@@ -73,8 +73,8 @@ export function SubscriptionCancellation({
     return (
       <Alert
         description={syncPending
-          ? "A recorrência foi encerrada no Asaas. A atualização do status local está sendo sincronizada; seus dados continuam preservados."
-          : "Sua loja pública está pausada, a cobrança recorrente foi encerrada e os dados da loja continuam preservados."}
+          ? "A recorrência foi encerrada no Asaas. A atualização do status local está sendo sincronizada; o prazo de retenção começa após essa confirmação."
+          : "Sua loja pública está pausada, a cobrança recorrente foi encerrada e os dados operacionais ficam preservados por até 30 dias."}
         title="Assinatura cancelada"
         variant="danger"
       />
@@ -97,7 +97,7 @@ export function SubscriptionCancellation({
           <div className="max-w-2xl">
             <p className="font-semibold text-[var(--app-foreground)]">Cancelar assinatura</p>
             <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">
-              Encerra definitivamente a recorrência e deixa a loja pública indisponível. Seus dados serão preservados.
+              Encerra definitivamente a recorrência e deixa a loja pública indisponível. Os dados operacionais permanecem por até 30 dias.
             </p>
           </div>
           <Button disabled={!canCancel} onClick={() => setOpen(true)} variant="danger">
@@ -150,7 +150,7 @@ export function SubscriptionCancellation({
           >
             <ul className="grid gap-2 text-sm leading-6 text-[var(--app-foreground-muted)]">
               <li>• A loja pública ficará indisponível.</li>
-              <li>• Categorias, produtos e imagens serão preservados.</li>
+              <li>• Categorias, produtos e imagens serão preservados por até 30 dias.</li>
               <li>• Novas cobranças recorrentes deixarão de ser geradas.</li>
             </ul>
 

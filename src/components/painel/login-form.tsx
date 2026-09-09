@@ -17,7 +17,7 @@ export function LoginForm() {
     <form action={action} className="grid gap-5">
       <Field>
         <FieldLabel htmlFor="email">E-mail da assinatura</FieldLabel>
-        <Input autoComplete="email" id="email" name="email" placeholder="voce@empresa.com" required type="email" />
+        <Input autoComplete="email" id="email" maxLength={254} name="email" placeholder="voce@empresa.com" required type="email" />
       </Field>
 
       <Field>
@@ -30,7 +30,7 @@ export function LoginForm() {
             Esqueci minha senha
           </Link>
         </div>
-        <Input autoComplete="current-password" id="password" name="password" placeholder="Sua senha" required type="password" />
+        <Input autoComplete="current-password" id="password" maxLength={256} name="password" placeholder="Sua senha" required type="password" />
       </Field>
 
       {state.error ? <Alert title={state.error} variant="danger" /> : null}

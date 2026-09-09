@@ -16,6 +16,7 @@ import Link from "next/link";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -55,6 +56,8 @@ const benefits = [
 ];
 
 export default function HomePage() {
+  const legalIdentity = getLegalIdentity();
+
   return (
     <main className="overflow-hidden bg-[var(--app-background)]">
       <nav className="relative z-10 border-b border-brand-900/10 bg-white/95 backdrop-blur">
@@ -228,6 +231,9 @@ export default function HomePage() {
           <nav aria-label="Links institucionais" className="flex flex-col items-start gap-1 sm:items-end">
             <FooterLink href="/termos">Termos de uso</FooterLink>
             <FooterLink href="/privacidade">Política de privacidade</FooterLink>
+            {legalIdentity.supportEmail ? (
+              <FooterLink href={`mailto:${legalIdentity.supportEmail}`}>Atendimento</FooterLink>
+            ) : null}
             <FooterLink href="/painel">Entrar no painel</FooterLink>
           </nav>
         </div>

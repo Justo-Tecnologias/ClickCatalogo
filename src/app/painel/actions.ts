@@ -14,7 +14,7 @@ export type LoginActionState = {
 };
 
 const loginSchema = z.object({
-  email: z.email("Digite um e-mail válido."),
+  email: z.string().trim().pipe(z.email("Digite um e-mail válido.")),
   password: z.string().min(1, "Digite sua senha.").max(256),
 });
 

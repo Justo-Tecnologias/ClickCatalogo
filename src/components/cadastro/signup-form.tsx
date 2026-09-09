@@ -34,9 +34,9 @@ export function SignupForm() {
 
   useEffect(() => {
     if (form.slug.length < 3) return;
+
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
-      setSlugStatus((current) => ({ ...current, checking: true, message: "Verificando endereço..." }));
       try {
         const response = await fetch(`/api/slug-disponivel?slug=${encodeURIComponent(form.slug)}`, { signal: controller.signal });
         const result = await response.json() as { available: boolean | null; message: string };
@@ -55,11 +55,20 @@ export function SignupForm() {
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) { setForm((current) => ({ ...current, [key]: value })); }
 
+  function updateSlug(value: string, markAsEdited: boolean) {
+    const slug = slugify(value);
+    if (markAsEdited) setSlugEdited(true);
+    update("slug", slug);
+    setSlugStatus(slug.length >= 3
+      ? { available: null, checking: true, message: "Verificando endereço..." }
+      : { available: null, checking: false, message: "" });
+  }
+
   function nextStep(event: React.FormEvent) {
     event.preventDefault();
     const validation = signupSchema.pick({ email: true, nomeLoja: true, privacyAccepted: true, slug: true, termsAccepted: true, whatsapp: true }).safeParse(form);
     if (!validation.success) return setError(validation.error.issues[0]?.message ?? "Revise os dados.");
-    if (effectiveSlugStatus.available === false || effectiveSlugStatus.checking) return setError("Escolha um endereço disponível antes de continuar.");
+    if (effectiveSlugStatus.available !== true || effectiveSlugStatus.checking) return setError("Aguarde a confirmação de que o endereço está disponível.");
     setError(null); setStep(2); window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -83,9 +92,9 @@ export function SignupForm() {
           <form className="grid gap-5" onSubmit={nextStep}>
             <div><h1 className="text-2xl font-bold">Vamos criar sua loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Preencha os dados que seus clientes usarão para encontrar e pedir.</p></div>
             {error ? <Alert title={error} variant="danger" /> : null}
-            <Field><FieldLabel htmlFor="nomeLoja">Nome da loja</FieldLabel><Input id="nomeLoja" maxLength={100} onChange={(event) => { update("nomeLoja", event.target.value); if (!slugEdited) update("slug", slugify(event.target.value)); }} placeholder="Ex.: Sabor da Vila" required value={form.nomeLoja} /></Field>
-            <div className="grid gap-4 sm:grid-cols-2"><Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} onChange={(event) => update("whatsapp", normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(form.whatsapp)} /><FieldDescription>Código do país + DDD + número. Salvamos apenas os dígitos.</FieldDescription></Field><Field><FieldLabel htmlFor="email">E-mail</FieldLabel><Input autoComplete="email" id="email" onChange={(event) => update("email", event.target.value)} placeholder="voce@empresa.com" required type="email" value={form.email} /><FieldDescription>Este será seu acesso ao painel.</FieldDescription></Field></div>
-            <Field><FieldLabel htmlFor="slug">Endereço da loja</FieldLabel><div className="flex rounded-[var(--radius-control)] border bg-white focus-within:border-brand-600 focus-within:shadow-[var(--focus-ring)]"><span className="flex items-center border-r px-3 text-xs text-[var(--app-foreground-muted)]">/loja/</span><input className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" id="slug" onBlur={() => setSlugTouched(true)} onChange={(event) => { setSlugEdited(true); update("slug", slugify(event.target.value)); }} required value={form.slug} /></div>{effectiveSlugStatus.message ? <p className={`text-xs ${effectiveSlugStatus.available === true ? "text-[var(--app-success)]" : effectiveSlugStatus.available === false ? "text-[var(--app-danger)]" : "text-[var(--app-foreground-muted)]"}`}>{effectiveSlugStatus.checking ? <LoaderCircle aria-hidden="true" className="mr-1 inline size-3 animate-spin" /> : effectiveSlugStatus.available === true ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3" /> : null}{effectiveSlugStatus.message}</p> : null}</Field>
+            <Field><FieldLabel htmlFor="nomeLoja">Nome da loja</FieldLabel><Input id="nomeLoja" maxLength={100} onChange={(event) => { update("nomeLoja", event.target.value); if (!slugEdited) updateSlug(event.target.value, false); }} placeholder="Ex.: Sabor da Vila" required value={form.nomeLoja} /></Field>
+            <div className="grid gap-4 sm:grid-cols-2"><Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} onChange={(event) => update("whatsapp", normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(form.whatsapp)} /><FieldDescription>Código do país + DDD + número. Salvamos apenas os dígitos.</FieldDescription></Field><Field><FieldLabel htmlFor="email">E-mail</FieldLabel><Input autoComplete="email" id="email" maxLength={254} onChange={(event) => update("email", event.target.value)} placeholder="voce@empresa.com" required type="email" value={form.email} /><FieldDescription>Este será seu acesso ao painel.</FieldDescription></Field></div>
+            <Field><FieldLabel htmlFor="slug">Endereço da loja</FieldLabel><div className="flex rounded-[var(--radius-control)] border bg-white focus-within:border-brand-600 focus-within:shadow-[var(--focus-ring)]"><span className="flex items-center border-r px-3 text-xs text-[var(--app-foreground-muted)]">/loja/</span><input aria-describedby="slug-status" aria-invalid={effectiveSlugStatus.available === false && slugTouched} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" id="slug" maxLength={60} onBlur={() => setSlugTouched(true)} onChange={(event) => updateSlug(event.target.value, true)} required value={form.slug} /></div><p aria-live="polite" className={`min-h-4 text-xs ${effectiveSlugStatus.available === true ? "text-[var(--app-success)]" : effectiveSlugStatus.available === false ? "text-[var(--app-danger)]" : "text-[var(--app-foreground-muted)]"}`} id="slug-status">{effectiveSlugStatus.checking ? <LoaderCircle aria-hidden="true" className="mr-1 inline size-3 animate-spin" /> : effectiveSlugStatus.available === true ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3" /> : null}{effectiveSlugStatus.message}</p></Field>
             <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input checked={form.termsAccepted} className="mt-1 size-4 accent-[var(--brand-700)]" onChange={(event) => update("termsAccepted", event.target.checked)} type="checkbox" /><span>Li e aceito os <Link className="-my-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline" href="/termos" rel="noreferrer" target="_blank">termos de uso</Link>.</span></label>
             <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input checked={form.privacyAccepted} className="mt-1 size-4 accent-[var(--brand-700)]" onChange={(event) => update("privacyAccepted", event.target.checked)} type="checkbox" /><span>Li e aceito a <Link className="-my-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline" href="/privacidade" rel="noreferrer" target="_blank">política de privacidade</Link>.</span></label>
             <Button size="lg" type="submit">Escolher o tema<ArrowRight aria-hidden="true" /></Button>

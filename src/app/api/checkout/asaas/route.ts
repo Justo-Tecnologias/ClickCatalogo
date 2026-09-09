@@ -5,6 +5,7 @@ import { getAsaasEnv, getSiteUrl } from "@/lib/env/server";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/documents";
 import { expireStaleSignupIntents } from "@/lib/signup/intents";
 import { signupSchema } from "@/lib/signup/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -75,9 +76,11 @@ export async function POST(request: Request) {
     email: parsed.data.email,
     nome_loja: parsed.data.nomeLoja,
     privacy_accepted_at: now,
+    privacy_version: PRIVACY_VERSION,
     slug: parsed.data.slug,
     tema: parsed.data.tema,
     terms_accepted_at: now,
+    terms_version: TERMS_VERSION,
     whatsapp: parsed.data.whatsapp,
   }).select("external_reference").single();
 

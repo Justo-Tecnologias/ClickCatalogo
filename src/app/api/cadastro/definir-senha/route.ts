@@ -7,7 +7,7 @@ import { enforceSameOrigin } from "@/lib/security/same-origin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const passwordSetupSchema = z.object({
-  email: z.email("Digite o mesmo e-mail usado no cadastro.").transform((value) => value.toLowerCase()),
+  email: z.string().trim().pipe(z.email("Digite o mesmo e-mail usado no cadastro.")).transform((value) => value.toLowerCase()),
   password: z.string().min(8, "Crie uma senha com pelo menos 8 caracteres.").max(128, "A senha deve ter no máximo 128 caracteres."),
   reference: z.uuid("Referência do cadastro inválida."),
 });

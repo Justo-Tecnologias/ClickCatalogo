@@ -52,7 +52,15 @@ export function ProductManager({ categories, initialProducts }: { categories: Ca
 
       const result = await saveProductAction(formData);
       if (!result.ok) return setError(result.error);
-      window.location.reload();
+      const savedProduct = result.data;
+      if (savedProduct) {
+        setProducts((current) => editing
+          ? current.map((product) => product.id === savedProduct.id ? savedProduct : product)
+          : [...current, savedProduct]);
+      }
+      setEditing(null);
+      setEditorOpen(false);
+      setError(null);
     });
   }
 

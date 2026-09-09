@@ -28,6 +28,7 @@ export function PasswordFields({
           autoComplete="new-password"
           disabled={disabled}
           id={`${idPrefix}-password`}
+          maxLength={128}
           minLength={8}
           onChange={(event) => onPasswordChange(event.target.value)}
           required
@@ -42,6 +43,7 @@ export function PasswordFields({
           autoComplete="new-password"
           disabled={disabled}
           id={`${idPrefix}-confirmation`}
+          maxLength={128}
           minLength={8}
           onChange={(event) => onConfirmationChange(event.target.value)}
           required

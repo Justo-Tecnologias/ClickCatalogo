@@ -32,7 +32,13 @@ O arquivo `migrations/202608060004_asaas_customer_lookup.sql` adiciona o índice
 
 O arquivo `migrations/202608280005_expire_stale_signup_intents.sql` libera slugs de checkouts pendentes vencidos mesmo quando o evento `CHECKOUT_EXPIRED` não chega. Em bancos que já receberam o schema antes desta migration, execute somente este arquivo complementar no SQL Editor.
 
-O arquivo `migrations/202608290006_prelaunch_hardening.sql` fecha os pontos da auditoria pré-lançamento: uma loja por usuário, bloqueio de checkout duplicado por e-mail, reordenação atômica de categorias e rate limiting distribuído entre as Functions da Netlify. Em um banco que já recebeu o schema ou as cinco migrations anteriores, execute este arquivo por último.
+O arquivo `migrations/202608290006_prelaunch_hardening.sql` fecha os pontos da auditoria pré-lançamento: uma loja por usuário, bloqueio de checkout duplicado por e-mail, reordenação atômica de categorias e rate limiting distribuído entre as Functions da Netlify.
+
+O arquivo `migrations/202608300007_fix_distributed_rate_limit.sql` corrige a colisão do identificador `current_time` com uma palavra reservada do PostgreSQL. Em um banco que já recebeu o schema ou as migrations anteriores, execute este arquivo depois do hardening e confirme o resultado `allowed = true`.
+
+O arquivo `migrations/202608300008_legal_acceptance_versions.sql` registra qual versão dos Termos e da Política de Privacidade foi aceita em cada checkout. Execute-o depois da correção do rate limiting e confirme que os dois contadores finais retornam zero.
+
+O arquivo `migrations/202608300009_privacy_retention_and_deletion.sql` registra a data real de cancelamento, cria a fila auditável de exclusão, isola as evidências legais mínimas e adiciona as RPCs restritas à `service_role` usadas pela rotina de retenção. Execute-o depois da migration de aceites legais. A migration não apaga dados existentes.
 
 ## Aplicação
 

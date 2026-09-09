@@ -7,6 +7,7 @@ import { z } from "zod";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { DEMO_CATALOG, DEMO_TENANT, isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 import { createPublicClient } from "@/lib/supabase/public";
+import { tenantSlugSchema } from "@/lib/tenants/slug";
 import type { PublicCatalog } from "@/types/catalog";
 
 const productSchema = z.object({
@@ -40,6 +41,10 @@ export type PublicStoreResult =
   | { kind: "unconfigured" };
 
 const queryPublicStore = unstable_cache(async (slug: string): Promise<PublicStoreResult> => {
+  const parsedSlug = tenantSlugSchema.safeParse(slug);
+  if (!parsedSlug.success) return { kind: "missing" };
+
+  slug = parsedSlug.data;
   if (slug === DEMO_TENANT.slug && isDemoAccessEnabled()) {
     return { catalog: DEMO_CATALOG, kind: "available" };
   }

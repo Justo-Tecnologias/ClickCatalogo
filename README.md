@@ -57,7 +57,7 @@ npm audit --omit=dev
 npm run audit:live
 ```
 
-`npm run verify` executa lint, TypeScript, contraste AA das seis paletas e o build. `audit:live` é somente leitura e confere integridade agregada do Supabase usando o `.env.local`, sem imprimir chaves nem dados pessoais.
+`npm run verify` executa lint, TypeScript, contraste AA das seis paletas e o build. `audit:live` não altera dados de clientes: confere integridade agregada do Supabase, cria e remove apenas um probe técnico do rate limiting e não imprime chaves nem dados pessoais. A rotina de publicação, monitoramento, backup e incidentes está em `docs/OPERACAO.md`.
 
 ## Design system
 
@@ -65,4 +65,4 @@ Tokens, temas e componentes reutilizáveis estão documentados em `docs/design-s
 
 ## Banco de dados
 
-O banco completo para um projeto novo está em `supabase/schema.sql`. Consulte `SETUP.md` para Supabase, Netlify, Auth e Asaas.
+O banco completo para um projeto novo está em `supabase/schema.sql`. Consulte `SETUP.md` para Supabase, Netlify, Auth e Asaas, e `docs/OPERACAO.md` para a rotina de produção.

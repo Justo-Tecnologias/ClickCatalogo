@@ -68,6 +68,8 @@ export async function cancelSubscriptionAction(
 
     await cancelAsaasSubscription(subscription.asaas_subscription_id);
 
+    const canceledAt = new Date().toISOString();
+
     const { error: localSubscriptionError } = await admin
       .from("subscriptions")
       .update({ status: "cancelado" })
@@ -75,7 +77,7 @@ export async function cancelSubscriptionAction(
       .eq("tenant_id", tenant.id);
     const { error: localTenantError } = await admin
       .from("tenants")
-      .update({ status: "cancelado" })
+      .update({ canceled_at: canceledAt, status: "cancelado" })
       .eq("id", tenant.id)
       .eq("owner_user_id", tenant.owner_user_id);
 

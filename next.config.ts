@@ -43,6 +43,7 @@ function getContentSecurityPolicy() {
   const supabase = getSupabaseOrigins();
   const imageSources = ["'self'", "blob:", "data:", supabase.http].filter(Boolean).join(" ");
   const connectSources = ["'self'", supabase.http, supabase.websocket].filter(Boolean).join(" ");
+  const formSources = ["'self'", supabase.http].filter(Boolean).join(" ");
 
   return [
     "default-src 'self'",
@@ -56,21 +57,36 @@ function getContentSecurityPolicy() {
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    `form-action ${formSources}`,
     "frame-ancestors 'none'",
   ].join("; ");
 }
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: getContentSecurityPolicy() },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  { key: "Origin-Agent-Cluster", value: "?1" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  ...(process.env.NODE_ENV === "production"
+    ? [{ key: "Strict-Transport-Security", value: "max-age=31536000" }]
+    : []),
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
 ];
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Logo e banner podem ser enviados juntos. O limite inclui o overhead do
+      // multipart, aceita dois arquivos de 2 MiB e continua abaixo do teto
+      // efetivo aproximado de 4,5 MB para payload binário na Netlify.
+      bodySizeLimit: "4352kb",
+    },
+  },
   async headers() {
     return [{ headers: securityHeaders, source: "/:path*" }];
   },

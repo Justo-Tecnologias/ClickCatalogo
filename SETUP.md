@@ -7,8 +7,8 @@ Este é o guia principal para colocar o **ClickCatálogo** em um ambiente novo. 
 - Não envie chaves secretas por chat e não as grave no Git.
 - O arquivo local com valores reais é `C:\Projeto-Github\ClickCatálogo\.env.local`.
 - A Netlify não usa o `.env.local` do computador durante o deploy. Cadastre as variáveis no painel dela.
-- O `.env.local` existente ainda aponta para o ambiente anterior. Substitua os valores somente depois de copiar as credenciais do novo Supabase e a URL do novo site.
-- O domínio `clickcatalogo.com` só deve ser usado quando estiver realmente vinculado. Até lá, use a URL `https://SEU-SITE.netlify.app`.
+- O ambiente atual já usa o novo Supabase e `https://clickcatalogo.com` na Netlify.
+- Em uma instalação paralela, use a URL própria `*.netlify.app` até vincular um domínio.
 
 ## 1. Ordem recomendada
 
@@ -64,6 +64,26 @@ Ela adiciona:
 
 Essa migration precisa estar aplicada **antes** do deploy do código desta rodada.
 
+### Correção complementar do rate limiting distribuído
+
+Em bancos que já receberam a migration de hardening, execute também:
+
+`C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300007_fix_distributed_rate_limit.sql`
+
+Ela corrige uma colisão entre o nome de variável `current_time` e a palavra reservada do PostgreSQL. Sem essa correção, a aplicação continua funcionando com fallback em memória, mas a limitação de abuso não é compartilhada entre as instâncias da Netlify. O arquivo termina com uma chamada real que deve retornar `allowed = true` e `remaining = 1`.
+
+Depois, execute a migration que versiona os aceites legais:
+
+`C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300008_legal_acceptance_versions.sql`
+
+Ela preserva os aceites antigos como versão `2026-08-29` e prepara novos checkouts para gravar a versão `2026-08-30`. O resultado final deve mostrar `terms_without_version = 0` e `privacy_without_version = 0`.
+
+Por fim, execute a migration de retenção e exclusão auditável:
+
+`C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300009_privacy_retention_and_deletion.sql`
+
+Ela registra `tenants.canceled_at`, cria a fila de exclusão e a área isolada de evidências legais mínimas, além das funções administrativas usadas pela rotina de expurgo. A migration não exclui dados ao ser aplicada.
+
 ### O que o schema cria
 
 - `public.tenants` — lojas e seus proprietários;
@@ -73,11 +93,14 @@ Essa migration precisa estar aplicada **antes** do deploy do código desta rodad
 - `public.signup_intents` — cadastro antes da confirmação do pagamento;
 - `public.asaas_webhook_events` — idempotência e auditoria de webhooks;
 - `public.api_rate_limits` — limitação de abuso compartilhada entre instâncias;
+- `public.account_deletion_requests` — fila, tentativas e estado das exclusões;
+- `public.legal_retention_records` — evidências mínimas isoladas do conteúdo operacional;
 - constraints, índices e gatilhos de `updated_at`;
 - RLS e grants para isolamento multi-tenant;
 - RPCs `get_public_catalog` e `get_public_store_status` para a loja pública;
 - RPC administrativa `expire_stale_signup_intents` para liberar reservas vencidas;
 - RPCs protegidas para verificar conta existente, reordenar categorias e consumir rate limit;
+- RPCs protegidas para arquivar evidências, agendar, reservar e expurgar dados vencidos;
 - bucket público `produtos`, limite de 2 MB e tipos JPEG, PNG e WebP;
 - policies de Storage que restringem escrita ao proprietário do tenant.
 
@@ -91,10 +114,12 @@ Depois do schema, execute no SQL Editor:
 
 Esse arquivo não altera dados. Ele deve listar:
 
-- sete tabelas com RLS ativo;
-- sete funções esperadas, incluindo expiração, reordenação e rate limit;
+- nove tabelas com RLS ativo;
+- quinze funções esperadas, incluindo expiração, reordenação, rate limit, webhook atômico e retenção;
 - o bucket `produtos` como público;
 - policies das tabelas e do Storage.
+
+O último resultado do arquivo executa a função de rate limiting dentro de uma transação revertida. Ele deve retornar `allowed = true` sem deixar dados de teste.
 
 ## 3. O que copiar do Supabase
 
@@ -121,7 +146,10 @@ Em **Authentication → URL Configuration**:
 - durante o teste publicado, defina **Site URL** como `https://SEU-SITE.netlify.app`;
 - adicione `https://SEU-SITE.netlify.app/auth/callback` em **Redirect URLs**;
 - mantenha `http://localhost:3000/auth/callback` para desenvolvimento local;
-- quando o domínio final entrar no ar, adicione `https://clickcatalogo.com/auth/callback` e troque a Site URL para `https://clickcatalogo.com`.
+- quando o domínio final entrar no ar, troque a Site URL para `https://clickcatalogo.com`;
+- adicione `https://clickcatalogo.com/auth/callback` e também a URL exata usada pela recuperação: `https://clickcatalogo.com/auth/callback?next=%2Fpainel%2Fnova-senha`.
+
+Se a URL completa da recuperação não estiver permitida, o Supabase pode ignorar o `redirectTo` e devolver o parâmetro `code` na raiz do site. Nesse caso a sessão não é trocada e o usuário volta para a landing em vez de abrir a criação de senha.
 
 O pagamento não depende de e-mail: o webhook cria o usuário e a tela de sucesso permite definir a senha inicial. Porém a recuperação de senha depende de entrega de e-mail.
 
@@ -151,7 +179,18 @@ Nome: ClickCatálogo
 
 Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Se a integração guiada Resend aparecer no seu painel no futuro, ela será apenas uma alternativa a esta configuração manual e não será necessária.
 
-Em **Authentication → Email Templates → Reset password**, mantenha o link de confirmação fornecido pelo Supabase e use um texto curto, sem publicidade. Depois envie uma recuperação real para um Gmail e um Outlook e confirme recebimento, abertura do callback, troca da senha e novo login.
+### Canal público de atendimento
+
+O endereço público do serviço é `contato@clickcatalogo.com`. Ele é independente do SMTP de autenticação:
+
+- o ImprovMX recebe as mensagens destinadas a `contato@clickcatalogo.com` e as encaminha para uma caixa privada;
+- o domínio raiz `clickcatalogo.com`, verificado separadamente no Resend, permite enviar como `ClickCatálogo <contato@clickcatalogo.com>`;
+- a chave restrita criada para esse envio manual não é usada pelo código atual e, portanto, não deve ser colocada na Netlify nem em `.env.local`;
+- `auth.clickcatalogo.com` continua reservado aos e-mails automáticos enviados pelo Supabase Auth.
+
+O teste de envio deve aparecer como assinado por `clickcatalogo.com`; o subdomínio técnico `rsend.clickcatalogo.com` em “enviado por” é esperado. A chave deve permanecer somente no Resend e em um gerenciador de senhas confiável.
+
+Em **Authentication → Email Templates → Reset password**, use o template versionado abaixo. Ele mantém a confirmação fornecida pelo Supabase dentro de uma etapa intermediária do ClickCatálogo: scanners de segurança podem abrir o primeiro link sem consumir o token de uso único, que só é enviado ao Supabase depois que o usuário pressiona **Continuar e criar nova senha**. Depois envie uma recuperação real para um Gmail e um Outlook e confirme recebimento, etapa intermediária, abertura do callback, troca da senha e novo login.
 
 O modelo em português pronto para colar está em:
 
@@ -173,8 +212,14 @@ Use este formato:
 NEXT_PUBLIC_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=
 
 DEMO_ACCESS_ENABLED=true
+
+LEGAL_BUSINESS_NAME=
+LEGAL_TAX_ID=
+LEGAL_POSTAL_ADDRESS=
+LEGAL_SUPPORT_EMAIL=
 
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 
@@ -183,7 +228,9 @@ ASAAS_WEBHOOK_TOKEN=
 ASAAS_API_URL=
 ```
 
-Para validar banco, login e CRUD localmente, as três variáveis do Supabase são suficientes. Para o cadastro pago também são necessárias `ASAAS_API_KEY` e `ASAAS_WEBHOOK_TOKEN`, além de uma URL HTTPS pública.
+Gere `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` uma única vez com `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` e use exatamente o mesmo valor no ambiente local e na Netlify. A chave mantém as Server Actions compatíveis entre instâncias e publicações; não a envie por chat nem a versione.
+
+Para validar banco, login e CRUD localmente, as três variáveis do Supabase são suficientes. Para o cadastro pago também são necessárias `ASAAS_API_KEY` e `ASAAS_WEBHOOK_TOKEN`, além de uma URL HTTPS pública. Antes da primeira venda, preencha as quatro variáveis `LEGAL_*` com a identificação e o canal reais do fornecedor; esses valores aparecem publicamente e não devem ser fictícios.
 
 Teste local:
 
@@ -229,7 +276,12 @@ Abra **Project configuration → Environment variables** e cadastre para o conte
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_SITE_URL
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 DEMO_ACCESS_ENABLED
+LEGAL_BUSINESS_NAME
+LEGAL_TAX_ID
+LEGAL_POSTAL_ADDRESS
+LEGAL_SUPPORT_EMAIL
 SUPABASE_SERVICE_ROLE_KEY
 ASAAS_API_KEY
 ASAAS_WEBHOOK_TOKEN
@@ -243,11 +295,14 @@ Marque como segredo:
 
 - `SUPABASE_SERVICE_ROLE_KEY`;
 - `ASAAS_API_KEY`;
-- `ASAAS_WEBHOOK_TOKEN`.
+- `ASAAS_WEBHOOK_TOKEN`;
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.
+
+As variáveis `LEGAL_*` não são credenciais: elas serão publicadas nos documentos legais. Ainda assim, mantê-las no painel da Netlify evita gravar CPF/CNPJ ou endereço pessoal no repositório público.
 
 `ASAAS_API_URL` deve permanecer ausente ou vazia com chaves atuais. O código escolhe Sandbox ou Produção pelo prefixo da chave.
 
-Depois de criar ou alterar variáveis, faça um novo deploy. As variáveis `NEXT_PUBLIC_*` são incorporadas durante o build e não mudam em deploys antigos.
+Depois de criar ou alterar variáveis, faça um novo deploy. As variáveis `NEXT_PUBLIC_*` são incorporadas durante o build e não mudam em deploys antigos. Acumule alterações e publique em lote para evitar consumo desnecessário de créditos.
 
 Em contas Netlify Free novas, confirme também que o projeto foi publicado e não ficou privado.
 
@@ -266,7 +321,7 @@ Depois do primeiro deploy público, crie no painel do Asaas:
 
 ```text
 Nome: ClickCatálogo
-URL: https://SEU-SITE.netlify.app/api/webhooks/asaas
+URL: https://clickcatalogo.com/api/webhooks/asaas
 Token: mesmo valor de ASAAS_WEBHOOK_TOKEN
 API: v3
 Envio: sequencial
@@ -337,11 +392,21 @@ Depois entre em `/painel` com o e-mail e a senha desse usuário. Categorias, pro
 8. Teste pedido individual e carrinho consolidado pelo WhatsApp.
 9. No Sandbox, escolha uma assinatura descartável e valide o cancelamento self-service.
 
+Depois dos testes funcionais, rode as auditorias repetíveis:
+
+```powershell
+# Exige Node.js 22 ou superior e valida banco, RLS, Storage e integridade.
+npm run audit:live
+
+# Valida domínio, páginas, headers, proteção do painel e catálogo publicado.
+npm run audit:production -- loja-teste-netlify
+```
+
 O produto atual aceita **uma loja por e-mail/usuário**. Uma segunda tentativa retorna orientação para entrar no painel ou recuperar a senha, antes de abrir outro checkout.
 
-## 10. Trocar para `clickcatalogo.com`
+## 10. Domínio final `clickcatalogo.com`
 
-Quando o domínio for vinculado à Netlify:
+O domínio já está vinculado à Netlify. Para uma instalação nova ou migração futura:
 
 1. Configure o domínio e aguarde SSL ativo.
 2. Troque `NEXT_PUBLIC_SITE_URL` para `https://clickcatalogo.com` na Netlify.
@@ -362,16 +427,14 @@ Quando o domínio for vinculado à Netlify:
 - catálogo público com busca, paginação, temas e otimização de imagens;
 - carrinho client-side e pedido consolidado pelo WhatsApp;
 - assinatura e cancelamento self-service;
+- área de privacidade, solicitação antecipada e rotina segura de exclusão;
 - termos e política de privacidade.
 
 ### Obrigatório antes do primeiro cliente real
 
-- executar e verificar o schema no novo Supabase;
-- executar `supabase/migrations/202608290006_prelaunch_hardening.sql` em bancos criados antes desta auditoria;
-- trocar todas as variáveis do ambiente antigo pelas novas;
-- publicar o estado local atual no GitHub — há funcionalidades ainda não commitadas;
-- configurar SMTP próprio e testar recuperação de senha;
+- executar, na ordem, as migrations `202608300007`, `202608300008` e `202608300009` no banco que já recebeu o hardening;
 - colar e testar o template em português de recuperação;
+- identificar o fornecedor do serviço e publicar um canal de atendimento real nos termos e na política de privacidade;
 - configurar webhook na conta Asaas de Produção;
 - realizar uma cobrança real controlada e um cancelamento controlado;
 - revisar logs da Netlify, Supabase e Asaas após o teste.
@@ -387,9 +450,15 @@ Quando o domínio for vinculado à Netlify:
 - schema completo: `C:\Projeto-Github\ClickCatálogo\supabase\schema.sql`;
 - migration complementar de slugs expirados: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608280005_expire_stale_signup_intents.sql`;
 - hardening pré-lançamento: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608290006_prelaunch_hardening.sql`;
+- correção do rate limiting distribuído: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300007_fix_distributed_rate_limit.sql`;
+- versionamento dos aceites legais: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300008_legal_acceptance_versions.sql`;
+- retenção e exclusão auditável: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300009_privacy_retention_and_deletion.sql`;
 - template de recuperação: `C:\Projeto-Github\ClickCatálogo\docs\supabase-email-templates\recovery.html`;
 - verificação do banco: `C:\Projeto-Github\ClickCatálogo\supabase\verify-setup.sql`;
 - exemplo de variáveis: `C:\Projeto-Github\ClickCatálogo\.env.example`;
 - valores locais reais: `C:\Projeto-Github\ClickCatálogo\.env.local`;
 - configuração Netlify: `C:\Projeto-Github\ClickCatálogo\netlify.toml`;
+- auditoria do ambiente publicado: `C:\Projeto-Github\ClickCatálogo\scripts\audit-production.mjs`;
+- expurgo de retenção em modo seguro: `C:\Projeto-Github\ClickCatálogo\scripts\purge-retention.mjs`;
+- rotina de publicação, monitoramento, backup e incidentes: `C:\Projeto-Github\ClickCatálogo\docs\OPERACAO.md`;
 - estado e pendências: `C:\Projeto-Github\ClickCatálogo\STATUS.md`.

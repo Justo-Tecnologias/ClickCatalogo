@@ -11,7 +11,11 @@
     "check": "npm run lint && npm run typecheck && npm run check:contrast",
     "check:contrast": "node scripts/check-theme-contrast.mjs",
     "verify": "npm run check && npm run build",
-    "audit:live": "node --env-file-if-exists=.env.local scripts/audit-live.mjs"
+    "audit:live": "node --env-file-if-exists=.env.local scripts/audit-live.mjs",
+    "audit:asaas": "node --env-file-if-exists=.env.local scripts/audit-asaas.mjs",
+    "audit:production": "node --env-file-if-exists=.env.local scripts/audit-production.mjs",
+    "backup:storage": "node --env-file-if-exists=.env.local scripts/backup-storage.mjs",
+    "privacy:purge": "node --env-file-if-exists=.env.local scripts/purge-retention.mjs"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -29,6 +33,7 @@
     "next": "16.3.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "0.35.4",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },

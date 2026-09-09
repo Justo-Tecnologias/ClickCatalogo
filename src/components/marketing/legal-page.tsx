@@ -36,11 +36,11 @@ export function LegalPage({ children, description, title }: { children: ReactNod
               {description}
             </p>
             <p className="mt-3 text-xs font-medium text-brand-700">
-              Última atualização: 29 de agosto de 2026
+              Última atualização: 30 de agosto de 2026
             </p>
           </div>
 
-          <div className="mt-8 grid gap-0 text-sm leading-7 [&_section]:border-b [&_section]:border-[var(--app-border)] [&_section]:py-7 [&_section:first-child]:pt-0 [&_section:last-child]:border-0 [&_section:last-child]:pb-0 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-[var(--app-foreground)] [&_p]:text-[var(--app-foreground-muted)]">
+          <div className="mt-8 grid gap-0 text-sm leading-7 [&_section]:border-b [&_section]:border-[var(--app-border)] [&_section]:py-7 [&_section:first-child]:pt-0 [&_section:last-child]:border-0 [&_section:last-child]:pb-0 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-[var(--app-foreground)] [&_li]:text-[var(--app-foreground-muted)] [&_p]:text-[var(--app-foreground-muted)] [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1">
             {children}
           </div>
         </div>

@@ -34,13 +34,16 @@ export function getAsaasEnv(): AsaasEnv | null {
   }
 
   const configuredApiUrl = process.env.ASAAS_API_URL?.trim().replace(/\/$/, "");
-  const environment = configuredApiUrl === ASAAS_API_URL.production ? "production" : "sandbox";
+  if (configuredApiUrl === ASAAS_API_URL.production) {
+    return { apiKey, apiUrl: ASAAS_API_URL.production, environment: "production" };
+  }
+  if (configuredApiUrl === ASAAS_API_URL.sandbox) {
+    return { apiKey, apiUrl: ASAAS_API_URL.sandbox, environment: "sandbox" };
+  }
 
-  return {
-    apiKey,
-    apiUrl: environment === "production" ? ASAAS_API_URL.production : ASAAS_API_URL.sandbox,
-    environment,
-  };
+  // Uma chave com prefixo desconhecido nunca deve cair silenciosamente em
+  // Sandbox ou Produção. Chaves legadas exigem a URL oficial explícita.
+  return null;
 }
 
 export function requireAsaasEnv(): AsaasEnv {

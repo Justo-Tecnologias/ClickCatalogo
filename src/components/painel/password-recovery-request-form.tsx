@@ -57,6 +57,7 @@ export function PasswordRecoveryRequestForm() {
           autoComplete="email"
           disabled={submitting}
           id="recovery-email"
+          maxLength={254}
           name="email"
           onChange={(event) => setEmail(event.target.value)}
           placeholder="voce@empresa.com"

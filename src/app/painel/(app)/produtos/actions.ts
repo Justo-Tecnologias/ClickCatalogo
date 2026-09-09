@@ -5,10 +5,9 @@ import { z } from "zod";
 
 import { actionError, type ActionResult } from "@/lib/actions/result";
 import { requireTenant } from "@/lib/auth/session";
+import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
-
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+import type { Database } from "@/types/database";
 
 const productSchema = z.object({
   ativo: z.boolean(),
@@ -25,6 +24,11 @@ const productSchema = z.object({
     ),
   variacaoInfo: z.string().trim().max(300).nullable(),
 });
+
+type SavedProduct = Pick<
+  Database["public"]["Tables"]["products"]["Row"],
+  "ativo" | "category_id" | "descricao" | "id" | "imagem_url" | "nome" | "preco" | "variacao_info"
+>;
 
 function parsePrice(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
@@ -45,7 +49,7 @@ function storagePathFromUrl(url: string | null) {
   return index >= 0 ? decodeURIComponent(url.slice(index + marker.length)) : null;
 }
 
-export async function saveProductAction(formData: FormData): Promise<ActionResult> {
+export async function saveProductAction(formData: FormData): Promise<ActionResult<SavedProduct>> {
   const parsed = productSchema.safeParse({
     ativo: formData.get("ativo") !== "false",
     categoryId: formData.get("categoryId"),
@@ -61,8 +65,9 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
   const fileEntry = formData.get("imagem");
   const file = fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
   const removeImage = formData.get("removeImagem") === "true";
-  if (file && (!ALLOWED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE)) {
-    return { error: "A imagem deve ser JPG, PNG ou WebP e ter no máximo 2 MB.", ok: false };
+  if (file) {
+    const validationError = await validateCatalogImageUpload(file);
+    if (validationError) return { error: validationError, ok: false };
   }
 
   let uploadedPath: string | null = null;
@@ -100,13 +105,28 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
       variacao_info: parsed.data.variacaoInfo,
     };
 
+    let savedProduct: SavedProduct;
+    const returnColumns = "ativo,category_id,descricao,id,imagem_url,nome,preco,variacao_info";
+
     if (parsed.data.id) {
-      const { error } = await supabase.from("products").update(values).eq("id", parsed.data.id).eq("tenant_id", tenant.id);
+      const { data, error } = await supabase
+        .from("products")
+        .update(values)
+        .eq("id", parsed.data.id)
+        .eq("tenant_id", tenant.id)
+        .select(returnColumns)
+        .single();
       if (error) throw error;
+      savedProduct = data;
     } else {
       const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("category_id", parsed.data.categoryId);
-      const { error } = await supabase.from("products").insert({ ...values, ordem: count ?? 0 });
+      const { data, error } = await supabase
+        .from("products")
+        .insert({ ...values, ordem: count ?? 0 })
+        .select(returnColumns)
+        .single();
       if (error) throw error;
+      savedProduct = data;
     }
 
     const previousPath = storagePathFromUrl(previousImageUrl);
@@ -118,7 +138,7 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
     revalidatePath("/painel/produtos");
     revalidatePath("/painel/loja");
     revalidatePath(`/loja/${tenant.slug}`);
-    return { ok: true };
+    return { data: savedProduct, ok: true };
   } catch (error) {
     if (uploadedPath) {
       try {

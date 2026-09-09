@@ -1,9 +1,9 @@
 "use client";
 
-import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Package, Settings2, ShoppingBag } from "lucide-react";
+import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Package, Settings2, ShieldCheck, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { signOutAction } from "@/app/painel/actions";
 import { Badge } from "@/components/ui/badge";
@@ -17,10 +17,23 @@ const links = [
   { href: "/painel/categorias", icon: FolderTree, label: "Categorias" },
   { href: "/painel/produtos", icon: Package, label: "Produtos" },
   { href: "/painel/assinatura", icon: CreditCard, label: "Assinatura" },
+  { href: "/painel/privacidade", icon: ShieldCheck, label: "Privacidade" },
 ] as const;
 
 export function PanelShell({ children, demo = false, slug, status, storeName, userEmail }: { children: ReactNode; demo?: boolean; slug: string; status: TenantStatus; storeName: string; userEmail: string | null }) {
   const pathname = usePathname();
+  const navigationRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const navigation = navigationRef.current;
+    if (!navigation || window.matchMedia("(min-width: 1024px)").matches) return;
+
+    navigation.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({
+      behavior: "auto",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-[var(--app-background)] lg:grid lg:grid-cols-[17rem_1fr]">
@@ -33,7 +46,11 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
           <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status}</Badge>
         </div>
 
-        <nav aria-label="Navegação do painel" className="flex gap-1 overflow-x-auto border-t px-3 py-2 lg:grid lg:border-t-0 lg:px-3 lg:py-5">
+        <nav
+          aria-label="Navegação do painel"
+          className="flex gap-1 overflow-x-auto overscroll-x-contain border-t px-3 py-2 [scrollbar-width:none] lg:grid lg:border-t-0 lg:px-3 lg:py-5 [&::-webkit-scrollbar]:hidden"
+          ref={navigationRef}
+        >
           {links.map(({ href, icon: Icon, label }) => {
             const active = pathname === href;
             return (

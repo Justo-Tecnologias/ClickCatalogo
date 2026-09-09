@@ -6,11 +6,10 @@ import { z } from "zod";
 import { actionError, type ActionResult } from "@/lib/actions/result";
 import { requireTenant } from "@/lib/auth/session";
 import { normalizeInstagramUsername } from "@/lib/instagram/username";
+import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
 import type { TenantTheme } from "@/types/database";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const themes = ["classico", "natural", "tech", "delivery", "elegante", "minimal"] as const;
 
 const storeSchema = z.object({
@@ -49,7 +48,9 @@ export async function updateStoreAction(formData: FormData): Promise<ActionResul
   const removeLogo = formData.get("remove-logo") === "true";
   const files = Object.fromEntries(Object.entries(entries).map(([key, entry]) => [key, entry instanceof File && entry.size > 0 ? entry : null])) as { banner: File | null; logo: File | null };
   for (const file of Object.values(files)) {
-    if (file && (!ALLOWED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE)) return { error: "Logo e banner devem ser JPG, PNG ou WebP com no máximo 2 MB.", ok: false };
+    if (!file) continue;
+    const validationError = await validateCatalogImageUpload(file);
+    if (validationError) return { error: validationError, ok: false };
   }
 
   const uploaded: string[] = [];

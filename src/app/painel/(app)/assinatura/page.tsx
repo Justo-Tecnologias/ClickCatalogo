@@ -12,6 +12,7 @@ import { SubscriptionCancellation } from "@/components/painel/subscription-cance
 import { requireTenant } from "@/lib/auth/session";
 import { DEMO_SUBSCRIPTION } from "@/lib/demo/panel-demo";
 import { formatCurrency } from "@/lib/format/currency";
+import { getLegalIdentity } from "@/lib/legal/identity";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Assinatura" };
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SubscriptionPage() {
   const { demo, tenant } = await requireTenant();
+  const { supportEmail } = getLegalIdentity();
   let subscription = demo ? DEMO_SUBSCRIPTION : null;
   if (!demo) {
     const supabase = await createClient();
@@ -45,6 +47,19 @@ export default async function SubscriptionPage() {
             storeName={tenant.nome_loja}
           />
           {subscription.portal_url ? <div><Link className={buttonVariants()} href={subscription.portal_url} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />{subscription.status === "cancelado" ? "Ver última cobrança no Asaas" : "Ver cobrança no Asaas"}</Link></div> : subscription.status !== "cancelado" ? <Alert description="O link da cobrança aparecerá aqui quando for enviado pelo Asaas." title="Cobrança ainda sem link" /> : null}
+          {supportEmail && !demo ? (
+            <Alert
+              description={(
+                <span>
+                  Para dúvidas sobre cobrança ou para solicitar acesso, correção ou exclusão de dados, escreva para{" "}
+                  <a className="font-semibold underline underline-offset-4" href={`mailto:${supportEmail}?subject=Atendimento%20ClickCat%C3%A1logo`}>
+                    {supportEmail}
+                  </a>.
+                </span>
+              )}
+              title="Atendimento e privacidade"
+            />
+          ) : null}
         </div>
       )}
     </div>

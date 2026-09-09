@@ -41,8 +41,9 @@ export function PasswordSetupForm({ onConfigured, reference }: PasswordSetupForm
     setSubmitting(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const response = await fetch("/api/cadastro/definir-senha", {
-        body: JSON.stringify({ email, password, reference }),
+        body: JSON.stringify({ email: normalizedEmail, password, reference }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -54,7 +55,7 @@ export function PasswordSetupForm({ onConfigured, reference }: PasswordSetupForm
       }
 
       const supabase = createClient();
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
       if (loginError) {
         onConfigured();
@@ -89,6 +90,7 @@ export function PasswordSetupForm({ onConfigured, reference }: PasswordSetupForm
           autoComplete="email"
           disabled={submitting}
           id="setup-email"
+          maxLength={254}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="voce@empresa.com"
           required

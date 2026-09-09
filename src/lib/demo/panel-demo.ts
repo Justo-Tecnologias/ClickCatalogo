@@ -13,6 +13,7 @@ const createdAt = "2026-07-19T12:00:00.000Z";
 
 export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
   banner_url: null,
+  canceled_at: null,
   created_at: createdAt,
   descricao_curta: "Cafés, presentes e pequenos momentos preparados com carinho.",
   endereco: "Praça Central, 27 — Centro",

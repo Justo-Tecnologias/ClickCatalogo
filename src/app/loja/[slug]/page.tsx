@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StorePreview } from "@/components/loja-publica/store-preview";
-import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPublicStore } from "@/lib/catalog/public-catalog";
@@ -44,12 +43,11 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
     return <StoreMessage icon={Settings} title="Catálogo aguardando configuração" description="A tela pública está pronta. Configure as chaves do Supabase para carregar os dados reais desta loja." />;
   }
   if (store.kind === "canceled") {
-    return <StoreMessage icon={Ban} title="Loja temporariamente indisponível" description="Este catálogo não está recebendo pedidos no momento. Os produtos permanecem preservados para uma futura reativação." />;
+    return <StoreMessage icon={Ban} title="Loja temporariamente indisponível" description="Este catálogo não está recebendo pedidos no momento." />;
   }
 
   return (
     <div data-tema={store.catalog.tema}>
-      {store.catalog.status === "inadimplente" ? <div className="bg-[var(--cor-fundo)] px-4 pt-3"><Alert className="mx-auto max-w-[var(--content-width)]" description="O catálogo continua disponível, mas algumas atualizações podem ficar limitadas." title="Aviso sobre esta loja" variant="warning" /></div> : null}
       <StorePreview catalog={store.catalog} />
     </div>
   );

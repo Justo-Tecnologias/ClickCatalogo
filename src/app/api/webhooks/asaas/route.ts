@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
 
 const eventSchema = z.object({
   checkout: z.record(z.string(), z.unknown()).optional(),
-  event: z.string().min(1),
-  id: z.string().min(1),
+  event: z.string().min(1).max(100),
+  id: z.string().min(1).max(200),
   payment: z.record(z.string(), z.unknown()).optional(),
   subscription: z.record(z.string(), z.unknown()).optional(),
 }).passthrough();
@@ -102,22 +102,21 @@ export async function POST(request: Request) {
 
   const event = parsed.data;
   const admin = createAdminClient();
-  const { error: insertError } = await admin.from("asaas_webhook_events").insert({ event_id: event.id, event_type: event.event, payload: event as unknown as Json });
-
-  if (insertError) {
-    if (insertError.code !== "23505") return NextResponse.json({ error: "Falha ao registrar evento." }, { status: 500 });
-    const { data: existing } = await admin.from("asaas_webhook_events").select("attempts,processed_at,processing_error,received_at").eq("event_id", event.id).single();
-    if (existing?.processed_at) return NextResponse.json({ received: true, repeated: true });
-    const stillProcessing = existing && !existing.processing_error && Date.now() - new Date(existing.received_at).getTime() < 5 * 60 * 1000;
-    if (stillProcessing) {
-      return NextResponse.json(
-        { error: "Evento ainda em processamento; tente novamente." },
-        { status: 409 },
-      );
-    }
-    const { error: retryUpdateError } = await admin.from("asaas_webhook_events").update({ attempts: (existing?.attempts ?? 1) + 1, processing_error: null }).eq("event_id", event.id);
-    if (retryUpdateError) return NextResponse.json({ error: "Falha ao preparar nova tentativa." }, { status: 500 });
+  const { data: claim, error: claimError } = await admin.rpc("claim_asaas_webhook_event", {
+    p_event_id: event.id,
+    p_event_type: event.event,
+    p_payload: event as unknown as Json,
+    p_stale_seconds: 300,
+  });
+  if (claimError) return NextResponse.json({ error: "Falha ao registrar evento." }, { status: 500 });
+  if (claim === "repeated") return NextResponse.json({ received: true, repeated: true });
+  if (claim === "processing") {
+    return NextResponse.json(
+      { error: "Evento ainda em processamento; tente novamente." },
+      { status: 409 },
+    );
   }
+  if (claim !== "claimed") return NextResponse.json({ error: "Estado de evento inválido." }, { status: 500 });
 
   try {
     await processEvent(event);
@@ -185,15 +184,33 @@ async function findIntent(event: WebhookEvent): Promise<SignupIntent | null> {
 type ExistingSubscription = {
   id: string;
   matchedBy: "customer" | "subscription";
+  status: "ativo" | "atrasado" | "cancelado";
   tenant_id: string;
 };
+
+async function cancellationIsTerminal(
+  admin: ReturnType<typeof createAdminClient>,
+  tenantId: string,
+  subscriptionStatus: ExistingSubscription["status"] | null,
+) {
+  if (subscriptionStatus === "cancelado") return true;
+
+  const { data, error } = await admin
+    .from("tenants")
+    .select("status")
+    .eq("id", tenantId)
+    .single();
+  if (error) throw error;
+
+  return data.status === "cancelado";
+}
 
 async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSubscription | null> {
   const admin = createAdminClient();
   const subscriptionId = subscriptionIdFrom(event);
 
   if (subscriptionId) {
-    const { data, error } = await admin.from("subscriptions").select("id,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
     if (error) throw error;
     if (data) return { ...data, matchedBy: "subscription" };
   }
@@ -201,7 +218,7 @@ async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSu
   const customerId = customerIdFrom(event);
   if (!customerId) return null;
 
-  const { data, error } = await admin.from("subscriptions").select("id,tenant_id").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
+  const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
   if (error) throw error;
   if (!data?.length) return null;
 
@@ -215,6 +232,10 @@ async function activateExistingSubscription(event: WebhookEvent) {
   if (!existing) return false;
 
   const admin = createAdminClient();
+  if (await cancellationIsTerminal(admin, existing.tenant_id, existing.status)) {
+    return true;
+  }
+
   const values: Database["public"]["Tables"]["subscriptions"]["Update"] = { status: "ativo" };
   const customerId = customerIdFrom(event);
   const subscriptionId = subscriptionIdFrom(event);
@@ -254,10 +275,12 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
   tenantId ??= existingSubscription?.tenant_id ?? null;
 
   let ownerUserId: string | null = null;
+  let currentTenantStatus: "ativo" | "inadimplente" | "cancelado" | null = null;
   if (tenantId) {
-    const { data: tenant, error } = await admin.from("tenants").select("owner_user_id").eq("id", tenantId).single();
+    const { data: tenant, error } = await admin.from("tenants").select("owner_user_id,status").eq("id", tenantId).single();
     if (error) throw error;
     ownerUserId = tenant?.owner_user_id ?? null;
+    currentTenantStatus = tenant?.status ?? null;
   }
 
   if (!ownerUserId) {
@@ -288,15 +311,22 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
     }
   }
 
-  const { error: tenantError } = await admin.from("tenants").update({ status: "ativo" }).eq("id", tenantId);
-  if (tenantError) throw tenantError;
-
   let currentSubscription = existingSubscription;
   if (!currentSubscription) {
-    const { data, error } = await admin.from("subscriptions").select("id,tenant_id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     currentSubscription = data ? { ...data, matchedBy: "customer" } : null;
   }
+
+  if (
+    intent.provisioned_tenant_id
+    && (currentTenantStatus === "cancelado" || currentSubscription?.status === "cancelado")
+  ) {
+    return;
+  }
+
+  const { error: tenantError } = await admin.from("tenants").update({ status: "ativo" }).eq("id", tenantId);
+  if (tenantError) throw tenantError;
 
   const subscriptionValues: Database["public"]["Tables"]["subscriptions"]["Update"] = { status: "ativo", valor: value };
   if (customerId) subscriptionValues.asaas_customer_id = customerId;
@@ -324,10 +354,14 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
   const customerId = customerIdFrom(event);
   let tenantId: string | null = null;
   if (subscriptionId) {
-    const { data: subscription, error } = await admin.from("subscriptions").select("id,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
+    const { data: subscription, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
     if (error) throw error;
     if (subscription) {
       tenantId = subscription.tenant_id;
+      if (
+        subscriptionStatus === "atrasado"
+        && await cancellationIsTerminal(admin, tenantId, subscription.status)
+      ) return;
       const { error: updateError } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", subscription.id);
       if (updateError) throw updateError;
     }
@@ -336,6 +370,10 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
     const existing = await findExistingSubscription(event);
     if (existing) {
       tenantId = existing.tenant_id;
+      if (
+        subscriptionStatus === "atrasado"
+        && await cancellationIsTerminal(admin, tenantId, existing.status)
+      ) return;
       const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", existing.id);
       if (error) throw error;
     }
@@ -346,6 +384,10 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
     const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("tenant_id", tenantId);
     if (error) throw error;
   }
-  const { error: tenantError } = await admin.from("tenants").update({ status: tenantStatus }).eq("id", tenantId);
+  const tenantValues: Database["public"]["Tables"]["tenants"]["Update"] = {
+    status: tenantStatus,
+  };
+  if (tenantStatus === "cancelado") tenantValues.canceled_at = new Date().toISOString();
+  const { error: tenantError } = await admin.from("tenants").update(tenantValues).eq("id", tenantId);
   if (tenantError) throw tenantError;
 }

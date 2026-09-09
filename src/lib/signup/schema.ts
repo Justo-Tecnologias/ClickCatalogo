@@ -3,7 +3,7 @@ import { z } from "zod";
 import { tenantSlugSchema } from "@/lib/tenants/slug";
 
 export const signupSchema = z.object({
-  email: z.email("Digite um e-mail válido.").transform((value) => value.toLowerCase()),
+  email: z.string().trim().pipe(z.email("Digite um e-mail válido.")).transform((value) => value.toLowerCase()),
   nomeLoja: z.string().trim().min(2, "Digite o nome da loja.").max(100),
   privacyAccepted: z.literal(true, { error: "Aceite a política de privacidade." }),
   slug: tenantSlugSchema,
