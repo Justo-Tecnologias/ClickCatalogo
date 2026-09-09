@@ -41,7 +41,7 @@ if (siteUrl.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(siteUrl
 }
 
 const publicPages = [
-  ["/", "Sua loja no WhatsApp"],
+  ["/", "Seu catálogo no WhatsApp. Em breve."],
   ["/cadastro", "Vamos criar sua loja"],
   ["/painel", "Seu catálogo, num clique"],
   ["/auth/confirmar-recuperacao", "Confirme a recuperação"],
