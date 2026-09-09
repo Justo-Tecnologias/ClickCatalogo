@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   Check,
+  CreditCard,
   LayoutTemplate,
   MessageCircle,
   MousePointerClick,
@@ -20,12 +21,13 @@ import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  title: "Em breve: seu catálogo no WhatsApp",
-  description: "O ClickCatálogo está em pré-lançamento. Um produto da Justo Tecnologias para organizar produtos e receber pedidos pelo WhatsApp.",
-  openGraph: { title: "ClickCatálogo — em breve", description: "Um produto da Justo Tecnologias. PRÉ-LANÇAMENTO · EM BREVE" },
+  title: "Catálogo digital para vender pelo WhatsApp",
+  description: "Crie sua loja digital, organize produtos e receba pedidos pelo WhatsApp com o ClickCatálogo, um produto da Justo Tecnologias.",
+  openGraph: {
+    title: "ClickCatálogo — sua loja no WhatsApp",
+    description: "Crie um catálogo profissional, compartilhe seu link e receba pedidos direto no WhatsApp.",
+  },
 };
-
-const interestUrl = "https://wa.me/5517982021405?text=" + encodeURIComponent("Olá! Tenho interesse no lançamento do ClickCatálogo, da Justo Tecnologias. Quero saber mais.");
 
 const steps = [
   {
@@ -67,8 +69,8 @@ export default function HomePage() {
             <Link className={buttonVariants({ size: "sm", variant: "ghost" })} href="/painel">
               Entrar
             </Link>
-            <Link className={buttonVariants({ size: "sm" })} href={interestUrl}>
-              Tenho interesse
+            <Link className={buttonVariants({ size: "sm" })} href="/cadastro">
+              Quero minha loja
             </Link>
           </div>
         </div>
@@ -83,15 +85,15 @@ export default function HomePage() {
               Catálogo simples. Pedido direto.
             </span>
             <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] text-brand-900 sm:text-6xl">
-              Seu catálogo no WhatsApp. Em breve.
+              Sua loja no WhatsApp em minutos
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-[var(--app-foreground-muted)]">
-              Estamos preparando uma forma simples de organizar seus produtos e receber pedidos no
+              Organize seus produtos em um catálogo bonito, compartilhe o link e receba pedidos no
               WhatsApp — sem complicação.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link className={buttonVariants({ size: "lg" })} href={interestUrl}>
-                Tenho interesse
+              <Link className={buttonVariants({ size: "lg" })} href="/cadastro">
+                Quero minha loja
                 <ArrowRight aria-hidden="true" />
               </Link>
               <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="#temas">
@@ -99,7 +101,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm font-medium text-[var(--app-foreground-muted)]">
-              Um produto da Justo Tecnologias. Fale com a gente para saber mais.
+              R$ 27/mês · cancele quando quiser
             </p>
           </div>
 
@@ -112,7 +114,7 @@ export default function HomePage() {
                     <ShoppingBag aria-hidden="true" />
                   </span>
                   <span className="rounded-full bg-[var(--brand-accent)] px-3 py-1 text-xs font-bold text-brand-900">
-                    EM BREVE
+                    LOJA NO AR
                   </span>
                 </div>
                 <h2 className="mt-7 text-2xl font-bold">Seu catálogo profissional</h2>
@@ -122,7 +124,7 @@ export default function HomePage() {
                 <MiniBenefit icon={LayoutTemplate} label="Visual profissional" />
                 <MiniBenefit icon={PackageCheck} label="Itens ilimitados" />
                 <MiniBenefit icon={MessageCircle} label="Pedido no WhatsApp" />
-                <MiniBenefit icon={Sparkles} label="Em pré-lançamento" />
+                <MiniBenefit icon={CreditCard} label="R$ 27/mês" />
               </div>
             </Card>
           </div>
@@ -134,7 +136,7 @@ export default function HomePage() {
           <SectionTitle
             description="Você cuida dos produtos; o ClickCatálogo deixa a loja organizada e leva cada pedido até o seu WhatsApp."
             eyebrow="Como funciona"
-            title="Uma prévia de como vai funcionar"
+            title="Do cadastro ao primeiro pedido em três passos"
           />
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {steps.map(({ description, icon: Icon, number, title }) => (
@@ -170,8 +172,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-4xl">
           <Card className="grid overflow-hidden border-brand-200 lg:grid-cols-[1fr_0.8fr]">
             <div className="p-7 sm:p-10">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">O que estamos preparando</p>
-              <h2 className="mt-2 text-3xl font-bold">Uma vitrine para o seu negócio</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Plano completo</p>
+              <h2 className="mt-2 text-3xl font-bold">Tudo para vender melhor</h2>
               <ul className="mt-7 grid gap-4">
                 {benefits.map((benefit) => (
                   <li className="flex items-center gap-3 text-sm font-medium" key={benefit}>
@@ -184,17 +186,20 @@ export default function HomePage() {
               </ul>
             </div>
             <div className="flex flex-col justify-center bg-brand-900 p-7 text-white sm:p-10">
-              <p className="text-sm text-white/80">Lançamento em preparação</p>
-              <p className="mt-2 text-4xl font-black tracking-tight">Em breve</p>
-              <p className="mt-4 text-sm leading-6 text-white/80">As condições comerciais serão apresentadas no lançamento.</p>
+              <p className="text-sm text-white/80">Por apenas</p>
+              <p className="mt-1 flex items-end gap-2">
+                <span className="text-5xl font-black tracking-tight">R$27</span>
+                <span className="pb-1 text-white/80">/mês</span>
+              </p>
+              <p className="mt-4 text-sm leading-6 text-white/80">Pagamento mensal no cartão de crédito. Cancele quando quiser.</p>
               <Link
                 className={buttonVariants({
                   className: "mt-7 bg-[var(--brand-accent)] text-brand-900 hover:bg-white",
                   size: "lg",
                 })}
-                href={interestUrl}
+                href="/cadastro"
               >
-                Tenho interesse
+                Quero minha loja
                 <ArrowRight aria-hidden="true" />
               </Link>
             </div>
@@ -205,13 +210,13 @@ export default function HomePage() {
       <section className="border-t border-brand-200 bg-brand-100 px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-            Seu próximo catálogo começa aqui
+            Seu próximo pedido pode começar aqui
           </h2>
           <p className="mt-4 text-[var(--app-foreground-muted)]">
-            Conheça a proposta e converse com a Justo Tecnologias sobre o lançamento.
+            Crie seu catálogo, compartilhe o link e deixe seus produtos trabalharem por você.
           </p>
-          <Link className={buttonVariants({ className: "mt-7", size: "lg" })} href={interestUrl}>
-            Tenho interesse
+          <Link className={buttonVariants({ className: "mt-7", size: "lg" })} href="/cadastro">
+            Quero minha loja
             <ArrowRight aria-hidden="true" />
           </Link>
         </div>
