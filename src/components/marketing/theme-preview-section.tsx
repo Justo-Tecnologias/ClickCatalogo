@@ -20,15 +20,19 @@ export function ThemePreviewSection() {
         <div className="mt-4 rounded-lg border border-brand-200/70 bg-brand-50 p-3">
           <p className="text-sm font-semibold text-brand-900">Tema {selected.name}</p>
           <p className="mt-1 text-xs leading-5 text-[var(--app-foreground-muted)]">
-            {selected.description} Você pode trocar quando quiser.
+            {selected.description} Explore os temas. Esta demonstração não envia pedidos.
           </p>
         </div>
       </Card>
       <div className="min-w-0">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">
-          Prévia interativa
+          Prévia interativa · loja demonstrativa
         </p>
-        <div className="overflow-hidden rounded-[var(--radius-panel)]">
+        <div className="overflow-hidden rounded-[var(--radius-panel)]" onClickCapture={(event) => {
+          const target = event.target as HTMLElement;
+          const link = target.closest("a");
+          if (link && /^https?:/.test(link.getAttribute("href") ?? "")) { event.preventDefault(); event.stopPropagation(); }
+        }}>
           <StorePreview catalog={{ ...marketingCatalog, tema: theme }} framed theme={theme} />
         </div>
       </div>
