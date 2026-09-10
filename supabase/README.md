@@ -40,6 +40,8 @@ O arquivo `migrations/202608300008_legal_acceptance_versions.sql` registra qual 
 
 O arquivo `migrations/202608300009_privacy_retention_and_deletion.sql` registra a data real de cancelamento, cria a fila auditável de exclusão, isola as evidências legais mínimas e adiciona as RPCs restritas à `service_role` usadas pela rotina de retenção. Execute-o depois da migration de aceites legais. A migration não apaga dados existentes.
 
+O arquivo `migrations/202609100010_prelaunch_continuity.sql` muda o cancelamento self-service para o fim do período já pago. Ele registra a data limite de acesso, protege o catálogo caso o agendador atrase e cria a RPC idempotente chamada de hora em hora pela Scheduled Function da Netlify. Execute-o depois da migration de retenção, antes do deploy desta versão.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

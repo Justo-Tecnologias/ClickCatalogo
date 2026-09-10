@@ -10,6 +10,11 @@ const checkoutResponseSchema = z.object({
   link: z.url().optional(),
 });
 
+const subscriptionResponseSchema = z.object({
+  id: z.string(),
+  nextDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
 export class AsaasSubscriptionCancellationError extends Error {
   constructor(message: string) {
     super(message);
@@ -74,42 +79,82 @@ export async function createRecurringCheckout(input: CreateCheckoutInput) {
 export async function cancelAsaasSubscription(subscriptionId: string) {
   const env = requireAsaasEnv();
 
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(
+        `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
+            access_token: env.apiKey,
+          },
+          method: "DELETE",
+          signal: AbortSignal.timeout(15_000),
+        },
+      );
+
+      // DELETE é tratado como idempotente: 404 também significa que a
+      // recorrência já não existe, inclusive após uma primeira tentativa cujo
+      // retorno se perdeu por timeout.
+      if (response.ok || response.status === 404) return;
+
+      if (response.status === 401) {
+        throw new AsaasSubscriptionCancellationError(
+          "O Asaas recusou a autenticação. A assinatura não foi cancelada; tente novamente mais tarde.",
+        );
+      }
+
+      throw new AsaasSubscriptionCancellationError(
+        "O Asaas não confirmou o cancelamento. Sua assinatura continua ativa; aguarde um instante e tente novamente.",
+      );
+    } catch (error) {
+      if (error instanceof AsaasSubscriptionCancellationError) throw error;
+      if (attempt === 1) continue;
+
+      throw new AsaasSubscriptionCancellationError(
+        "Não foi possível comunicar com o Asaas. Sua assinatura não foi cancelada; verifique sua conexão e tente novamente.",
+      );
+    }
+  }
+}
+
+export async function getAsaasSubscriptionNextDueDate(subscriptionId: string) {
+  const env = requireAsaasEnv();
+
   try {
     const response = await fetch(
       `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
       {
+        cache: "no-store",
         headers: {
           Accept: "application/json",
           "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
           access_token: env.apiKey,
         },
-        method: "DELETE",
+        method: "GET",
         signal: AbortSignal.timeout(15_000),
       },
     );
 
-    if (response.ok) return;
-
-    if (response.status === 401) {
+    if (!response.ok) {
       throw new AsaasSubscriptionCancellationError(
-        "O Asaas recusou a autenticação. A assinatura não foi cancelada; tente novamente mais tarde.",
+        "Não foi possível confirmar até quando o período atual está pago. A assinatura não foi cancelada.",
       );
     }
 
-    if (response.status === 404) {
+    const parsed = subscriptionResponseSchema.safeParse(await response.json().catch(() => null));
+    if (!parsed.success || parsed.data.id !== subscriptionId) {
       throw new AsaasSubscriptionCancellationError(
-        "A assinatura não foi encontrada no Asaas. Nenhuma alteração foi confirmada; tente novamente mais tarde.",
+        "O Asaas não informou a próxima renovação com segurança. A assinatura não foi cancelada.",
       );
     }
 
-    throw new AsaasSubscriptionCancellationError(
-      "O Asaas não confirmou o cancelamento. Sua assinatura continua ativa; aguarde um instante e tente novamente.",
-    );
+    return parsed.data.nextDueDate;
   } catch (error) {
     if (error instanceof AsaasSubscriptionCancellationError) throw error;
-
     throw new AsaasSubscriptionCancellationError(
-      "Não foi possível comunicar com o Asaas. Sua assinatura não foi cancelada; verifique sua conexão e tente novamente.",
+      "Não foi possível consultar o período pago no Asaas. Verifique sua conexão e tente novamente.",
     );
   }
 }

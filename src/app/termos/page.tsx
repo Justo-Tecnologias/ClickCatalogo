@@ -28,7 +28,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>4. Assinatura, renovação e cancelamento</h2>
-        <p>O plano custa R$ 27 por mês e é renovado de forma recorrente pelo Asaas. Atrasos podem limitar o serviço. O cancelamento pode ser solicitado no painel, interrompe cobranças futuras e deixa a loja pública offline. O cancelamento da cobrança não apaga os dados imediatamente: os dados operacionais permanecem por até 30 dias, e o titular pode antecipar a exclusão para até 15 dias na área de privacidade. Evidências mínimas podem ser preservadas conforme a Política de Privacidade. Valores já pagos e eventuais pedidos de reembolso são analisados conforme a legislação aplicável e as condições da cobrança.</p>
+        <p>O plano custa R$ 27 por mês e é renovado de forma recorrente pelo Asaas. Atrasos podem limitar o serviço. O cancelamento pode ser solicitado no painel e interrompe as cobranças futuras; loja e painel permanecem disponíveis até o fim do período já pago, indicado antes da confirmação. Encerrado esse período, a loja fica offline e começa o prazo operacional de retenção de até 30 dias. O titular pode antecipar a exclusão para até 15 dias na área de privacidade. Evidências mínimas podem ser preservadas conforme a Política de Privacidade. Cancelar a renovação não gera reembolso automático; valores já pagos e pedidos de reembolso são analisados conforme a legislação aplicável e as condições da cobrança.</p>
       </section>
       <section>
         <h2>5. Arrependimento e suporte</h2>

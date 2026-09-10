@@ -12,22 +12,35 @@ import { Input } from "@/components/ui/input";
 type SubscriptionCancellationProps = {
   canCancel: boolean;
   demo: boolean;
+  initialAccessUntil: string | null;
   initialCancelled: boolean;
+  initialScheduled: boolean;
   storeName: string;
 };
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(value));
+}
 
 export function SubscriptionCancellation({
   canCancel,
   demo,
+  initialAccessUntil,
   initialCancelled,
+  initialScheduled,
   storeName,
 }: SubscriptionCancellationProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [cancelled, setCancelled] = useState(initialCancelled);
+  const [accessUntil, setAccessUntil] = useState(initialAccessUntil);
+  const [state, setState] = useState<"active" | "cancelled" | "scheduled">(
+    initialCancelled ? "cancelled" : initialScheduled ? "scheduled" : "active",
+  );
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [syncPending, setSyncPending] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -62,21 +75,29 @@ export function SubscriptionCancellation({
         return;
       }
 
-      setCancelled(true);
-      setSyncPending(Boolean(result.data?.syncPending));
+      setState(result.data?.status === "agendado" ? "scheduled" : "cancelled");
+      setAccessUntil(result.data?.accessUntil ?? null);
       setOpen(false);
       setConfirmation("");
     });
   }
 
-  if (cancelled) {
+  if (state === "cancelled") {
     return (
       <Alert
-        description={syncPending
-          ? "A recorrência foi encerrada no Asaas. A atualização do status local está sendo sincronizada; o prazo de retenção começa após essa confirmação."
-          : "Sua loja pública está pausada, a cobrança recorrente foi encerrada e os dados operacionais ficam preservados por até 30 dias."}
+        description="Sua loja pública está pausada, a cobrança recorrente foi encerrada e os dados operacionais ficam preservados por até 30 dias."
         title="Assinatura cancelada"
         variant="danger"
+      />
+    );
+  }
+
+  if (state === "scheduled" && accessUntil) {
+    return (
+      <Alert
+        description={`A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`}
+        title="Cancelamento agendado"
+        variant="warning"
       />
     );
   }
@@ -97,7 +118,7 @@ export function SubscriptionCancellation({
           <div className="max-w-2xl">
             <p className="font-semibold text-[var(--app-foreground)]">Cancelar assinatura</p>
             <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">
-              Encerra definitivamente a recorrência e deixa a loja pública indisponível. Os dados operacionais permanecem por até 30 dias.
+              Interrompe as próximas renovações. Sua loja e o painel continuam disponíveis até o fim do período já pago.
             </p>
           </div>
           <Button disabled={!canCancel} onClick={() => setOpen(true)} variant="danger">
@@ -133,7 +154,7 @@ export function SubscriptionCancellation({
               </span>
               <div>
                 <h2 className="text-lg font-bold" id="cancel-subscription-title">Confirmar cancelamento</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">Esta ação encerra a assinatura definitivamente.</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">A próxima renovação será interrompida.</p>
               </div>
             </div>
             <Button aria-label="Fechar confirmação" disabled={isPending} onClick={closeDialog} size="icon" variant="ghost">
@@ -149,8 +170,8 @@ export function SubscriptionCancellation({
             }}
           >
             <ul className="grid gap-2 text-sm leading-6 text-[var(--app-foreground-muted)]">
-              <li>• A loja pública ficará indisponível.</li>
-              <li>• Categorias, produtos e imagens serão preservados por até 30 dias.</li>
+              <li>• A loja e o painel continuarão ativos até o fim do período pago.</li>
+              <li>• Depois dessa data, a loja ficará indisponível e começa o prazo de retenção.</li>
               <li>• Novas cobranças recorrentes deixarão de ser geradas.</li>
             </ul>
 

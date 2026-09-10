@@ -38,12 +38,14 @@ export default async function SubscriptionPage() {
           <Card><CardContent className="grid gap-6 p-6 sm:grid-cols-3">
             <div><p className="text-sm text-[var(--app-foreground-muted)]">Status</p><Badge className="mt-2" variant={subscription.status === "ativo" ? "success" : subscription.status === "atrasado" ? "warning" : "danger"}>{subscription.status}</Badge></div>
             <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CreditCard aria-hidden="true" className="size-4" />Valor mensal</p><p className="mt-2 text-xl font-bold">{formatCurrency(Number(subscription.valor))}</p></div>
-            <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CalendarDays aria-hidden="true" className="size-4" />Próxima cobrança</p><p className="mt-2 font-semibold">{subscription.status === "cancelado" ? "Cobrança encerrada" : subscription.next_due_date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${subscription.next_due_date}T12:00:00Z`)) : "A confirmar"}</p></div>
+            <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CalendarDays aria-hidden="true" className="size-4" />Próxima cobrança</p><p className="mt-2 font-semibold">{subscription.status === "cancelado" || subscription.cancel_at_period_end ? "Não haverá nova cobrança" : subscription.next_due_date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${subscription.next_due_date}T12:00:00Z`)) : "A confirmar"}</p></div>
           </CardContent></Card>
           <SubscriptionCancellation
             canCancel={Boolean(subscription.asaas_subscription_id)}
             demo={demo}
+            initialAccessUntil={subscription.access_until}
             initialCancelled={subscription.status === "cancelado"}
+            initialScheduled={subscription.cancel_at_period_end}
             storeName={tenant.nome_loja}
           />
           {subscription.portal_url ? <div><Link className={buttonVariants()} href={subscription.portal_url} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />{subscription.status === "cancelado" ? "Ver última cobrança no Asaas" : "Ver cobrança no Asaas"}</Link></div> : subscription.status !== "cancelado" ? <Alert description="O link da cobrança aparecerá aqui quando for enviado pelo Asaas." title="Cobrança ainda sem link" /> : null}
@@ -52,9 +54,9 @@ export default async function SubscriptionPage() {
               description={(
                 <span>
                   Para dúvidas sobre cobrança ou para solicitar acesso, correção ou exclusão de dados, escreva para{" "}
-                  <a className="font-semibold underline underline-offset-4" href={`mailto:${supportEmail}?subject=Atendimento%20ClickCat%C3%A1logo`}>
+                  <Link className="font-semibold underline underline-offset-4" href="/atendimento?assunto=cobranca">
                     {supportEmail}
-                  </a>.
+                  </Link>.
                 </span>
               )}
               title="Atendimento e privacidade"

@@ -29,6 +29,8 @@ export function SignupForm() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ available: null, checking: false, message: "" });
+  const [accountAction, setAccountAction] = useState<"login" | "resume" | null>(null);
+  const [checkingAccount, setCheckingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,12 +66,29 @@ export function SignupForm() {
       : { available: null, checking: false, message: "" });
   }
 
-  function nextStep(event: React.FormEvent) {
+  async function nextStep(event: React.FormEvent) {
     event.preventDefault();
     const validation = signupSchema.pick({ email: true, nomeLoja: true, privacyAccepted: true, slug: true, termsAccepted: true, whatsapp: true }).safeParse(form);
     if (!validation.success) return setError(validation.error.issues[0]?.message ?? "Revise os dados.");
     if (effectiveSlugStatus.available !== true || effectiveSlugStatus.checking) return setError("Aguarde a confirmação de que o endereço está disponível.");
-    setError(null); setStep(2); window.scrollTo({ top: 0, behavior: "smooth" });
+    setCheckingAccount(true); setAccountAction(null); setError(null);
+    try {
+      const response = await fetch("/api/cadastro/validar-conta", {
+        body: JSON.stringify({ email: form.email }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const result = await response.json() as { action?: "login" | "resume"; error?: string };
+      if (!response.ok) {
+        setAccountAction(result.action ?? null);
+        return setError(result.error ?? "Não foi possível validar a conta agora.");
+      }
+      setStep(2); window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setError("Não foi possível validar a conta agora. Confira sua conexão e tente novamente.");
+    } finally {
+      setCheckingAccount(false);
+    }
   }
 
   async function checkout() {
@@ -91,13 +110,13 @@ export function SignupForm() {
         <Card className="mx-auto w-full max-w-xl p-5 sm:p-7">
           <form className="grid gap-5" onSubmit={nextStep}>
             <div><h1 className="text-2xl font-bold">Vamos criar sua loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Preencha os dados que seus clientes usarão para encontrar e pedir.</p></div>
-            {error ? <Alert title={error} variant="danger" /> : null}
+            {error ? <div className="grid gap-3"><Alert title={error} variant="danger" />{accountAction ? <div className="flex flex-col gap-2 sm:flex-row">{accountAction === "login" ? <><Link className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-brand-700 px-4 text-sm font-semibold text-white" href="/painel">Entrar no painel</Link><Link className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--app-border)] bg-white px-4 text-sm font-semibold" href="/painel/recuperar-senha">Recuperar senha</Link></> : <Link className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-brand-700 px-4 text-sm font-semibold text-white" href="/cadastro/continuar">Continuar cadastro</Link>}</div> : null}</div> : null}
             <Field><FieldLabel htmlFor="nomeLoja">Nome da loja</FieldLabel><Input id="nomeLoja" maxLength={100} onChange={(event) => { update("nomeLoja", event.target.value); if (!slugEdited) updateSlug(event.target.value, false); }} placeholder="Ex.: Sabor da Vila" required value={form.nomeLoja} /></Field>
-            <div className="grid gap-4 sm:grid-cols-2"><Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} onChange={(event) => update("whatsapp", normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(form.whatsapp)} /><FieldDescription>Código do país + DDD + número. Salvamos apenas os dígitos.</FieldDescription></Field><Field><FieldLabel htmlFor="email">E-mail</FieldLabel><Input autoComplete="email" id="email" maxLength={254} onChange={(event) => update("email", event.target.value)} placeholder="voce@empresa.com" required type="email" value={form.email} /><FieldDescription>Este será seu acesso ao painel.</FieldDescription></Field></div>
+            <div className="grid gap-4 sm:grid-cols-2"><Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} onChange={(event) => update("whatsapp", normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(form.whatsapp)} /><FieldDescription>Código do país + DDD + número. Salvamos apenas os dígitos.</FieldDescription></Field><Field><FieldLabel htmlFor="email">E-mail</FieldLabel><Input autoComplete="email" id="email" maxLength={254} onChange={(event) => { update("email", event.target.value); setAccountAction(null); }} placeholder="voce@empresa.com" required type="email" value={form.email} /><FieldDescription>Este será seu acesso ao painel.</FieldDescription></Field></div>
             <Field><FieldLabel htmlFor="slug">Endereço da loja</FieldLabel><div className="flex rounded-[var(--radius-control)] border bg-white focus-within:border-brand-600 focus-within:shadow-[var(--focus-ring)]"><span className="flex items-center border-r px-3 text-xs text-[var(--app-foreground-muted)]">/loja/</span><input aria-describedby="slug-status" aria-invalid={effectiveSlugStatus.available === false && slugTouched} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" id="slug" maxLength={60} onBlur={() => setSlugTouched(true)} onChange={(event) => updateSlug(event.target.value, true)} required value={form.slug} /></div><p aria-live="polite" className={`min-h-4 text-xs ${effectiveSlugStatus.available === true ? "text-[var(--app-success)]" : effectiveSlugStatus.available === false ? "text-[var(--app-danger)]" : "text-[var(--app-foreground-muted)]"}`} id="slug-status">{effectiveSlugStatus.checking ? <LoaderCircle aria-hidden="true" className="mr-1 inline size-3 animate-spin" /> : effectiveSlugStatus.available === true ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3" /> : null}{effectiveSlugStatus.message}</p></Field>
             <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input checked={form.termsAccepted} className="mt-1 size-4 accent-[var(--brand-700)]" onChange={(event) => update("termsAccepted", event.target.checked)} type="checkbox" /><span>Li e aceito os <Link className="-my-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline" href="/termos" rel="noreferrer" target="_blank">termos de uso</Link>.</span></label>
             <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input checked={form.privacyAccepted} className="mt-1 size-4 accent-[var(--brand-700)]" onChange={(event) => update("privacyAccepted", event.target.checked)} type="checkbox" /><span>Li e aceito a <Link className="-my-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline" href="/privacidade" rel="noreferrer" target="_blank">política de privacidade</Link>.</span></label>
-            <Button size="lg" type="submit">Escolher o tema<ArrowRight aria-hidden="true" /></Button>
+            <Button disabled={checkingAccount} size="lg" type="submit">{checkingAccount ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}{checkingAccount ? "Validando seus dados..." : "Escolher o tema"}{!checkingAccount ? <ArrowRight aria-hidden="true" /> : null}</Button>
           </form>
         </Card>
       ) : (

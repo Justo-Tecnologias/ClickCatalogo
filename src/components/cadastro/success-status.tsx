@@ -15,6 +15,7 @@ export function SuccessStatus({ reference }: { reference: string | null }) {
   const [status, setStatus] = useState<StatusResponse>({ status: "pendente" });
   const [copied, setCopied] = useState<string | null>(null);
   const [checkCycle, setCheckCycle] = useState(0);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,11 @@ export function SuccessStatus({ reference }: { reference: string | null }) {
           cache: "no-store",
           signal: AbortSignal.timeout(8_000),
         });
-        const result = await response.json() as StatusResponse;
+        const result = await response.json() as StatusResponse & { error?: string };
+        if (!response.ok && [400, 404].includes(response.status)) {
+          setLookupError(result.error ?? "Não encontramos este cadastro.");
+          return;
+        }
         setStatus(result);
         if (result.ready || result.status === "cancelado" || result.status === "expirado" || result.configured === false) return;
       } catch { /* Uma nova tentativa será feita. */ }
@@ -45,9 +50,10 @@ export function SuccessStatus({ reference }: { reference: string | null }) {
     window.setTimeout(() => setCopied(null), 1800);
   }
 
-  if (!reference) return <><h1 className="sr-only">Pagamento não identificado</h1><Alert description="Volte ao checkout pelo cadastro para concluir sua assinatura." title="Referência do pagamento não encontrada" variant="danger" /></>;
-  if (status.configured === false) return <><h1 className="sr-only">Cadastro indisponível</h1><Alert description="Configure Supabase e Asaas para o webhook confirmar o pagamento e liberar estes links." title="Integrações aguardando as chaves" variant="warning" /></>;
-  if (status.status === "cancelado" || status.status === "expirado") return <><h1 className="sr-only">Checkout encerrado</h1><Alert description="Você pode reiniciar o cadastro e gerar uma nova sessão segura de pagamento." title="Este checkout foi cancelado ou expirou" variant="danger" /></>;
+  if (!reference) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Continue seu acesso</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Não encontramos uma confirmação salva neste navegador. Se você já pagou, aguarde alguns instantes e recupere o acesso usando o mesmo e-mail da assinatura.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/recuperar-senha">Recuperar meu acesso</Link><Link className={buttonVariants({ variant: "secondary" })} href="/cadastro">Voltar ao cadastro</Link></div></Card>;
+  if (lookupError) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Não encontramos este cadastro</h1><Alert className="mt-5" description="Confira se este é o mesmo navegador usado no pagamento. Se o pagamento já foi confirmado, recupere o acesso pelo e-mail da assinatura." title={lookupError} variant="warning" /><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/recuperar-senha">Recuperar meu acesso</Link><Link className={buttonVariants({ variant: "secondary" })} href="/cadastro">Iniciar cadastro</Link></div></Card>;
+  if (status.configured === false) return <><h1 className="sr-only">Cadastro temporariamente indisponível</h1><Alert description="Não foi possível consultar a confirmação agora. Aguarde um instante e tente novamente sem realizar outro pagamento." title="Estamos com uma instabilidade momentânea" variant="warning" /></>;
+  if (status.status === "cancelado" || status.status === "expirado") return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Checkout encerrado</h1><Alert className="mt-5" description="Nenhuma loja foi criada por este checkout. Você pode revisar os dados e gerar uma nova sessão segura de pagamento." title="Este checkout foi cancelado ou expirou" variant="warning" /><Link className={`${buttonVariants()} mt-6`} href="/cadastro">Voltar ao cadastro</Link></Card>;
 
   if (!status.ready || !status.slug) {
     return <Card className="p-7 text-center sm:p-9"><span className="mx-auto grid size-14 place-items-center rounded-full bg-amber-50 text-amber-700"><Clock3 aria-hidden="true" className="size-6" /></span><h1 className="mt-5 text-2xl font-bold">Estamos preparando sua loja</h1><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--app-foreground-muted)]">O checkout foi concluído. A confirmação do Asaas pode levar alguns instantes; esta página atualiza automaticamente.</p><div className="mx-auto mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-[var(--app-surface-muted)]"><div className="h-full w-2/3 animate-pulse rounded-full bg-brand-600" /></div>{timedOut ? <div className="mt-6 grid gap-4"><Alert className="text-left" description="Não faça outro pagamento. Guarde o endereço desta página: ele permite consultar novamente sem depender de atendimento." title="A confirmação está levando mais tempo" variant="warning" /><Button className="mx-auto" onClick={() => { setTimedOut(false); setCheckCycle((cycle) => cycle + 1); }} variant="secondary"><RotateCw aria-hidden="true" />Verificar novamente</Button></div> : null}</Card>;

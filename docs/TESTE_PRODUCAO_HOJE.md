@@ -4,50 +4,49 @@ Roteiro para execução em `https://clickcatalogo.com` em 9 de setembro de 2026.
 
 ## Preparação
 
-- [ ] Abrir uma janela anônima no celular e outra no computador.
-- [ ] Separar um e-mail real que **nunca tenha sido usado** para criar tenant neste Supabase.
-- [ ] Usar dados controlados e reconhecíveis, como nome `Loja Teste Produção` e slug exclusivo.
-- [ ] Confirmar no Asaas que a conta está em **Produção** antes de pagar.
-- [ ] Confirmar que o webhook de Produção está ativo, com fila ativa e URL `https://clickcatalogo.com/api/webhooks/asaas`.
-- [ ] Manter abertos os logs da Netlify, logs de Webhook do Asaas e o Table Editor do Supabase.
-- [ ] Não usar dados de cartão em prints, gravações, logs ou mensagens.
+- [ x] Abrir uma janela anônima no celular e outra no computador.
+- [ x] Separar um e-mail real que **nunca tenha sido usado** para criar tenant neste Supabase.
+- [ x] Usar dados controlados e reconhecíveis, como nome `Loja Teste Produção` e slug exclusivo.
+- [ x] Confirmar no Asaas que a conta está em **Produção** antes de pagar.
+- [ x] Confirmar que o webhook de Produção está ativo, com fila ativa e URL `https://clickcatalogo.com/api/webhooks/asaas`.
+- [ x] Manter abertos os logs da Netlify, logs de Webhook do Asaas e o Table Editor do Supabase.
+- [ x] Não usar dados de cartão em prints, gravações, logs ou mensagens.
 
 ## 1. Site, domínio e navegação pública
 
-- [ ] `https://clickcatalogo.com` abre com HTTPS e sem aviso de certificado.
-- [ ] `https://www.clickcatalogo.com` redireciona para o domínio principal.
-- [ ] Header exibe **ClickCatálogo** corretamente.
-- [ ] **Entrar** abre `/painel`.
-- [ ] **Quero minha loja** abre `/cadastro`.
-- [ ] **Ver os temas** rola até a seção correta.
-- [ ] Prévia de temas troca tema sem quebrar o layout.
-- [ ] Rodapé exibe copyright, Termos, Política de privacidade e Painel.
-- [ ] `/termos` e `/privacidade` possuem conteúdo completo e dados legais corretos.
-- [ ] Não aparece “Em breve”, “Tenho interesse”, domínio antigo ou marca antiga.
-- [ ] Não há texto cortado, rolagem horizontal ou botão sobreposto em 375 px, 768 px, 1024 px e 1440 px.
+- [ x] `https://clickcatalogo.com` abre com HTTPS e sem aviso de certificado.
+- [ x] `https://www.clickcatalogo.com` redireciona para o domínio principal.
+- [ x] Header exibe **ClickCatálogo** corretamente.
+- [ x] **Entrar** abre `/painel`.
+- [ x] **Quero minha loja** abre `/cadastro`.
+- [ x] **Ver os temas** rola até a seção correta.
+- [x ] Prévia de temas troca tema sem quebrar o layout.
+- [ x] Rodapé exibe copyright, Termos, Política de privacidade e Painel.
+- [ x] `/termos` e `/privacidade` possuem conteúdo completo e dados legais corretos.
+- [ x] Não aparece “Em breve”, “Tenho interesse”, domínio antigo ou marca antiga.
+- [ x] Não há texto cortado, rolagem horizontal ou botão sobreposto em 375 px, 768 px, 1024 px e 1440 px.
 
 ## 2. Validações do cadastro sem pagar
 
-- [ ] Tentar avançar com campos vazios e conferir mensagens claras.
-- [ ] WhatsApp incompleto é rejeitado.
-- [ ] E-mail inválido é rejeitado.
-- [ ] Slug curto, inválido ou reservado é rejeitado.
-- [ ] Slug já utilizado é rejeitado antes do checkout.
-- [ ] Termos e privacidade precisam ser aceitos.
-- [ ] Links de Termos e Privacidade abrem o conteúdo correto sem perder os dados digitados.
+- [ x] Tentar avançar com campos vazios e conferir mensagens claras.
+- [ x] WhatsApp incompleto é rejeitado.
+- [ x] E-mail inválido é rejeitado.
+- [ x] Slug curto, inválido ou reservado é rejeitado.
+- [ x] Slug já utilizado é rejeitado antes do checkout.
+- [ x] Termos e privacidade precisam ser aceitos.
+- [ x] Links de Termos e Privacidade abrem o conteúdo correto sem perder os dados digitados.
 - [ ] Etapa 2 mostra nome, WhatsApp, slug e tema digitados corretamente na prévia.
 - [ ] Voltar para a etapa 1 preserva os dados.
 - [ ] O texto informa naturalmente pagamento mensal no cartão de crédito e cobrança segura pelo Asaas.
 - [ ] O botão final mostra **Continuar para pagamento**.
 
-## 3. Cobrança real controlada de R$ 5
+## 3. Cobrança real controlada de R$ 27
 
 Executar apenas uma vez com o e-mail novo preparado acima.
 
 - [ ] Preencher `/cadastro` com dados controlados e slug único.
 - [ ] Clicar em **Continuar para pagamento** uma única vez.
-- [ ] Netlify está temporariamente com `ASAAS_CHECKOUT_TEST_VALUE=5` somente durante esta validação.
-- [ ] Checkout abre no domínio oficial do Asaas e mostra o item **ClickCatálogo — teste**, recorrência mensal e valor de R$ 5.
+- [ ] Checkout abre no domínio oficial do Asaas e mostra o item **Assinatura ClickCatálogo**, recorrência mensal e valor oficial de R$ 27.
 - [ ] Realizar o pagamento com um cartão real autorizado pelo titular.
 - [ ] Não atualizar nem reenviar o pagamento enquanto o Asaas processa.
 - [ ] Após aprovação, retornar para `/cadastro/sucesso?ref=...` no domínio ClickCatálogo.
@@ -59,7 +58,7 @@ Executar apenas uma vez com o e-mail novo preparado acima.
 ### Conferência no Asaas
 
 - [ ] Cliente foi criado uma única vez.
-- [ ] Assinatura mensal de R$ 5 aparece ativa.
+- [ ] Assinatura mensal de R$ 27 aparece ativa.
 - [ ] Cobrança aparece confirmada/recebida.
 - [ ] Webhook correspondente aparece entregue com resposta HTTP 2xx.
 - [ ] Não há eventos presos, falhas consecutivas ou assinatura duplicada.
@@ -190,16 +189,17 @@ Não criar uma segunda cobrança real apenas para testar duplicação.
 
 ## 13. Cancelamento real — executar por último
 
-Esta ação encerra a recorrência e deixa a loja indisponível. Só faça na conta controlada quando todos os testes anteriores terminarem.
+Esta ação encerra a próxima recorrência, mas preserva loja e painel até o fim do período já pago. Só faça na conta controlada quando todos os testes anteriores terminarem.
 
 - [ ] Abrir cancelamento e conferir que a tela exige o nome exato da loja.
 - [ ] Nome incorreto não cancela.
 - [ ] Confirmar com o nome correto uma única vez.
-- [ ] Painel mostra assinatura cancelada.
+- [ ] Painel mostra **Cancelamento agendado**, a data final de acesso e informa que não haverá nova cobrança.
 - [ ] Asaas mostra assinatura cancelada e não agenda nova recorrência.
-- [ ] `subscriptions.status` fica `cancelado`.
-- [ ] `tenants.status` fica `cancelado` e `canceled_at` é preenchido.
-- [ ] Loja pública passa a mostrar indisponibilidade sem revelar motivo financeiro.
+- [ ] `subscriptions.status` continua `ativo`, `cancel_at_period_end=true` e `access_until` corresponde à próxima renovação cancelada.
+- [ ] `tenants.status` continua `ativo` e `canceled_at` permanece vazio durante o período já pago.
+- [ ] Loja pública e painel continuam disponíveis durante o período já pago.
+- [ ] Scheduled Function `finalize-subscription-cancellations` aparece como agendada na Netlify; no vencimento ela muda assinatura e tenant para `cancelado`, preenche `canceled_at` e a loja fica indisponível.
 - [ ] Reentrega de evento financeiro antigo não reativa tenant cancelado.
 - [ ] Área de privacidade mostra o prazo de retenção e a opção de antecipação conforme implementado.
 - [ ] Não executar o expurgo real de dados durante este teste, a menos que exista uma conta descartável e uma auditoria separada.
@@ -215,8 +215,8 @@ Esta ação encerra a recorrência e deixa a loja indisponível. Só faça na co
 - [ ] Registrar o resultado da cobrança e do cancelamento em `docs/PRE_LANCAMENTO.md`.
 - [ ] Configurar alertas de consumo/orçamento em Netlify, Supabase, Resend e Asaas.
 - [ ] Rotacionar e inutilizar a antiga chave Sandbox do Asaas que foi compartilhada durante o desenvolvimento.
-- [ ] Remover `ASAAS_CHECKOUT_TEST_VALUE` da Netlify e de `.env.local`.
-- [ ] Republicar uma única vez e abrir um checkout sem pagar para confirmar o retorno ao valor oficial de R$ 27.
+- [ ] Confirmar que a variável antiga `ASAAS_CHECKOUT_TEST_VALUE` não existe na Netlify nem no `.env.local`; esta versão ignora qualquer valor de teste.
+- [ ] Republicar uma única vez e abrir um checkout sem pagar para confirmar o valor oficial de R$ 27.
 - [ ] Cancelar/expirar esse checkout de conferência sem efetuar uma segunda cobrança.
 - [ ] Fazer backup conforme `docs/OPERACAO.md` antes de alterações estruturais futuras.
 

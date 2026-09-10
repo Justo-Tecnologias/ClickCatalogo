@@ -8,6 +8,10 @@ import { enforceSameOrigin } from "@/lib/security/same-origin";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/documents";
 import { expireStaleSignupIntents } from "@/lib/signup/intents";
 import { signupSchema } from "@/lib/signup/schema";
+import {
+  SIGNUP_RESUME_COOKIE_NAME,
+  signupResumeCookieOptions,
+} from "@/lib/signup/resume";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function todayInBrazil() {
@@ -97,7 +101,13 @@ export async function POST(request: Request) {
       .update({ asaas_checkout_id: checkout.id })
       .eq("external_reference", intent.external_reference);
     if (checkoutUpdateError) throw checkoutUpdateError;
-    return NextResponse.json({ checkoutUrl: checkout.link });
+    const response = NextResponse.json({ checkoutUrl: checkout.link });
+    response.cookies.set(
+      SIGNUP_RESUME_COOKIE_NAME,
+      intent.external_reference,
+      signupResumeCookieOptions(),
+    );
+    return response;
   } catch (error) {
     const { error: cancelError } = await admin.from("signup_intents").update({ status: "cancelado" }).eq("external_reference", intent.external_reference);
     if (cancelError) console.error("Falha ao cancelar intenção após erro no checkout:", cancelError.message);

@@ -1,6 +1,6 @@
 # Planejamento de evolução do ClickCatálogo
 
-Atualizado em 9 de setembro de 2026. Este documento registra ideias aprovadas para planejamento. Nenhum item abaixo está autorizado para publicação automática; cada fase deve passar por implementação, validação local e uma única release em lote.
+Atualizado em 10 de setembro de 2026. Este documento registra ideias aprovadas para planejamento. Nenhum item abaixo está autorizado para publicação automática; cada fase deve passar por implementação, validação local e uma única release em lote.
 
 ## Objetivo
 
@@ -37,6 +37,155 @@ O ClickCatálogo deve preservar identidade e escopo próprios. Não copiar texto
 | P3 | FAQ e página `/como-funciona` | Conversão e redução de dúvidas | Conteúdo revisado e componentes existentes |
 | P4 | Central `/ajuda` com guias por tarefa | Menos suporte e melhor ativação | Estrutura de conteúdo, busca futura |
 | P5 | Blog editorial | Aquisição orgânica de longo prazo | Calendário, revisão e responsabilidade de manutenção |
+
+## Triagem de produto antes do lançamento
+
+Esta triagem separa correções necessárias para vender com segurança de melhorias que podem entrar depois. O objetivo é evitar transformar o pré-lançamento em uma reescrita, sem deixar falhas de cobrança, recuperação de acesso ou confiança visual chegarem ao cliente.
+
+### Agora — antes de receber clientes reais
+
+#### 1. Retomada segura depois do pagamento
+
+**Estado atual:** a confirmação pode ser retomada enquanto o cliente conservar a URL `/cadastro/sucesso?ref=...`. A referência consulta a intenção no servidor e, depois do webhook, libera a criação da senha. Se a pessoa perder essa URL, o usuário já provisionado pode recuperar o acesso pelo fluxo de senha do painel, mas essa alternativa não está explicada na jornada de compra.
+
+**Correção proposta:**
+
+- manter a referência de retomada em cookie seguro e de curta duração antes de redirecionar ao Asaas;
+- criar uma entrada **Continuar cadastro** que não dependa de conhecer a URL com `ref`;
+- depois do pagamento confirmado, permitir recuperar/criar a senha pelo e-mail da contratação;
+- mostrar claramente que um pagamento já identificado não deve ser repetido;
+- futuramente enviar confirmação transacional com os links da loja e do painel, sem tornar o e-mail o único meio de recuperação;
+- testar queda de internet, aba fechada antes do webhook, retorno em outro navegador e webhook atrasado.
+
+A referência é uma credencial de retomada e não deve aparecer em logs públicos, analytics ou mensagens de erro.
+
+#### 2. Intenções de cadastro e retorno do Asaas
+
+**Estado atual:** é correto salvar `signup_intents` antes de abrir o checkout. O registro é necessário para ligar o pagamento aos dados da loja, impedir duplicação, validar aceites legais e processar reentregas do webhook com idempotência. Atualmente o checkout expira em 60 minutos, enquanto a intenção pendente possui expiração defensiva de 24 horas. Voltar para `/cadastro` abre um formulário vazio, embora a reserva continue ativa.
+
+**Correção proposta:**
+
+- não apagar nem recriar a intenção quando o cliente volta do Asaas;
+- reconhecer a intenção do navegador e oferecer **Retomar pagamento** ou **Revisar cadastro**;
+- exibir prazo e estado reais: pendente, pago, expirado ou cancelado;
+- avaliar alinhar a reserva pendente à expiração do checkout mais uma margem de segurança, em vez de bloquear e-mail e slug por 24 horas;
+- manter limpeza e retenção posteriores para auditoria, sem expor a tabela ao cliente.
+
+#### 3. Verificação antecipada do e-mail
+
+**Estado atual:** formato do e-mail, slug e aceites são validados na primeira etapa, mas a existência de outra loja para o e-mail só é consultada no servidor ao criar o checkout, depois da escolha do tema.
+
+**Correção proposta:** consultar a disponibilidade ao avançar da primeira etapa, com rate limit e mensagem que leve diretamente a **Entrar** ou **Recuperar senha**. A checagem final do checkout deve continuar existindo e ser a validação autoritativa, pois uma pré-validação no navegador pode ficar desatualizada. A resposta deve ser desenhada para não facilitar enumeração automatizada de contas.
+
+#### 4. Cancelamento no fim do período pago
+
+**Estado atual e problema:** o cancelamento atual remove a recorrência no Asaas e marca assinatura e tenant como `cancelado` imediatamente. A loja sai do ar no mesmo momento, mesmo que o mês tenha acabado de ser pago.
+
+**Regra recomendada para lançamento:** cancelar significa impedir a próxima renovação e manter painel e loja ativos até o fim do período já pago. Na interface, mostrar **Cancelamento agendado**, a data final de acesso e a confirmação de que não haverá nova cobrança.
+
+Isso exige uma alteração coordenada:
+
+- registrar `cancel_at_period_end` e `access_until` (ou estado equivalente) na assinatura;
+- manter o tenant ativo até `access_until`;
+- impedir que `SUBSCRIPTION_DELETED` derrube imediatamente uma loja com período pago vigente;
+- executar uma rotina idempotente que desative a loja quando o período terminar;
+- permitir desfazer o cancelamento somente se o Asaas suportar retomada segura; caso contrário, orientar nova assinatura;
+- separar cancelamento de renovação, pedido de reembolso e exclusão de dados;
+- atualizar assinatura, privacidade, termos, FAQ e testes de webhook com a mesma regra.
+
+Este item é bloqueador para a primeira venda real porque muda o direito de uso do período já cobrado.
+
+#### 5. Atendimento funcional e consistente
+
+**Estado atual:** **Atendimento** e **Solicitar atendimento sobre dados** apontam para um endereço `mailto:`. Eles dependem de o dispositivo possuir um aplicativo de e-mail configurado; quando não possui, o clique parece não funcionar.
+
+**Correção proposta:** centralizar os dois caminhos em `/atendimento`, mostrando o e-mail, botão para copiar e botão para abrir o aplicativo de e-mail. Se for adotado WhatsApp de suporte, ele deve ser um canal oficial separado do WhatsApp das lojas. Pedidos de LGPD devem continuar identificados e auditáveis; não prometer atendimento em prazo que ainda não exista.
+
+#### 6. Ícone da aplicação
+
+**Estado atual:** existe somente `src/app/favicon.ico`, criado junto à base inicial e ainda percebido como o símbolo padrão da tecnologia.
+
+**Correção proposta:** criar um conjunto próprio e simples do ClickCatálogo (`favicon.ico`, `icon.png`/`icon.svg` compatível, `apple-icon.png` e manifesto apenas se houver PWA). Validar cache, aba do navegador, favorito, Android e iOS. A marca deve continuar legível em 16 × 16 px e não depender do nome por extenso.
+
+### Logo depois do lançamento controlado
+
+#### 7. Formatação monetária no cadastro de produto
+
+Transformar o campo em entrada brasileira de moeda: exibir `R$ 1.234,56`, aceitar digitação por centavos e normalizar uma única vez antes da Server Action. O servidor continua validando limites e não confia no texto formatado. Idealmente, valores passam a ser tratados internamente em centavos; enquanto o banco permanecer `numeric(10,2)`, cobrir conversões e arredondamento com testes.
+
+#### 8. Troca do endereço da loja
+
+Não fazer uma simples atualização de `tenants.slug`, pois links já enviados e resultados de busca quebrariam. Planejar:
+
+- confirmação explícita, validação de nomes reservados e limite de frequência;
+- alteração atômica e única por tenant;
+- tabela de histórico com `old_slug`, `tenant_id`, `redirect_until`, `released_at` e motivo da alteração;
+- somente o endereço atual e, no máximo, o endereço imediatamente anterior podem responder pela loja;
+- redirecionamento temporário do endereço anterior para o atual por 90 dias;
+- depois do redirecionamento, quarentena de 30 dias exibindo uma página neutra de endereço alterado, sem revelar dados privados;
+- liberação automática do slug para outro cliente após 120 dias, mantendo o registro apenas para auditoria, sem continuar reservando o nome;
+- ao ser liberado ou reutilizado, qualquer redirecionamento antigo deve estar definitivamente desativado;
+- atualização de URL canônica, sitemap e Open Graph no momento da alteração;
+- intervalo mínimo de 90 dias entre trocas, evitando acúmulo de aliases ativos e abuso;
+- revalidação do catálogo e dos cartões sociais.
+
+Essa política aceita um risco residual inevitável: depois que um slug é liberado e reutilizado, links muito antigos poderão abrir a nova loja. Reserva permanente eliminaria esse risco, mas bloquearia nomes úteis para sempre. O período de 120 dias cria uma transição previsível sem transformar o histórico em posse vitalícia do endereço. Os prazos devem ficar configuráveis no código para ajuste futuro com base no uso real.
+
+#### 9. Página individual de produto
+
+Criar `/loja/[slug]/produto/[produtoSlug]` ou rota equivalente estável, sem remover os cards e o carrinho atuais. A página deve ter imagem maior, nome, preço, descrição completa, variações, loja de origem, adicionar ao carrinho, pedir pelo WhatsApp e compartilhar. Incluir metadados e Open Graph por produto, fallback de imagem, URL canônica e regra para produto oculto/inexistente.
+
+A referência analisada usa páginas individuais principalmente para busca e compartilhamento. O ClickCatálogo deve manter o pedido consolidado pelo WhatsApp e não copiar layout, textos ou recursos de orçamento que pertencem a outro produto.
+
+#### 10. Analytics antes de mídia paga
+
+Instrumentar primeiro o funil do próprio ClickCatálogo, sem enviar e-mail, WhatsApp, nome da loja, conteúdo do carrinho ou outros dados pessoais:
+
+- landing → cadastro;
+- etapa 1 → tema;
+- tema → checkout;
+- checkout confirmado;
+- senha configurada e primeiro acesso;
+- primeira categoria, primeiro produto e primeira publicação;
+- compartilhamento da loja;
+- abertura do carrinho e clique para enviar pedido no WhatsApp;
+- cancelamento iniciado e concluído.
+
+Escolher GA4 e Meta Pixel somente após definir consentimento, atualizar a Política de Privacidade e implementar Consent Mode/camada equivalente quando aplicável. Não registrar **compra de produto** no catálogo, pois o clique no WhatsApp não comprova que a venda foi concluída. O Meta Pixel torna-se prioridade antes de campanha paga no Facebook ou Instagram, não antes do lançamento orgânico controlado.
+
+### Evolução e experimentos posteriores
+
+#### 11. Banner promocional
+
+O banner de capa da loja já existe e é editável no painel. Uma nova **área de banner** deve significar promoção interna do catálogo, separada da capa. Começar com um único banner ativo — imagem, texto alternativo, link opcional, datas de início/fim e opção de ocultar — antes de considerar carrossel. Preservar desempenho mobile, proporção fixa e contraste.
+
+#### 12. Login com Google
+
+Planejar OAuth pelo Supabase, com projeto no Google Cloud, tela de consentimento, Client ID/Secret, callback PKCE e URLs autorizadas. O ponto crítico não é o botão: é vincular com segurança uma conta Google a um usuário que já possui senha e o mesmo e-mail, sem criar segundo tenant nem perder o vínculo da assinatura. Testar conta existente, conta nova, recusa de consentimento, e-mail sem correspondência e recuperação de acesso.
+
+#### 13. Teste gratuito sem cartão
+
+Tratar como experimento comercial, não como simples desconto. Antes de escolher 3 ou 7 dias, medir abandono no checkout e ativação dos primeiros clientes. A implementação exigiria estado `trialing`, `trial_ends_at`, rotina de expiração, regra de visibilidade da loja, conversão para assinatura, avisos, prevenção de abuso e atualização legal. Uma alternativa de menor risco é permitir montar a loja gratuitamente e exigir assinatura apenas para publicá-la.
+
+#### 14. Integração com Instagram
+
+Separar três níveis:
+
+1. **Divulgação simples:** link da loja na bio, compartilhamento e Open Graph de loja/produto;
+2. **Medição:** Meta Pixel do próprio ClickCatálogo, com consentimento e sem misturar dados dos tenants;
+3. **Instagram Shopping real:** sincronização de catálogo via ecossistema Meta, autenticação do lojista, tokens renováveis, IDs estáveis de produto, disponibilidade/estoque, exclusões, revisão do aplicativo e conformidade com as regras vigentes da Meta.
+
+O nível 1 vem junto das páginas compartilháveis. O nível 3 fica para depois da página individual de produto, da identidade estável dos itens e da validação de demanda, pois adiciona suporte operacional e dependência de aprovação externa.
+
+## Ordem prática atualizada
+
+| Momento | Pacote | Condição de saída |
+|---|---|---|
+| Antes da primeira venda | Retomada pós-pagamento, validação antecipada de conta, cancelamento no fim do período, atendimento e favicon | Fluxos de falha e cobrança testados sem perda de acesso |
+| Lançamento controlado | Preço oficial restaurado, checklist financeiro completo e divulgação orgânica limitada | Uma contratação e um cancelamento reais auditados |
+| Primeira melhoria | Moeda, compartilhar + Open Graph, analytics básico e página de produto | Eventos sem PII e previews sociais validados |
+| Crescimento | Slug com redirecionamento, vitrine, FAQ/ajuda e banner promocional | Métricas e suporte justificam cada recurso |
+| Experimentos | Google Login, teste grátis e integração completa com Instagram | Hipótese, custo operacional e critério de sucesso definidos |
 
 ## Fase P1 — Compartilhar loja e apresentação social
 

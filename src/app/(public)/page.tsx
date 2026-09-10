@@ -237,7 +237,7 @@ export default function HomePage() {
             <FooterLink href="/termos">Termos de uso</FooterLink>
             <FooterLink href="/privacidade">Política de privacidade</FooterLink>
             {legalIdentity.supportEmail ? (
-              <FooterLink href={`mailto:${legalIdentity.supportEmail}`}>Atendimento</FooterLink>
+              <FooterLink href="/atendimento">Atendimento</FooterLink>
             ) : null}
             <FooterLink href="/painel">Entrar no painel</FooterLink>
           </nav>

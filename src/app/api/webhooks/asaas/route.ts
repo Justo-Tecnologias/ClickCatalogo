@@ -55,9 +55,10 @@ function subscriptionIdFrom(event: WebhookEvent) {
 }
 
 function nextDueDateFrom(event: WebhookEvent) {
-  return textValue(event.payment, "nextDueDate", "dueDate")
-    ?? textValue(event.subscription, "nextDueDate")
-    ?? textValue(recordValue(event.checkout, "subscription"), "nextDueDate");
+  return textValue(event.subscription, "nextDueDate")
+    ?? textValue(recordValue(event.checkout, "subscription"), "nextDueDate")
+    ?? textValue(event.payment, "nextDueDate")
+    ?? textValue(event.payment, "dueDate");
 }
 
 function validToken(received: string | null) {
@@ -182,11 +183,19 @@ async function findIntent(event: WebhookEvent): Promise<SignupIntent | null> {
 }
 
 type ExistingSubscription = {
+  access_until: string | null;
+  cancel_at_period_end: boolean;
   id: string;
   matchedBy: "customer" | "subscription";
   status: "ativo" | "atrasado" | "cancelado";
   tenant_id: string;
 };
+
+function scheduledCancellationStillHasAccess(subscription: ExistingSubscription) {
+  return subscription.cancel_at_period_end
+    && Boolean(subscription.access_until)
+    && new Date(subscription.access_until!).getTime() > Date.now();
+}
 
 async function cancellationIsTerminal(
   admin: ReturnType<typeof createAdminClient>,
@@ -210,7 +219,7 @@ async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSu
   const subscriptionId = subscriptionIdFrom(event);
 
   if (subscriptionId) {
-    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until").eq("asaas_subscription_id", subscriptionId).maybeSingle();
     if (error) throw error;
     if (data) return { ...data, matchedBy: "subscription" };
   }
@@ -218,7 +227,7 @@ async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSu
   const customerId = customerIdFrom(event);
   if (!customerId) return null;
 
-  const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
+  const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
   if (error) throw error;
   if (!data?.length) return null;
 
@@ -313,7 +322,7 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
 
   let currentSubscription = existingSubscription;
   if (!currentSubscription) {
-    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     currentSubscription = data ? { ...data, matchedBy: "customer" } : null;
   }
@@ -354,10 +363,11 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
   const customerId = customerIdFrom(event);
   let tenantId: string | null = null;
   if (subscriptionId) {
-    const { data: subscription, error } = await admin.from("subscriptions").select("id,status,tenant_id").eq("asaas_subscription_id", subscriptionId).maybeSingle();
+    const { data: subscription, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until").eq("asaas_subscription_id", subscriptionId).maybeSingle();
     if (error) throw error;
     if (subscription) {
       tenantId = subscription.tenant_id;
+      if (scheduledCancellationStillHasAccess({ ...subscription, matchedBy: "subscription" })) return;
       if (
         subscriptionStatus === "atrasado"
         && await cancellationIsTerminal(admin, tenantId, subscription.status)
@@ -370,6 +380,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
     const existing = await findExistingSubscription(event);
     if (existing) {
       tenantId = existing.tenant_id;
+      if (scheduledCancellationStillHasAccess(existing)) return;
       if (
         subscriptionStatus === "atrasado"
         && await cancellationIsTerminal(admin, tenantId, existing.status)

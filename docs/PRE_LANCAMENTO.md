@@ -16,8 +16,8 @@ Atualizado em 6 de setembro de 2026. Marque cada item somente depois de validar 
 - [x] Remover o nome antigo do webhook; configuração auditada como `ClickCatalogo Sandbox` no painel do Asaas.
 - [x] Criar a API Key e o webhook no Asaas Produção, mantendo-os secretos e o webhook inativo até a troca final da Netlify.
 - [x] Trocar `ASAAS_API_KEY` pela chave de Produção e manter `ASAAS_WEBHOOK_TOKEN` secreto.
-- [ ] Fazer uma cobrança real controlada de R$ 5 com `ASAAS_CHECKOUT_TEST_VALUE=5`, conferir webhook, tenant, assinatura e acesso.
-- [ ] Remover `ASAAS_CHECKOUT_TEST_VALUE` da Netlify, republicar e confirmar que um novo checkout mostra o valor oficial de R$ 27 antes de divulgar o serviço.
+- [ ] Abrir um checkout de produção sem concluir o pagamento e confirmar o valor oficial de R$ 27.
+- [ ] Fazer uma contratação real controlada, conferir webhook, tenant, assinatura e acesso; eventual estorno deve ser tratado diretamente no Asaas.
 - [ ] Cancelar uma assinatura controlada e conferir Asaas, Supabase, painel e loja pública.
 
 ## E-mail e acesso

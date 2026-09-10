@@ -25,6 +25,7 @@ from information_schema.routines
 where routine_schema = 'public'
   and routine_name in (
     'expire_stale_signup_intents',
+    'finalize_due_subscription_cancellations',
     'consume_api_rate_limit',
     'email_has_tenant',
     'get_public_catalog',
@@ -60,6 +61,11 @@ where table_schema = 'public'
   and (
     (table_name = 'signup_intents' and column_name in ('terms_version', 'privacy_version'))
     or (table_name = 'tenants' and column_name = 'canceled_at')
+    or (table_name = 'subscriptions' and column_name in (
+      'cancel_at_period_end',
+      'cancellation_requested_at',
+      'access_until'
+    ))
   )
 order by table_name, column_name;
 

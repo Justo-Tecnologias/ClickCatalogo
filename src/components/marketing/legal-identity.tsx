@@ -1,4 +1,5 @@
 import { getLegalIdentity } from "@/lib/legal/identity";
+import Link from "next/link";
 
 export function LegalIdentityDetails() {
   const identity = getLegalIdentity();
@@ -28,9 +29,9 @@ export function LegalIdentityDetails() {
       <p><strong className="text-[var(--app-foreground)]">Endereço:</strong> {identity.address}</p>
       <p>
         <strong className="text-[var(--app-foreground)]">Atendimento:</strong>{" "}
-        <a className="font-semibold text-brand-700 underline underline-offset-4" href={`mailto:${identity.supportEmail}`}>
+        <Link className="font-semibold text-brand-700 underline underline-offset-4" href="/atendimento">
           {identity.supportEmail}
-        </a>
+        </Link>
       </p>
     </address>
   );

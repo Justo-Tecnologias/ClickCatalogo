@@ -334,8 +334,11 @@ export type Database = {
       };
       subscriptions: {
         Row: {
+          access_until: string | null;
           asaas_customer_id: string | null;
           asaas_subscription_id: string | null;
+          cancel_at_period_end: boolean;
+          cancellation_requested_at: string | null;
           created_at: string;
           id: string;
           next_due_date: string | null;
@@ -346,8 +349,11 @@ export type Database = {
           valor: number;
         };
         Insert: {
+          access_until?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          cancel_at_period_end?: boolean;
+          cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
@@ -358,8 +364,11 @@ export type Database = {
           valor?: number;
         };
         Update: {
+          access_until?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          cancel_at_period_end?: boolean;
+          cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
@@ -450,6 +459,10 @@ export type Database = {
       };
       expire_stale_signup_intents: {
         Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      finalize_due_subscription_cancellations: {
+        Args: { p_now?: string };
         Returns: number;
       };
       get_public_catalog: {

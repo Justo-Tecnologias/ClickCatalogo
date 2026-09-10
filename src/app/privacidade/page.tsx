@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>7. Retenção e segurança</h2>
-        <p>Enquanto a assinatura estiver ativa, mantemos os dados necessários para prestar o serviço. Após o cancelamento, catálogo, produtos, imagens, configurações e acesso permanecem por até 30 dias para encerramento operacional. O titular autenticado pode antecipar esse prazo para até 15 dias na tela Privacidade do painel.</p>
+        <p>Enquanto a assinatura estiver ativa, inclusive durante o período já pago após o cancelamento da próxima renovação, mantemos os dados necessários para prestar o serviço. Quando esse período termina, a loja fica indisponível e catálogo, produtos, imagens, configurações e acesso permanecem por até 30 dias para encerramento operacional. O titular autenticado pode antecipar esse prazo para até 15 dias na tela Privacidade do painel.</p>
         <p>Intenções de cadastro canceladas ou expiradas são eliminadas depois de 90 dias. Payloads de webhooks processados com sucesso são mantidos por 180 dias; falhas pendentes ficam preservadas até serem resolvidas. Registros técnicos de limitação de abuso expiram em um dia.</p>
         <p>Depois da exclusão operacional, preservamos por cinco anos, contados do arquivamento, somente evidências mínimas de contratação, aceite dos documentos e pagamento, sem conteúdo do catálogo, imagens, WhatsApp, endereço ou credenciais. Esse conjunto isolado existe para obrigações legais, prevenção de fraude e exercício regular de direitos. Ao fim do prazo, ele também é eliminado. Aplicamos isolamento entre lojas, controle de acesso, validação de origem, limitação de abuso e chaves exclusivas de servidor.</p>
       </section>

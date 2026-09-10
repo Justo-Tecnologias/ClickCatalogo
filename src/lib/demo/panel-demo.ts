@@ -41,8 +41,11 @@ export const DEMO_PRODUCTS: Database["public"]["Tables"]["products"]["Row"][] = 
 ];
 
 export const DEMO_SUBSCRIPTION: Database["public"]["Tables"]["subscriptions"]["Row"] = {
+  access_until: null,
   asaas_customer_id: "cus_demo",
   asaas_subscription_id: "sub_demo",
+  cancel_at_period_end: false,
+  cancellation_requested_at: null,
   created_at: createdAt,
   id: "00000000-0000-4000-8000-000000000301",
   next_due_date: "2026-08-19",

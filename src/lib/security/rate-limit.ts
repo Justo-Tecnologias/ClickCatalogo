@@ -26,6 +26,7 @@ const globalStore = globalThis as GlobalRateLimitStore;
 const store = globalStore.__clickCatalogoRateLimitStore ??= new Map<string, RateLimitEntry>();
 
 export const PUBLIC_API_RATE_LIMITS = {
+  accountAvailability: { limit: 12, scope: "account-availability", windowMs: 10 * 60 * 1000 },
   checkout: { limit: 5, scope: "checkout", windowMs: 10 * 60 * 1000 },
   passwordSetup: { limit: 10, scope: "password-setup", windowMs: 15 * 60 * 1000 },
   slugAvailability: { limit: 60, scope: "slug-availability", windowMs: 60 * 1000 },

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
+import { SIGNUP_RESUME_COOKIE_NAME } from "@/lib/signup/resume";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const passwordSetupSchema = z.object({
@@ -87,5 +88,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não foi possível criar a senha agora. Tente novamente." }, { status: 500 });
   }
 
-  return NextResponse.json({ configured: true });
+  const response = NextResponse.json({ configured: true });
+  response.cookies.set(SIGNUP_RESUME_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }

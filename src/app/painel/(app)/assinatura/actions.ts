@@ -6,9 +6,11 @@ import { z } from "zod";
 import {
   AsaasSubscriptionCancellationError,
   cancelAsaasSubscription,
+  getAsaasSubscriptionNextDueDate,
 } from "@/lib/asaas/client";
 import type { ActionResult } from "@/lib/actions/result";
 import { requireTenant } from "@/lib/auth/session";
+import { brazilDateStartAsIso } from "@/lib/billing/access-period";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const cancellationSchema = z.object({
@@ -16,8 +18,8 @@ const cancellationSchema = z.object({
 });
 
 type CancellationResult = {
-  status: "cancelado";
-  syncPending?: boolean;
+  accessUntil?: string;
+  status: "cancelado" | "agendado";
 };
 
 export async function cancelSubscriptionAction(
@@ -41,7 +43,7 @@ export async function cancelSubscriptionAction(
     const admin = createAdminClient();
     const { data: subscription, error: subscriptionError } = await admin
       .from("subscriptions")
-      .select("id,status,asaas_subscription_id")
+      .select("id,status,asaas_subscription_id,cancel_at_period_end,access_until")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -59,6 +61,13 @@ export async function cancelSubscriptionAction(
       return { data: { status: "cancelado" }, ok: true };
     }
 
+    if (subscription.cancel_at_period_end && subscription.access_until) {
+      return {
+        data: { accessUntil: subscription.access_until, status: "agendado" },
+        ok: true,
+      };
+    }
+
     if (!subscription.asaas_subscription_id) {
       return {
         error: "Esta assinatura ainda não possui o identificador necessário do Asaas. O cancelamento não foi realizado.",
@@ -66,30 +75,56 @@ export async function cancelSubscriptionAction(
       };
     }
 
-    await cancelAsaasSubscription(subscription.asaas_subscription_id);
+    const nextDueDate = await getAsaasSubscriptionNextDueDate(subscription.asaas_subscription_id);
+    const accessUntil = brazilDateStartAsIso(nextDueDate);
+    if (new Date(accessUntil).getTime() <= Date.now()) {
+      return {
+        error: "O Asaas não informou uma renovação futura. A assinatura não foi cancelada; fale com o atendimento.",
+        ok: false,
+      };
+    }
 
-    const canceledAt = new Date().toISOString();
-
-    const { error: localSubscriptionError } = await admin
+    const cancellationRequestedAt = new Date().toISOString();
+    const { error: scheduleError } = await admin
       .from("subscriptions")
-      .update({ status: "cancelado" })
+      .update({
+        access_until: accessUntil,
+        cancel_at_period_end: true,
+        cancellation_requested_at: cancellationRequestedAt,
+        next_due_date: nextDueDate,
+      })
       .eq("id", subscription.id)
       .eq("tenant_id", tenant.id);
-    const { error: localTenantError } = await admin
-      .from("tenants")
-      .update({ canceled_at: canceledAt, status: "cancelado" })
-      .eq("id", tenant.id)
-      .eq("owner_user_id", tenant.owner_user_id);
+
+    if (scheduleError) {
+      return {
+        error: "Não foi possível registrar o fim do período pago. A assinatura não foi cancelada.",
+        ok: false,
+      };
+    }
+
+    try {
+      await cancelAsaasSubscription(subscription.asaas_subscription_id);
+    } catch (error) {
+      const { error: rollbackError } = await admin
+        .from("subscriptions")
+        .update({
+          access_until: null,
+          cancel_at_period_end: false,
+          cancellation_requested_at: null,
+        })
+        .eq("id", subscription.id)
+        .eq("tenant_id", tenant.id);
+      if (rollbackError) {
+        console.error("Falha crítica ao reverter o agendamento local após recusa do Asaas:", rollbackError.message);
+      }
+      throw error;
+    }
 
     revalidatePath("/painel/assinatura");
     revalidatePath(`/loja/${tenant.slug}`);
 
-    if (localSubscriptionError || localTenantError) {
-      console.error("Cancelamento confirmado no Asaas; sincronização local pendente.");
-      return { data: { status: "cancelado", syncPending: true }, ok: true };
-    }
-
-    return { data: { status: "cancelado" }, ok: true };
+    return { data: { accessUntil, status: "agendado" }, ok: true };
   } catch (error) {
     if (error instanceof AsaasSubscriptionCancellationError) {
       return { error: error.message, ok: false };

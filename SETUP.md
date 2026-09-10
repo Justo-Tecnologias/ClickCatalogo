@@ -84,6 +84,12 @@ Por fim, execute a migration de retenção e exclusão auditável:
 
 Ela registra `tenants.canceled_at`, cria a fila de exclusão e a área isolada de evidências legais mínimas, além das funções administrativas usadas pela rotina de expurgo. A migration não exclui dados ao ser aplicada.
 
+Depois execute a migration de continuidade do pré-lançamento:
+
+`C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100010_prelaunch_continuity.sql`
+
+Ela mantém a loja ativa até o fim do período já pago quando a próxima renovação é cancelada, cria a RPC idempotente de encerramento e adiciona uma proteção no catálogo caso a rotina agendada atrase. Esta migration precisa estar aplicada antes do deploy desta versão.
+
 ### O que o schema cria
 
 - `public.tenants` — lojas e seus proprietários;
@@ -101,6 +107,7 @@ Ela registra `tenants.canceled_at`, cria a fila de exclusão e a área isolada d
 - RPC administrativa `expire_stale_signup_intents` para liberar reservas vencidas;
 - RPCs protegidas para verificar conta existente, reordenar categorias e consumir rate limit;
 - RPCs protegidas para arquivar evidências, agendar, reservar e expurgar dados vencidos;
+- RPC protegida `finalize_due_subscription_cancellations`, executada de hora em hora pela Scheduled Function da Netlify;
 - bucket público `produtos`, limite de 2 MB e tipos JPEG, PNG e WebP;
 - policies de Storage que restringem escrita ao proprietário do tenant.
 
@@ -306,6 +313,19 @@ Depois de criar ou alterar variáveis, faça um novo deploy. As variáveis `NEXT
 
 Em contas Netlify Free novas, confirme também que o projeto foi publicado e não ficou privado.
 
+### Conferir a rotina de fim de assinatura
+
+O arquivo `C:\Projeto-Github\ClickCatálogo\netlify\functions\finalize-subscription-cancellations.mjs` é publicado como Scheduled Function e executa de hora em hora. Ele usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente no servidor para finalizar acessos cujo período pago terminou.
+
+Depois do deploy de Produção:
+
+1. abra **Netlify → Project overview → Functions**;
+2. localize `finalize-subscription-cancellations` e confirme o selo **Scheduled**;
+3. abra a função e use **Run now** uma vez;
+4. confira no log uma resposta com `finalized` igual a `0` ou outro número inteiro, sem erro de autenticação.
+
+A rotina agendada só executa automaticamente em deploy publicado. O catálogo possui uma segunda proteção no banco e deixa de exibir uma loja vencida mesmo se essa execução atrasar.
+
 ## 7. Asaas
 
 ### Valores necessários
@@ -344,7 +364,7 @@ SUBSCRIPTION_INACTIVATED
 
 O checkout custa R$ 27 por mês e atualmente usa cartão de crédito recorrente. Pix recorrente não faz parte deste fluxo.
 
-Para uma única validação financeira controlada em Produção, `ASAAS_CHECKOUT_TEST_VALUE=5` reduz o valor enviado ao Asaas para R$ 5 e identifica o item como teste controlado. A variável aceita somente valores de R$ 5 até R$ 26,99. Remova-a da Netlify imediatamente após o teste e publique novamente antes de receber clientes; ausente, o checkout volta ao preço oficial de R$ 27. Não altere os textos públicos, os Termos ou o valor padrão do banco para executar esse teste.
+O valor do checkout é definido no código pelo plano oficial de R$ 27. A versão de lançamento não aceita variável de ambiente para reduzir o preço, evitando que uma configuração de teste esquecida gere assinaturas com valor incorreto.
 
 ## 8. Tenant manual para testar sem Asaas
 

@@ -12,7 +12,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils/cn";
 import type { AccountDeletionSource, AccountDeletionStatus, TenantStatus } from "@/types/database";
 
 type RequestSummary = {
@@ -135,8 +134,8 @@ export function DataPrivacyManagement({
           </p>
           {supportEmail ? (
             <a
-              className={cn(buttonVariants({ variant: "secondary" }), "w-full sm:w-fit")}
-              href={`mailto:${supportEmail}?subject=Direitos%20sobre%20dados%20%E2%80%94%20ClickCat%C3%A1logo`}
+              className={`${buttonVariants({ variant: "secondary" })} w-full sm:w-fit`}
+              href="/atendimento?assunto=dados"
             >
               <FileDown aria-hidden="true" />
               Solicitar atendimento sobre dados
@@ -155,7 +154,7 @@ export function DataPrivacyManagement({
               Exclusão dos dados da conta
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">
-              Após o cancelamento, catálogo, produtos, imagens e acesso ficam disponíveis por até 30 dias para tratamento operacional. Você pode antecipar esse prazo para até 15 dias.
+              Depois do fim do período pago, catálogo, produtos, imagens e acesso são preservados por até 30 dias para tratamento operacional. Você pode antecipar esse prazo para até 15 dias.
             </p>
           </div>
           {tenantStatus === "cancelado" && !demo && !isExpedited && !requestIsProcessing && !requestIsComplete ? (
