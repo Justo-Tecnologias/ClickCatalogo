@@ -47,7 +47,7 @@ Executar apenas uma vez com o e-mail novo preparado acima.
 - [ ] Preencher `/cadastro` com dados controlados e slug único.
 - [ ] Clicar em **Continuar para pagamento** uma única vez.
 - [ ] Netlify está temporariamente com `ASAAS_CHECKOUT_TEST_VALUE=5` somente durante esta validação.
-- [ ] Checkout abre no domínio oficial do Asaas e mostra ClickCatálogo, recorrência mensal, identificação de teste controlado e valor de R$ 5.
+- [ ] Checkout abre no domínio oficial do Asaas e mostra o item **ClickCatálogo — teste**, recorrência mensal e valor de R$ 5.
 - [ ] Realizar o pagamento com um cartão real autorizado pelo titular.
 - [ ] Não atualizar nem reenviar o pagamento enquanto o Asaas processa.
 - [ ] Após aprovação, retornar para `/cadastro/sucesso?ref=...` no domínio ClickCatálogo.

@@ -24,7 +24,7 @@ export function getAsaasCheckoutPlan() {
 
   return {
     ...CLICKCATALOGO_MONTHLY_PLAN,
-    name: `${CLICKCATALOGO_MONTHLY_PLAN.name} — teste controlado`,
+    name: "ClickCatálogo — teste",
     value: parsed.data,
   };
 }
