@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
+import { getAsaasCheckoutPlan } from "@/lib/billing/server-plan";
 import { requireAsaasEnv } from "@/lib/env/server";
 
 const checkoutResponseSchema = z.object({
@@ -36,6 +36,7 @@ function checkoutUrl(id: string, link: string | undefined, apiUrl: string) {
 
 export async function createRecurringCheckout(input: CreateCheckoutInput) {
   const env = requireAsaasEnv();
+  const plan = getAsaasCheckoutPlan();
   const response = await fetch(`${env.apiUrl}/checkouts`, {
     body: JSON.stringify({
       billingTypes: ["CREDIT_CARD"],
@@ -46,9 +47,9 @@ export async function createRecurringCheckout(input: CreateCheckoutInput) {
       },
       chargeTypes: ["RECURRENT"],
       externalReference: input.externalReference,
-      items: [{ description: CLICKCATALOGO_MONTHLY_PLAN.description, name: CLICKCATALOGO_MONTHLY_PLAN.name, quantity: 1, value: CLICKCATALOGO_MONTHLY_PLAN.value }],
+      items: [{ description: plan.description, name: plan.name, quantity: 1, value: plan.value }],
       minutesToExpire: 60,
-      subscription: { cycle: CLICKCATALOGO_MONTHLY_PLAN.cycle, nextDueDate: input.nextDueDate },
+      subscription: { cycle: plan.cycle, nextDueDate: input.nextDueDate },
     }),
     headers: {
       Accept: "application/json",

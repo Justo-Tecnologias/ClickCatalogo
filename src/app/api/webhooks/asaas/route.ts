@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
+import { getAsaasCheckoutPlan } from "@/lib/billing/server-plan";
 import { requireAsaasWebhookToken } from "@/lib/env/server";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
@@ -262,7 +262,7 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
   const subscriptionId = subscriptionIdFrom(event) ?? intent.asaas_subscription_id;
   const nextDueDate = nextDueDateFrom(event);
   const portalUrl = textValue(event.payment, "invoiceUrl");
-  const value = numberValue(event.payment, "value") ?? numberValue(event.subscription, "value") ?? CLICKCATALOGO_MONTHLY_PLAN.value;
+  const value = numberValue(event.payment, "value") ?? numberValue(event.subscription, "value") ?? getAsaasCheckoutPlan().value;
 
   let tenantId = intent.provisioned_tenant_id;
   let existingSubscription = await findExistingSubscription(event);

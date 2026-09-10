@@ -344,6 +344,8 @@ SUBSCRIPTION_INACTIVATED
 
 O checkout custa R$ 27 por mês e atualmente usa cartão de crédito recorrente. Pix recorrente não faz parte deste fluxo.
 
+Para uma única validação financeira controlada em Produção, `ASAAS_CHECKOUT_TEST_VALUE=5` reduz o valor enviado ao Asaas para R$ 5 e identifica o item como teste controlado. A variável aceita somente valores de R$ 5 até R$ 26,99. Remova-a da Netlify imediatamente após o teste e publique novamente antes de receber clientes; ausente, o checkout volta ao preço oficial de R$ 27. Não altere os textos públicos, os Termos ou o valor padrão do banco para executar esse teste.
+
 ## 8. Tenant manual para testar sem Asaas
 
 1. Em **Authentication → Users**, crie um usuário com e-mail e senha e copie o UUID dele.

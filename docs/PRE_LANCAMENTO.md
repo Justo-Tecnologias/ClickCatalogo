@@ -8,15 +8,16 @@ Atualizado em 6 de setembro de 2026. Marque cada item somente depois de validar 
 - [x] Executar, na ordem, `202608300007_fix_distributed_rate_limit.sql` e `202608300008_legal_acceptance_versions.sql`.
 - [x] Executar `202608300009_privacy_retention_and_deletion.sql` antes do deploy que contém a área de privacidade.
 - [x] Executar `supabase/verify-setup.sql` novamente e confirmar nove tabelas, quinze funções, o bucket `produtos` e o rate limiting distribuído.
-- [ ] Publicar o commit auditado e confirmar que o workflow **Qualidade** passou no GitHub.
+- [x] Publicar o commit auditado e confirmar que o workflow **Qualidade** passou no GitHub.
 - [x] Apontar `clickcatalogo.com` para a Netlify e validar o certificado HTTPS para o domínio raiz e `www`.
 - [x] Trocar `NEXT_PUBLIC_SITE_URL` na Netlify para `https://clickcatalogo.com`. A publicação da versão auditada é validada no item acima.
 - [x] Atualizar Site URL e Redirect URLs no Supabase Auth para o domínio final, incluindo o callback completo da recuperação.
 - [x] Atualizar e auditar a URL do webhook Sandbox no Asaas para `https://clickcatalogo.com/api/webhooks/asaas`.
 - [x] Remover o nome antigo do webhook; configuração auditada como `ClickCatalogo Sandbox` no painel do Asaas.
 - [x] Criar a API Key e o webhook no Asaas Produção, mantendo-os secretos e o webhook inativo até a troca final da Netlify.
-- [ ] Trocar `ASAAS_API_KEY` pela chave de Produção e manter `ASAAS_WEBHOOK_TOKEN` secreto.
-- [ ] Fazer uma cobrança real controlada de R$ 27, conferir webhook, tenant, assinatura e acesso.
+- [x] Trocar `ASAAS_API_KEY` pela chave de Produção e manter `ASAAS_WEBHOOK_TOKEN` secreto.
+- [ ] Fazer uma cobrança real controlada de R$ 5 com `ASAAS_CHECKOUT_TEST_VALUE=5`, conferir webhook, tenant, assinatura e acesso.
+- [ ] Remover `ASAAS_CHECKOUT_TEST_VALUE` da Netlify, republicar e confirmar que um novo checkout mostra o valor oficial de R$ 27 antes de divulgar o serviço.
 - [ ] Cancelar uma assinatura controlada e conferir Asaas, Supabase, painel e loja pública.
 
 ## E-mail e acesso
@@ -30,7 +31,7 @@ Atualizado em 6 de setembro de 2026. Marque cada item somente depois de validar 
 
 ## Segurança e operação
 
-- [ ] Gerar e cadastrar a mesma `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` em `.env.local` e na Netlify antes do deploy final.
+- [x] Gerar e cadastrar a mesma `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` em `.env.local` e na Netlify antes do deploy final.
 - [x] Manter `DEMO_ACCESS_ENABLED=true` conscientemente: a demonstração pública faz parte do lançamento e permanece somente leitura.
 - [x] Rodar `npm run verify` e `npm audit --omit=dev` antes desta release; repetir se houver nova alteração de código.
 - [x] Rodar `npm run audit:live` depois de aplicar a migration `202608300009`; repetir após os testes de pagamento em Produção.
