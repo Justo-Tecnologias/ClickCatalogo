@@ -14,6 +14,8 @@ where schemaname = 'public'
     'signup_intents',
     'asaas_webhook_events',
     'api_rate_limits',
+    'signup_recovery_tokens',
+    'product_metrics_daily',
     'account_deletion_requests',
     'legal_retention_records'
   )
@@ -39,7 +41,9 @@ where routine_schema = 'public'
     'request_account_deletion',
     'withdraw_expedited_account_deletion',
     'claim_account_deletion_requests',
-    'purge_expired_operational_records'
+    'purge_expired_operational_records',
+    'consume_signup_recovery_token',
+    'increment_product_metric'
   )
 order by routine_name;
 
@@ -64,7 +68,15 @@ where table_schema = 'public'
     or (table_name = 'subscriptions' and column_name in (
       'cancel_at_period_end',
       'cancellation_requested_at',
-      'access_until'
+      'access_until',
+      'reactivation_requested_at',
+      'asaas_subscription_state'
+    ))
+    or (table_name = 'signup_intents' and column_name in (
+      'intent_type',
+      'target_tenant_id',
+      'asaas_checkout_url',
+      'asaas_checkout_expires_at'
     ))
   )
 order by table_name, column_name;
@@ -82,7 +94,9 @@ where (schemaname = 'public' and tablename in (
   'products',
   'subscriptions',
   'account_deletion_requests',
-  'legal_retention_records'
+  'legal_retention_records',
+  'signup_recovery_tokens',
+  'product_metrics_daily'
 ))
 or (schemaname = 'storage' and tablename = 'objects')
 order by schemaname, tablename, policyname;

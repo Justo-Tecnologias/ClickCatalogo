@@ -90,6 +90,15 @@ Depois execute a migration de continuidade do pré-lançamento:
 
 Ela mantém a loja ativa até o fim do período já pago quando a próxima renovação é cancelada, cria a RPC idempotente de encerramento e adiciona uma proteção no catálogo caso a rotina agendada atrase. Esta migration precisa estar aplicada antes do deploy desta versão.
 
+Depois, execute estas duas migrations desta release, na ordem:
+
+1. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100011_launch_recovery_and_reactivation.sql`
+2. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100012_first_party_product_metrics.sql`
+
+A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. Ambas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
+
+Depois das duas migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. O teste simula claim concorrente, dez reentregas do mesmo webhook e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste.
+
 ### O que o schema cria
 
 - `public.tenants` — lojas e seus proprietários;
@@ -99,6 +108,8 @@ Ela mantém a loja ativa até o fim do período já pago quando a próxima renov
 - `public.signup_intents` — cadastro antes da confirmação do pagamento;
 - `public.asaas_webhook_events` — idempotência e auditoria de webhooks;
 - `public.api_rate_limits` — limitação de abuso compartilhada entre instâncias;
+- `public.signup_recovery_tokens` — hashes de tokens de retomada, com expiração e consumo atômico;
+- `public.product_metrics_daily` — contadores diários agregados sem PII;
 - `public.account_deletion_requests` — fila, tentativas e estado das exclusões;
 - `public.legal_retention_records` — evidências mínimas isoladas do conteúdo operacional;
 - constraints, índices e gatilhos de `updated_at`;
@@ -164,7 +175,7 @@ Antes de vender para clientes reais, configure um SMTP próprio em **Authenticat
 
 ### Resend recomendado para o lançamento
 
-O ClickCatálogo usa o Resend apenas como SMTP do Supabase Auth. A recuperação de senha já está implementada no código; não é necessário instalar pacote, criar rota de e-mail ou adicionar `RESEND_API_KEY` ao `.env.local` ou à Netlify.
+O ClickCatálogo usa o Resend de duas formas: como SMTP do Supabase Auth para recuperação de senha e pela API direta para a jornada **Recuperar meu cadastro**. A API direta envia um link de uso único, com token bruto apenas no fragmento da URL; o banco recebe somente o hash.
 
 1. No Resend, abra **Domains → Add Domain**.
 2. Cadastre o subdomínio `auth.clickcatalogo.com`. O subdomínio separa a reputação dos e-mails de autenticação de futuras campanhas de marketing.
@@ -184,7 +195,7 @@ Remetente: nao-responda@auth.clickcatalogo.com
 Nome: ClickCatálogo
 ```
 
-Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Se a integração guiada Resend aparecer no seu painel no futuro, ela será apenas uma alternativa a esta configuração manual e não será necessária.
+Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Para a retomada de cadastro, crie outra chave com permissão somente de envio e domínio restrito, e salve-a como `RESEND_API_KEY` somente em `.env.local` e na Netlify. Configure `RESEND_FROM_EMAIL` com um remetente do mesmo domínio verificado.
 
 ### Canal público de atendimento
 
@@ -229,6 +240,9 @@ LEGAL_POSTAL_ADDRESS=
 LEGAL_SUPPORT_EMAIL=
 
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=ClickCatálogo <contato@clickcatalogo.com>
 
 ASAAS_API_KEY=
 ASAAS_WEBHOOK_TOKEN=
@@ -290,6 +304,8 @@ LEGAL_TAX_ID
 LEGAL_POSTAL_ADDRESS
 LEGAL_SUPPORT_EMAIL
 SUPABASE_SERVICE_ROLE_KEY
+RESEND_API_KEY
+RESEND_FROM_EMAIL
 ASAAS_API_KEY
 ASAAS_WEBHOOK_TOKEN
 ```
@@ -301,6 +317,7 @@ O endereço não fica mais fixo no `netlify.toml`: o valor do painel da Netlify 
 Marque como segredo:
 
 - `SUPABASE_SERVICE_ROLE_KEY`;
+- `RESEND_API_KEY`;
 - `ASAAS_API_KEY`;
 - `ASAAS_WEBHOOK_TOKEN`;
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.
@@ -475,8 +492,12 @@ O domínio já está vinculado à Netlify. Para uma instalação nova ou migraç
 - correção do rate limiting distribuído: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300007_fix_distributed_rate_limit.sql`;
 - versionamento dos aceites legais: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300008_legal_acceptance_versions.sql`;
 - retenção e exclusão auditável: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300009_privacy_retention_and_deletion.sql`;
+- continuidade de cancelamento: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100010_prelaunch_continuity.sql`;
+- recuperação e reativação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100011_launch_recovery_and_reactivation.sql`;
+- métricas agregadas sem PII: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100012_first_party_product_metrics.sql`;
 - template de recuperação: `C:\Projeto-Github\ClickCatálogo\docs\supabase-email-templates\recovery.html`;
 - verificação do banco: `C:\Projeto-Github\ClickCatálogo\supabase\verify-setup.sql`;
+- teste de integração crítico sem cobrança: `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`;
 - exemplo de variáveis: `C:\Projeto-Github\ClickCatálogo\.env.example`;
 - valores locais reais: `C:\Projeto-Github\ClickCatálogo\.env.local`;
 - configuração Netlify: `C:\Projeto-Github\ClickCatálogo\netlify.toml`;

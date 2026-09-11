@@ -6,10 +6,12 @@ import { useEffect, useMemo, useRef } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { formatCurrency } from "@/lib/format/currency";
+import { trackProductMetric } from "@/lib/analytics/client";
 import { createCartMessage, type CartLine } from "@/lib/whatsapp/cart-message";
 import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 
 type CartPanelProps = {
+  analyticsSlug?: string;
   items: CartLine[];
   onClose: () => void;
   onDecrement: (productId: string) => void;
@@ -21,6 +23,7 @@ type CartPanelProps = {
 };
 
 export function CartPanel({
+  analyticsSlug,
   items,
   onClose,
   onDecrement,
@@ -169,6 +172,9 @@ export function CartPanel({
                 <a
                   className={buttonVariants({ className: "w-full", size: "lg", variant: "theme" })}
                   href={orderUrl}
+                  onClick={() => {
+                    if (analyticsSlug) trackProductMetric("whatsapp_order_clicked", analyticsSlug);
+                  }}
                   rel="noreferrer"
                   target="_blank"
                 >

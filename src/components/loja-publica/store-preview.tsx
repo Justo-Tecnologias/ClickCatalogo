@@ -1,4 +1,5 @@
 import { StoreCatalog } from "@/components/loja-publica/store-catalog";
+import { CatalogViewTracker } from "@/components/loja-publica/catalog-view-tracker";
 import { StoreFooter } from "@/components/loja-publica/store-footer";
 import { StoreHeader } from "@/components/loja-publica/store-header";
 import { cn } from "@/lib/utils/cn";
@@ -32,6 +33,7 @@ export function StorePreview({
       )}
       data-tema={theme}
     >
+      {!framed ? <CatalogViewTracker slug={catalog.slug} /> : null}
       <StoreHeader
         bannerUrl={catalog.banner_url}
         description={catalog.descricao_curta}
@@ -44,6 +46,7 @@ export function StorePreview({
         categories={categoriesWithProducts}
         enableCart={!framed}
         framed={framed}
+        analyticsSlug={!framed ? catalog.slug : undefined}
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}
       />

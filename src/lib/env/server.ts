@@ -8,6 +8,11 @@ export type AsaasEnv = {
   environment: "production" | "sandbox";
 };
 
+export type ResendEnv = {
+  apiKey: string;
+  from: string;
+};
+
 const ASAAS_API_URL = {
   production: "https://api.asaas.com/v3",
   sandbox: "https://api-sandbox.asaas.com/v3",
@@ -82,4 +87,12 @@ export function requireSupabaseServiceRoleKey(): string {
   }
 
   return result.data;
+}
+
+export function getResendEnv(): ResendEnv | null {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.RESEND_FROM_EMAIL?.trim();
+
+  if (!apiKey || !from || from.length > 320) return null;
+  return { apiKey, from };
 }

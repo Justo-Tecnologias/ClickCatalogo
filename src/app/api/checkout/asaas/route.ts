@@ -1,8 +1,12 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import { createRecurringCheckout } from "@/lib/asaas/client";
+import { recordProductMetric } from "@/lib/analytics/server";
 import { getAsaasEnv, getSiteUrl } from "@/lib/env/server";
 import { isSupabaseConfigured } from "@/lib/env/public";
+import { logError, logInfo } from "@/lib/observability/logger";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/documents";
@@ -26,6 +30,7 @@ function todayInBrazil() {
 }
 
 export async function POST(request: Request) {
+  const requestId = request.headers.get("x-nf-request-id")?.slice(0, 100) ?? randomUUID();
   const originResponse = enforceSameOrigin(request);
   if (originResponse) return originResponse;
 
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
   try {
     await expireStaleSignupIntents(admin);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : "Falha ao liberar cadastros expirados.");
+    logError("checkout.expire_intents", error, { request_id: requestId });
     return NextResponse.json({ error: "Não foi possível verificar o endereço da loja agora. Tente novamente." }, { status: 503 });
   }
 
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
     p_email: parsed.data.email,
   });
   if (emailLookupError) {
-    console.error("Falha ao verificar conta existente:", emailLookupError.message);
+    logError("checkout.account_lookup", emailLookupError, { request_id: requestId });
     return NextResponse.json({ error: "Não foi possível validar o cadastro agora. Tente novamente." }, { status: 503 });
   }
   if (emailHasTenant) {
@@ -96,9 +101,14 @@ export async function POST(request: Request) {
   try {
     const successUrl = `${siteUrl}/cadastro/sucesso?ref=${intent.external_reference}`;
     const checkout = await createRecurringCheckout({ externalReference: intent.external_reference, nextDueDate: todayInBrazil(), successUrl });
+    const checkoutExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const { error: checkoutUpdateError } = await admin
       .from("signup_intents")
-      .update({ asaas_checkout_id: checkout.id })
+      .update({
+        asaas_checkout_expires_at: checkoutExpiresAt,
+        asaas_checkout_id: checkout.id,
+        asaas_checkout_url: checkout.link,
+      })
       .eq("external_reference", intent.external_reference);
     if (checkoutUpdateError) throw checkoutUpdateError;
     const response = NextResponse.json({ checkoutUrl: checkout.link });
@@ -107,11 +117,21 @@ export async function POST(request: Request) {
       intent.external_reference,
       signupResumeCookieOptions(),
     );
+    logInfo("checkout.created", {
+      request_id: requestId,
+      result: "created",
+      signup_intent_id: intent.external_reference,
+    });
+    await recordProductMetric("checkout_created");
     return response;
   } catch (error) {
     const { error: cancelError } = await admin.from("signup_intents").update({ status: "cancelado" }).eq("external_reference", intent.external_reference);
-    if (cancelError) console.error("Falha ao cancelar intenção após erro no checkout:", cancelError.message);
-    console.error("Falha ao criar checkout Asaas:", error instanceof Error ? error.message : "erro desconhecido");
+    if (cancelError) logError("checkout.intent_rollback", cancelError, { request_id: requestId, signup_intent_id: intent.external_reference });
+    logError("checkout.create", error, {
+      request_id: requestId,
+      result: "failed",
+      signup_intent_id: intent.external_reference,
+    });
     return NextResponse.json({ error: "Não foi possível abrir o checkout agora. Aguarde um instante e tente novamente." }, { status: 502 });
   }
 }

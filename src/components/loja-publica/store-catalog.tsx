@@ -19,6 +19,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const MAX_CART_QUANTITY = 999;
 
 type StoreCatalogProps = {
+  analyticsSlug?: string;
   categories: CatalogCategory[];
   enableCart?: boolean;
   framed?: boolean;
@@ -36,7 +37,7 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
-export function StoreCatalog({ categories, enableCart = true, framed = false, storeName, whatsapp }: StoreCatalogProps) {
+export function StoreCatalog({ analyticsSlug, categories, enableCart = true, framed = false, storeName, whatsapp }: StoreCatalogProps) {
   const searchId = useId();
   const totalProducts = useMemo(
     () => categories.reduce((total, category) => total + category.produtos.length, 0),
@@ -226,6 +227,7 @@ export function StoreCatalog({ categories, enableCart = true, framed = false, st
                     </h3>
                   </div>
                   <ProductGrid
+                    analyticsSlug={analyticsSlug}
                     cartQuantities={enableCart ? cartQuantities : undefined}
                     onAdd={enableCart ? addToCart : undefined}
                     onDecrement={enableCart ? decrementCartItem : undefined}
@@ -272,6 +274,7 @@ export function StoreCatalog({ categories, enableCart = true, framed = false, st
             </Button>
           ) : null}
           <CartPanel
+            analyticsSlug={analyticsSlug}
             items={cartItems}
             onClose={() => setCartOpen(false)}
             onDecrement={decrementCartItem}

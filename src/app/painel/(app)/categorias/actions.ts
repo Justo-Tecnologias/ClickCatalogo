@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { actionError, type ActionResult } from "@/lib/actions/result";
+import { recordProductMetric } from "@/lib/analytics/server";
 import { requireTenant } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -60,6 +61,7 @@ export async function saveCategoryAction(input: { id?: string; nome: string }): 
       if (error) throw error;
       category = data;
       showGroupingSuggestion = count === 15;
+      if (count === 0) await recordProductMetric("first_category_created", tenant.id);
     }
 
     revalidatePath("/painel/categorias");

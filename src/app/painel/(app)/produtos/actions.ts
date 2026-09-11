@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { actionError, type ActionResult } from "@/lib/actions/result";
+import { recordProductMetric } from "@/lib/analytics/server";
 import { requireTenant } from "@/lib/auth/session";
 import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
+import { parseBrazilianCurrency } from "@/lib/format/currency";
 import type { Database } from "@/types/database";
 
 const productSchema = z.object({
@@ -31,9 +33,7 @@ type SavedProduct = Pick<
 >;
 
 function parsePrice(value: FormDataEntryValue | null) {
-  const raw = String(value ?? "").trim();
-  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
-  return Number(normalized);
+  return parseBrazilianCurrency(String(value ?? ""));
 }
 
 function extensionFor(file: File) {
@@ -119,7 +119,10 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
       if (error) throw error;
       savedProduct = data;
     } else {
-      const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("category_id", parsed.data.categoryId);
+      const [{ count }, { count: totalCount }] = await Promise.all([
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("category_id", parsed.data.categoryId),
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+      ]);
       const { data, error } = await supabase
         .from("products")
         .insert({ ...values, ordem: count ?? 0 })
@@ -127,6 +130,8 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
         .single();
       if (error) throw error;
       savedProduct = data;
+      if (totalCount === 0) await recordProductMetric("first_product_created", tenant.id);
+      if (totalCount === 4) await recordProductMetric("fifth_product_created", tenant.id);
     }
 
     const previousPath = storagePathFromUrl(previousImageUrl);

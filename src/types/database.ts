@@ -17,6 +17,7 @@ export type TenantTheme =
 export type TenantStatus = "ativo" | "inadimplente" | "cancelado";
 export type SubscriptionStatus = "ativo" | "atrasado" | "cancelado";
 export type SignupIntentStatus = "pendente" | "pago" | "expirado" | "cancelado";
+export type SignupIntentType = "signup" | "reactivation";
 export type AccountDeletionSource = "titular" | "retencao";
 export type AccountDeletionStatus = "agendado" | "processando" | "concluido" | "cancelado" | "falhou";
 
@@ -269,6 +270,8 @@ export type Database = {
       signup_intents: {
         Row: {
           asaas_checkout_id: string | null;
+          asaas_checkout_expires_at: string | null;
+          asaas_checkout_url: string | null;
           asaas_customer_id: string | null;
           asaas_subscription_id: string | null;
           created_at: string;
@@ -276,12 +279,14 @@ export type Database = {
           expires_at: string;
           external_reference: string;
           id: string;
+          intent_type: SignupIntentType;
           nome_loja: string;
           privacy_accepted_at: string;
           privacy_version: string;
           provisioned_tenant_id: string | null;
           slug: string;
           status: SignupIntentStatus;
+          target_tenant_id: string | null;
           tema: TenantTheme;
           terms_accepted_at: string;
           terms_version: string;
@@ -290,6 +295,8 @@ export type Database = {
         };
         Insert: {
           asaas_checkout_id?: string | null;
+          asaas_checkout_expires_at?: string | null;
+          asaas_checkout_url?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
           created_at?: string;
@@ -297,12 +304,14 @@ export type Database = {
           expires_at?: string;
           external_reference?: string;
           id?: string;
+          intent_type?: SignupIntentType;
           nome_loja: string;
           privacy_accepted_at: string;
           privacy_version?: string;
           provisioned_tenant_id?: string | null;
           slug: string;
           status?: SignupIntentStatus;
+          target_tenant_id?: string | null;
           tema?: TenantTheme;
           terms_accepted_at: string;
           terms_version?: string;
@@ -311,6 +320,8 @@ export type Database = {
         };
         Update: {
           asaas_checkout_id?: string | null;
+          asaas_checkout_expires_at?: string | null;
+          asaas_checkout_url?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
           created_at?: string;
@@ -318,12 +329,14 @@ export type Database = {
           expires_at?: string;
           external_reference?: string;
           id?: string;
+          intent_type?: SignupIntentType;
           nome_loja?: string;
           privacy_accepted_at?: string;
           privacy_version?: string;
           provisioned_tenant_id?: string | null;
           slug?: string;
           status?: SignupIntentStatus;
+          target_tenant_id?: string | null;
           tema?: TenantTheme;
           terms_accepted_at?: string;
           terms_version?: string;
@@ -332,17 +345,76 @@ export type Database = {
         };
         Relationships: [];
       };
+      product_metrics_daily: {
+        Row: {
+          event_count: number;
+          event_name: string;
+          metric_date: string;
+          scope_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          event_count?: number;
+          event_name: string;
+          metric_date?: string;
+          scope_key?: string;
+          updated_at?: string;
+        };
+        Update: {
+          event_count?: number;
+          event_name?: string;
+          metric_date?: string;
+          scope_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      signup_recovery_tokens: {
+        Row: {
+          consumed_at: string | null;
+          created_at: string;
+          email_hash: string;
+          expires_at: string;
+          id: string;
+          requested_ip_hash: string;
+          signup_intent_id: string;
+          token_hash: string;
+        };
+        Insert: {
+          consumed_at?: string | null;
+          created_at?: string;
+          email_hash: string;
+          expires_at: string;
+          id?: string;
+          requested_ip_hash: string;
+          signup_intent_id: string;
+          token_hash: string;
+        };
+        Update: {
+          consumed_at?: string | null;
+          created_at?: string;
+          email_hash?: string;
+          expires_at?: string;
+          id?: string;
+          requested_ip_hash?: string;
+          signup_intent_id?: string;
+          token_hash?: string;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           access_until: string | null;
           asaas_customer_id: string | null;
           asaas_subscription_id: string | null;
+          asaas_subscription_state: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end: boolean;
           cancellation_requested_at: string | null;
           created_at: string;
           id: string;
           next_due_date: string | null;
           portal_url: string | null;
+          reactivation_requested_at: string | null;
           status: SubscriptionStatus;
           tenant_id: string;
           updated_at: string;
@@ -352,12 +424,14 @@ export type Database = {
           access_until?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          asaas_subscription_state?: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end?: boolean;
           cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
           portal_url?: string | null;
+          reactivation_requested_at?: string | null;
           status?: SubscriptionStatus;
           tenant_id: string;
           updated_at?: string;
@@ -367,12 +441,14 @@ export type Database = {
           access_until?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          asaas_subscription_state?: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end?: boolean;
           cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
           portal_url?: string | null;
+          reactivation_requested_at?: string | null;
           status?: SubscriptionStatus;
           tenant_id?: string;
           updated_at?: string;
@@ -453,6 +529,10 @@ export type Database = {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };
         Returns: { allowed: boolean; remaining: number; reset_at: string; retry_after: number }[];
       };
+      consume_signup_recovery_token: {
+        Args: { p_token_hash: string };
+        Returns: { external_reference: string; intent_status: SignupIntentStatus }[];
+      };
       email_has_tenant: {
         Args: { p_email: string };
         Returns: boolean;
@@ -472,6 +552,10 @@ export type Database = {
       get_public_store_status: {
         Args: { p_slug: string };
         Returns: string | null;
+      };
+      increment_product_metric: {
+        Args: { p_event_name: string; p_tenant_id?: string | null };
+        Returns: undefined;
       };
       reorder_categories: {
         Args: { p_ids: string[]; p_tenant_id: string };

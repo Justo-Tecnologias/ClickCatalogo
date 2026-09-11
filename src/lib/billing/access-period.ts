@@ -48,3 +48,10 @@ export function brazilDateStartAsIso(value: string) {
 
   return result.toISOString();
 }
+
+export function brazilDateFromIso(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error("Data do período pago inválida.");
+  const parts = zonedParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}

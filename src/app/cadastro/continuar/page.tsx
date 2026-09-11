@@ -29,7 +29,7 @@ export default async function ContinueSignupPage({
           </span>
           ClickCatálogo
         </Link>
-        <SuccessStatus reference={queryReference ?? savedReference ?? null} />
+        <SuccessStatus mode="resume" reference={queryReference ?? savedReference ?? null} />
       </div>
     </main>
   );

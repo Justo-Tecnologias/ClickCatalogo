@@ -54,8 +54,22 @@ const benefits = [
   "Loja publicada 24 horas por dia",
   "6 temas profissionais",
   "Produtos ilimitados",
+  "Sem comissão sobre suas vendas",
   "Edição a qualquer momento",
 ];
+
+const frequentlyAskedQuestions = [
+  ["O que é o ClickCatálogo?", "É um catálogo digital para pequenos lojistas organizarem produtos e receberem pedidos pelo WhatsApp."],
+  ["Meu cliente precisa instalar um aplicativo?", "Não. Ele abre o link da sua loja em qualquer navegador, escolhe os produtos e envia o pedido pelo WhatsApp."],
+  ["Como recebo os pedidos?", "O cliente monta o pedido no catálogo e o ClickCatálogo prepara uma mensagem organizada para o WhatsApp da sua loja."],
+  ["Como recebo o pagamento da venda?", "Você combina e recebe o pagamento diretamente do seu cliente. O ClickCatálogo não processa o pagamento dos produtos."],
+  ["O ClickCatálogo cobra comissão?", "Não. O plano custa R$ 27 por mês e não cobramos comissão sobre suas vendas."],
+  ["Quantos produtos e categorias posso cadastrar?", "O plano atual não possui limite comercial de produtos ou categorias."],
+  ["Posso mudar o tema?", "Sim. Você pode trocar entre os seis temas disponíveis pelo painel."],
+  ["Posso cancelar? Existe fidelidade?", "Você pode cancelar pelo painel, sem fidelidade. As próximas renovações são interrompidas e o acesso continua até o fim do período já pago."],
+  ["O que acontece depois do cancelamento?", "Ao terminar o período pago, a loja fica indisponível e os dados operacionais são preservados durante o prazo de retenção informado nos Termos."],
+  ["Preciso ter e-commerce?", "Não. O ClickCatálogo foi feito justamente para quem vende de forma simples pelo WhatsApp ou Instagram."],
+] as const;
 
 export default function HomePage() {
   const legalIdentity = getLegalIdentity();
@@ -204,6 +218,27 @@ export default function HomePage() {
               </Link>
             </div>
           </Card>
+        </div>
+      </section>
+
+      <section className="border-y border-brand-900/5 bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <SectionTitle
+            description="As respostas mais importantes antes de colocar sua loja no ar."
+            eyebrow="Perguntas frequentes"
+            title="Simples para você e para seus clientes"
+          />
+          <div className="mt-9 grid gap-3">
+            {frequentlyAskedQuestions.map(([question, answer]) => (
+              <details className="group rounded-[var(--radius-card)] border border-brand-200 bg-[var(--app-background)] px-5 py-1 open:bg-white" key={question}>
+                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 font-semibold marker:content-none">
+                  {question}
+                  <span aria-hidden="true" className="text-xl text-brand-700 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="border-t border-brand-100 py-4 text-sm leading-6 text-[var(--app-foreground-muted)]">{answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

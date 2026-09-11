@@ -105,6 +105,7 @@ create table public.subscriptions (
   tenant_id uuid not null references public.tenants(id) on delete cascade,
   asaas_customer_id text,
   asaas_subscription_id text unique,
+  asaas_subscription_state text not null default 'unknown',
   valor numeric(10, 2) not null default 27.00,
   status text not null default 'ativo',
   next_due_date date,
@@ -112,12 +113,16 @@ create table public.subscriptions (
   cancel_at_period_end boolean not null default false,
   cancellation_requested_at timestamptz,
   access_until timestamptz,
+  reactivation_requested_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
   constraint subscriptions_valor_check check (valor > 0),
   constraint subscriptions_status_check check (
     status in ('ativo', 'atrasado', 'cancelado')
+  ),
+  constraint subscriptions_asaas_state_check check (
+    asaas_subscription_state in ('unknown', 'active', 'inactive', 'deleted')
   ),
   constraint subscriptions_scheduled_cancellation_check check (
     not cancel_at_period_end
@@ -154,8 +159,12 @@ create table public.signup_intents (
   asaas_customer_id text,
   asaas_subscription_id text unique,
   asaas_checkout_id text unique,
+  asaas_checkout_url text,
+  asaas_checkout_expires_at timestamptz,
   status text not null default 'pendente',
-  provisioned_tenant_id uuid unique references public.tenants(id) on delete set null,
+  intent_type text not null default 'signup',
+  target_tenant_id uuid references public.tenants(id) on delete set null,
+  provisioned_tenant_id uuid references public.tenants(id) on delete set null,
   expires_at timestamptz not null default (now() + interval '24 hours'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -189,7 +198,32 @@ create table public.signup_intents (
   ),
   constraint signup_intents_status_check check (
     status in ('pendente', 'pago', 'expirado', 'cancelado')
+  ),
+  constraint signup_intents_intent_type_check check (
+    intent_type in ('signup', 'reactivation')
+  ),
+  constraint signup_intents_target_check check (
+    (intent_type = 'signup' and target_tenant_id is null)
+    or (intent_type = 'reactivation' and target_tenant_id is not null)
   )
+);
+
+create table public.signup_recovery_tokens (
+  id uuid primary key default extensions.gen_random_uuid(),
+  signup_intent_id uuid not null references public.signup_intents(id) on delete cascade,
+  token_hash text not null unique,
+  email_hash text not null,
+  requested_ip_hash text not null,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now(),
+
+  constraint signup_recovery_tokens_hash_check check (
+    token_hash ~ '^[a-f0-9]{64}$'
+    and email_hash ~ '^[a-f0-9]{64}$'
+    and requested_ip_hash ~ '^[a-f0-9]{64}$'
+  ),
+  constraint signup_recovery_tokens_expiry_check check (expires_at > created_at)
 );
 
 -- O id do evento evita processar duas vezes a mesma entrega do Asaas.
@@ -288,13 +322,28 @@ create index subscriptions_tenant_idx on public.subscriptions (tenant_id);
 create index subscriptions_asaas_customer_idx
   on public.subscriptions (asaas_customer_id)
   where asaas_customer_id is not null;
-create unique index signup_intents_active_slug_unique_idx
+create unique index signup_intents_pending_slug_unique_idx
   on public.signup_intents (slug)
-  where status in ('pendente', 'pago');
+  where status = 'pendente' and intent_type = 'signup';
 
-create unique index signup_intents_active_email_unique_idx
+create unique index signup_intents_pending_email_unique_idx
   on public.signup_intents (lower(email))
-  where status in ('pendente', 'pago');
+  where status = 'pendente';
+create unique index signup_intents_signup_tenant_unique_idx
+  on public.signup_intents (provisioned_tenant_id)
+  where intent_type = 'signup' and provisioned_tenant_id is not null;
+create unique index signup_intents_pending_reactivation_unique_idx
+  on public.signup_intents (target_tenant_id)
+  where intent_type = 'reactivation' and status = 'pendente';
+create index signup_intents_target_tenant_idx
+  on public.signup_intents (target_tenant_id, created_at desc)
+  where target_tenant_id is not null;
+create index signup_recovery_tokens_intent_active_idx
+  on public.signup_recovery_tokens (signup_intent_id, created_at desc)
+  where consumed_at is null;
+create index signup_recovery_tokens_expiry_idx
+  on public.signup_recovery_tokens (expires_at)
+  where consumed_at is null;
 create index signup_intents_asaas_customer_idx
   on public.signup_intents (asaas_customer_id)
   where asaas_customer_id is not null;
@@ -393,6 +442,7 @@ alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.signup_intents enable row level security;
+alter table public.signup_recovery_tokens enable row level security;
 alter table public.asaas_webhook_events enable row level security;
 alter table public.account_deletion_requests enable row level security;
 alter table public.legal_retention_records enable row level security;
@@ -402,6 +452,7 @@ revoke all on table public.categories from anon, authenticated;
 revoke all on table public.products from anon, authenticated;
 revoke all on table public.subscriptions from anon, authenticated;
 revoke all on table public.signup_intents from anon, authenticated;
+revoke all on table public.signup_recovery_tokens from public, anon, authenticated;
 revoke all on table public.asaas_webhook_events from anon, authenticated;
 revoke all on table public.account_deletion_requests from anon, authenticated;
 revoke all on table public.legal_retention_records from anon, authenticated;
@@ -630,6 +681,118 @@ $$;
 revoke all on function public.email_has_tenant(text) from public, anon, authenticated;
 grant execute on function public.email_has_tenant(text) to service_role;
 
+create or replace function public.consume_signup_recovery_token(p_token_hash text)
+returns table (
+  external_reference uuid,
+  intent_status text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_token_hash is null or p_token_hash !~ '^[a-f0-9]{64}$' then
+    return;
+  end if;
+
+  return query
+  with consumed as (
+    update public.signup_recovery_tokens as recovery
+    set consumed_at = clock_timestamp()
+    where recovery.token_hash = p_token_hash
+      and recovery.consumed_at is null
+      and recovery.expires_at > clock_timestamp()
+    returning recovery.signup_intent_id
+  )
+  select intent.external_reference, intent.status
+  from consumed
+  join public.signup_intents as intent on intent.id = consumed.signup_intent_id;
+end;
+$$;
+
+revoke all on function public.consume_signup_recovery_token(text)
+  from public, anon, authenticated;
+grant execute on function public.consume_signup_recovery_token(text)
+  to service_role;
+
+-- Métricas de produto agregadas. Não persistimos eventos individuais nem PII.
+create table public.product_metrics_daily (
+  metric_date date not null default current_date,
+  event_name text not null,
+  scope_key text not null default 'global',
+  event_count bigint not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (metric_date, event_name, scope_key),
+  constraint product_metrics_daily_event_check check (
+    event_name in (
+      'signup_started', 'signup_step_completed', 'checkout_created',
+      'payment_confirmed', 'password_created', 'first_category_created',
+      'first_product_created', 'fifth_product_created', 'catalog_shared',
+      'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
+      'cancellation_reverted', 'subscription_reactivated'
+    )
+  ),
+  constraint product_metrics_daily_scope_check check (
+    scope_key = 'global' or scope_key ~ '^[a-f0-9-]{36}$'
+  ),
+  constraint product_metrics_daily_count_check check (event_count >= 0)
+);
+
+alter table public.product_metrics_daily enable row level security;
+revoke all on table public.product_metrics_daily from public, anon, authenticated;
+
+create or replace function public.increment_product_metric(
+  p_event_name text,
+  p_tenant_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_scope_key text := coalesce(p_tenant_id::text, 'global');
+begin
+  if p_event_name not in (
+    'signup_started', 'signup_step_completed', 'checkout_created',
+    'payment_confirmed', 'password_created', 'first_category_created',
+    'first_product_created', 'fifth_product_created', 'catalog_shared',
+    'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
+    'cancellation_reverted', 'subscription_reactivated'
+  ) then
+    raise exception 'unsupported metric';
+  end if;
+
+  if p_tenant_id is not null and not exists (
+    select 1 from public.tenants where id = p_tenant_id
+  ) then
+    raise exception 'unknown tenant';
+  end if;
+
+  insert into public.product_metrics_daily (
+    metric_date, event_name, scope_key, event_count, updated_at
+  ) values (
+    (clock_timestamp() at time zone 'America/Sao_Paulo')::date,
+    p_event_name,
+    v_scope_key,
+    1,
+    clock_timestamp()
+  )
+  on conflict (metric_date, event_name, scope_key)
+  do update set
+    event_count = public.product_metrics_daily.event_count + 1,
+    updated_at = clock_timestamp();
+end;
+$$;
+
+revoke all on function public.increment_product_metric(text, uuid)
+  from public, anon, authenticated;
+grant execute on function public.increment_product_metric(text, uuid)
+  to service_role;
+
+comment on table public.product_metrics_daily is
+  'Contadores diários agregados de produto; não armazena IP, e-mail, telefone, texto livre ou eventos individuais.';
+
 -- Conclui cancelamentos quando termina o período já pago. A Scheduled Function
 -- da Netlify chama esta RPC; execuções repetidas são idempotentes.
 create or replace function public.finalize_due_subscription_cancellations(
@@ -648,6 +811,10 @@ begin
     set status = 'cancelado'
     where cancel_at_period_end = true
       and access_until <= coalesce(p_now, clock_timestamp())
+      and (
+        reactivation_requested_at is null
+        or reactivation_requested_at < coalesce(p_now, clock_timestamp()) - interval '10 minutes'
+      )
       and status in ('ativo', 'atrasado')
     returning tenant_id
   ), finalized_tenants as (
@@ -675,6 +842,16 @@ comment on column public.subscriptions.cancel_at_period_end is
   'Indica que a recorrência foi encerrada, mantendo acesso até access_until.';
 comment on column public.subscriptions.access_until is
   'Fim do período já pago, em instante absoluto.';
+comment on column public.subscriptions.reactivation_requested_at is
+  'Marca uma reativação em curso e impede corrida com a finalização agendada.';
+comment on column public.subscriptions.asaas_subscription_state is
+  'Último estado conhecido da recorrência remota no Asaas.';
+comment on column public.signup_intents.intent_type is
+  'Distingue o cadastro inicial da reativação de um tenant existente.';
+comment on column public.signup_intents.asaas_checkout_url is
+  'URL secreta do checkout, acessível somente pelo backend.';
+comment on table public.signup_recovery_tokens is
+  'Tokens de uso único para retomada cross-device; somente hashes são persistidos.';
 comment on function public.finalize_due_subscription_cancellations(timestamptz) is
   'Finaliza assinaturas com cancelamento agendado cujo período pago terminou.';
 
@@ -1153,6 +1330,20 @@ begin
     where request.status in ('agendado', 'falhou')
       and request.scheduled_for <= clock_timestamp()
       and request.attempts < 5
+      and not exists (
+        select 1
+        from public.signup_intents as intent
+        where intent.target_tenant_id = request.tenant_id_original
+          and intent.intent_type = 'reactivation'
+          and intent.status = 'pendente'
+      )
+      and not exists (
+        select 1
+        from public.subscriptions as subscription
+        where subscription.tenant_id = request.tenant_id_original
+          and subscription.reactivation_requested_at is not null
+          and subscription.reactivation_requested_at >= clock_timestamp() - interval '10 minutes'
+      )
     order by request.scheduled_for, request.created_at
     for update skip locked
     limit p_limit
@@ -1183,10 +1374,21 @@ declare
   webhook_count integer := 0;
   request_count integer := 0;
   legal_record_count integer := 0;
+  recovery_token_count integer := 0;
+  product_metric_count integer := 0;
 begin
   delete from public.api_rate_limits
   where reset_at < p_now - interval '1 day';
   get diagnostics rate_limit_count = row_count;
+
+  delete from public.signup_recovery_tokens
+  where expires_at < p_now - interval '1 day'
+    or consumed_at < p_now - interval '1 day';
+  get diagnostics recovery_token_count = row_count;
+
+  delete from public.product_metrics_daily
+  where metric_date < (p_now at time zone 'America/Sao_Paulo')::date - 400;
+  get diagnostics product_metric_count = row_count;
 
   delete from public.signup_intents
   where provisioned_tenant_id is null
@@ -1211,6 +1413,8 @@ begin
 
   return jsonb_build_object(
     'api_rate_limits', rate_limit_count,
+    'signup_recovery_tokens', recovery_token_count,
+    'product_metrics_daily', product_metric_count,
     'signup_intents', intent_count,
     'asaas_webhook_events', webhook_count,
     'account_deletion_requests', request_count,

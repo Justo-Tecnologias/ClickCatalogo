@@ -17,9 +17,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const store = await getPublicStore(slug);
   if (store.kind !== "available") return { title: "Loja indisponível", robots: { index: false, follow: false } };
   const description = store.catalog.descricao_curta ?? `Catálogo digital de ${store.catalog.nome_loja}.`;
+  const canonicalUrl = new URL(`/loja/${encodeURIComponent(store.catalog.slug)}`, getSiteUrl()).toString();
   return {
     alternates: {
-      canonical: `/loja/${encodeURIComponent(slug)}`,
+      canonical: canonicalUrl,
     },
     description,
     openGraph: {
@@ -28,9 +29,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       siteName: "ClickCatálogo",
       title: `${store.catalog.nome_loja} | ClickCatálogo`,
       type: "website",
-      url: new URL(`/loja/${encodeURIComponent(slug)}`, getSiteUrl()).toString(),
+      url: canonicalUrl,
     },
     title: store.catalog.nome_loja,
+    twitter: {
+      card: "summary_large_image",
+      description,
+      title: `${store.catalog.nome_loja} | ClickCatálogo`,
+    },
   };
 }
 

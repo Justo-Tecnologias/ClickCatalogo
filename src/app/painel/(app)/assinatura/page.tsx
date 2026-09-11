@@ -42,6 +42,7 @@ export default async function SubscriptionPage() {
           </CardContent></Card>
           <SubscriptionCancellation
             canCancel={Boolean(subscription.asaas_subscription_id)}
+            canRevert={subscription.asaas_subscription_state !== "deleted"}
             demo={demo}
             initialAccessUntil={subscription.access_until}
             initialCancelled={subscription.status === "cancelado"}

@@ -1,9 +1,13 @@
 "use client";
 
-import { Ban, LoaderCircle, TriangleAlert, X } from "lucide-react";
+import { Ban, CreditCard, LoaderCircle, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
-import { cancelSubscriptionAction } from "@/app/painel/(app)/assinatura/actions";
+import {
+  cancelSubscriptionAction,
+  createReactivationCheckoutAction,
+  revertSubscriptionCancellationAction,
+} from "@/app/painel/(app)/assinatura/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
@@ -11,6 +15,7 @@ import { Input } from "@/components/ui/input";
 
 type SubscriptionCancellationProps = {
   canCancel: boolean;
+  canRevert: boolean;
   demo: boolean;
   initialAccessUntil: string | null;
   initialCancelled: boolean;
@@ -27,6 +32,7 @@ function formatDate(value: string) {
 
 export function SubscriptionCancellation({
   canCancel,
+  canRevert,
   demo,
   initialAccessUntil,
   initialCancelled,
@@ -82,23 +88,68 @@ export function SubscriptionCancellation({
     });
   }
 
+  function renewSubscription() {
+    setError(null);
+    startTransition(async () => {
+      const result = await createReactivationCheckoutAction();
+      if (!result.ok || !result.data?.checkoutUrl) {
+        setError(result.ok ? "Não foi possível abrir a renovação." : result.error);
+        return;
+      }
+      window.location.assign(result.data.checkoutUrl);
+    });
+  }
+
   if (state === "cancelled") {
     return (
-      <Alert
-        description="Sua loja pública está pausada, a cobrança recorrente foi encerrada e os dados operacionais ficam preservados por até 30 dias."
-        title="Assinatura cancelada"
-        variant="danger"
-      />
+      <div className="grid gap-3">
+        <Alert
+          description="Sua loja pública está pausada. Os dados operacionais permanecem preservados durante o prazo de retenção e serão reutilizados quando a renovação for confirmada."
+          title="Assinatura cancelada"
+          variant="danger"
+        />
+        {error ? <Alert title={error} variant="danger" /> : null}
+        <div>
+          <Button disabled={isPending} onClick={renewSubscription}>
+            {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <CreditCard aria-hidden="true" />}
+            {isPending ? "Abrindo renovação..." : "Renovar assinatura"}
+          </Button>
+        </div>
+      </div>
     );
+  }
+
+  function revertCancellation() {
+    setError(null);
+    startTransition(async () => {
+      const result = await revertSubscriptionCancellationAction();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setState("active");
+      setAccessUntil(null);
+    });
   }
 
   if (state === "scheduled" && accessUntil) {
     return (
-      <Alert
-        description={`A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`}
-        title="Cancelamento agendado"
-        variant="warning"
-      />
+      <div className="grid gap-3">
+        <Alert
+          description={`A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`}
+          title="Cancelamento agendado"
+          variant="warning"
+        />
+        {error ? <Alert title={error} variant="danger" /> : null}
+        {canRevert ? (
+          <div><Button disabled={isPending} onClick={revertCancellation} variant="secondary">
+            {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}
+            {isPending ? "Reativando..." : "Desfazer cancelamento"}
+          </Button></div>
+        ) : (
+          <Alert description="Esta assinatura antiga foi encerrada de forma definitiva no Asaas. Seu acesso permanece até a data acima; depois disso, será possível renovar sem perder a loja." title="Renovação necessária ao fim do período" />
+        )}
+      </div>
     );
   }
 

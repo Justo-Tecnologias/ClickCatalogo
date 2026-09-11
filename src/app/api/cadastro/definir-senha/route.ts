@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { isSupabaseConfigured } from "@/lib/env/public";
+import { recordProductMetric } from "@/lib/analytics/server";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
 import { SIGNUP_RESUME_COOKIE_NAME } from "@/lib/signup/resume";
@@ -32,6 +34,13 @@ export async function POST(request: Request) {
 
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: "O acesso ainda não foi configurado no servidor." }, { status: 503 });
+  }
+
+  if ((await cookies()).get(SIGNUP_RESUME_COOKIE_NAME)?.value !== parsed.data.reference) {
+    return NextResponse.json(
+      { error: "Recupere o cadastro pelo e-mail antes de criar sua senha." },
+      { status: 403 },
+    );
   }
 
   const admin = createAdminClient();
@@ -87,6 +96,8 @@ export async function POST(request: Request) {
   if (updateError) {
     return NextResponse.json({ error: "Não foi possível criar a senha agora. Tente novamente." }, { status: 500 });
   }
+
+  await recordProductMetric("password_created", intent.provisioned_tenant_id);
 
   const response = NextResponse.json({ configured: true });
   response.cookies.set(SIGNUP_RESUME_COOKIE_NAME, "", {

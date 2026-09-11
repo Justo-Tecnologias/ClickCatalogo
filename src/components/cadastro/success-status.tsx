@@ -9,9 +9,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PasswordSetupForm } from "@/components/cadastro/password-setup-form";
 
-type StatusResponse = { accessConfigured?: boolean; configured?: boolean; ready?: boolean; slug?: string | null; status?: "pendente" | "pago" | "expirado" | "cancelado" };
+type StatusResponse = { accessConfigured?: boolean; checkoutUrl?: string | null; configured?: boolean; ready?: boolean; slug?: string | null; status?: "pendente" | "pago" | "expirado" | "cancelado" };
 
-export function SuccessStatus({ reference }: { reference: string | null }) {
+export function SuccessStatus({ mode, reference }: { mode: "checkout-return" | "resume"; reference: string | null }) {
   const [status, setStatus] = useState<StatusResponse>({ status: "pendente" });
   const [copied, setCopied] = useState<string | null>(null);
   const [checkCycle, setCheckCycle] = useState(0);
@@ -30,7 +30,7 @@ export function SuccessStatus({ reference }: { reference: string | null }) {
           signal: AbortSignal.timeout(8_000),
         });
         const result = await response.json() as StatusResponse & { error?: string };
-        if (!response.ok && [400, 404].includes(response.status)) {
+        if (!response.ok && [400, 403, 404].includes(response.status)) {
           setLookupError(result.error ?? "Não encontramos este cadastro.");
           return;
         }
@@ -50,10 +50,14 @@ export function SuccessStatus({ reference }: { reference: string | null }) {
     window.setTimeout(() => setCopied(null), 1800);
   }
 
-  if (!reference) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Continue seu acesso</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Não encontramos uma confirmação salva neste navegador. Se você já pagou, aguarde alguns instantes e recupere o acesso usando o mesmo e-mail da assinatura.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/recuperar-senha">Recuperar meu acesso</Link><Link className={buttonVariants({ variant: "secondary" })} href="/cadastro">Voltar ao cadastro</Link></div></Card>;
-  if (lookupError) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Não encontramos este cadastro</h1><Alert className="mt-5" description="Confira se este é o mesmo navegador usado no pagamento. Se o pagamento já foi confirmado, recupere o acesso pelo e-mail da assinatura." title={lookupError} variant="warning" /><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/recuperar-senha">Recuperar meu acesso</Link><Link className={buttonVariants({ variant: "secondary" })} href="/cadastro">Iniciar cadastro</Link></div></Card>;
+  if (!reference) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Continue seu cadastro</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Não encontramos uma confirmação salva neste navegador. Use o mesmo e-mail da contratação para retomar com segurança.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/cadastro/recuperar">Recuperar meu cadastro</Link><Link className={buttonVariants({ variant: "secondary" })} href="/painel">Já tenho acesso</Link></div></Card>;
+  if (lookupError) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Protegemos este acompanhamento</h1><Alert className="mt-5" description="Solicite um link de uso único usando o mesmo e-mail informado na contratação." title={lookupError} variant="warning" /><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/cadastro/recuperar">Recuperar meu cadastro</Link><Link className={buttonVariants({ variant: "secondary" })} href="/painel">Entrar no painel</Link></div></Card>;
   if (status.configured === false) return <><h1 className="sr-only">Cadastro temporariamente indisponível</h1><Alert description="Não foi possível consultar a confirmação agora. Aguarde um instante e tente novamente sem realizar outro pagamento." title="Estamos com uma instabilidade momentânea" variant="warning" /></>;
   if (status.status === "cancelado" || status.status === "expirado") return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Checkout encerrado</h1><Alert className="mt-5" description="Nenhuma loja foi criada por este checkout. Você pode revisar os dados e gerar uma nova sessão segura de pagamento." title="Este checkout foi cancelado ou expirou" variant="warning" /><Link className={`${buttonVariants()} mt-6`} href="/cadastro">Voltar ao cadastro</Link></Card>;
+
+  if (mode === "resume" && status.status === "pendente" && status.checkoutUrl) {
+    return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Seu pagamento ainda está pendente</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Você pode retornar ao checkout já criado. Se acabou de pagar, aguarde a confirmação automática antes de tentar novamente.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a className={buttonVariants()} href={status.checkoutUrl}>Continuar pagamento</a><Button onClick={() => setCheckCycle((cycle) => cycle + 1)} variant="secondary"><RotateCw aria-hidden="true" />Já paguei, verificar</Button></div></Card>;
+  }
 
   if (!status.ready || !status.slug) {
     return <Card className="p-7 text-center sm:p-9"><span className="mx-auto grid size-14 place-items-center rounded-full bg-amber-50 text-amber-700"><Clock3 aria-hidden="true" className="size-6" /></span><h1 className="mt-5 text-2xl font-bold">Estamos preparando sua loja</h1><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--app-foreground-muted)]">O checkout foi concluído. A confirmação do Asaas pode levar alguns instantes; esta página atualiza automaticamente.</p><div className="mx-auto mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-[var(--app-surface-muted)]"><div className="h-full w-2/3 animate-pulse rounded-full bg-brand-600" /></div>{timedOut ? <div className="mt-6 grid gap-4"><Alert className="text-left" description="Não faça outro pagamento. Guarde o endereço desta página: ele permite consultar novamente sem depender de atendimento." title="A confirmação está levando mais tempo" variant="warning" /><Button className="mx-auto" onClick={() => { setTimedOut(false); setCheckCycle((cycle) => cycle + 1); }} variant="secondary"><RotateCw aria-hidden="true" />Verificar novamente</Button></div> : null}</Card>;

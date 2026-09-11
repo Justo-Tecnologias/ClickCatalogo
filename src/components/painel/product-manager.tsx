@@ -14,7 +14,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { formatCurrency } from "@/lib/format/currency";
+import { formatCurrency, formatCurrencyInput, formatCurrencyInputValue } from "@/lib/format/currency";
 import { compressImageForUpload } from "@/lib/images/compress-upload";
 import { CatalogImage } from "@/components/loja-publica/catalog-image";
 
@@ -25,10 +25,16 @@ export function ProductManager({ categories, initialProducts }: { categories: Ca
   const [products, setProducts] = useState(initialProducts);
   const [editing, setEditing] = useState<ProductItem | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [priceInput, setPriceInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function openEditor(product: ProductItem | null = null) { setEditing(product); setEditorOpen(true); setError(null); }
+  function openEditor(product: ProductItem | null = null) {
+    setEditing(product);
+    setPriceInput(product ? formatCurrencyInputValue(product.preco) : "");
+    setEditorOpen(true);
+    setError(null);
+  }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,7 +103,7 @@ export function ProductManager({ categories, initialProducts }: { categories: Ca
             <div className="grid gap-4 sm:grid-cols-2">
               <Field><FieldLabel htmlFor="nome">Nome</FieldLabel><Input defaultValue={editing?.nome} id="nome" maxLength={120} name="nome" placeholder="Ex.: Kit presenteável" required /></Field>
               <Field><FieldLabel htmlFor="categoryId">Categoria</FieldLabel><Select defaultValue={editing?.category_id ?? categories[0]?.id} id="categoryId" name="categoryId" required>{categories.map((category) => <option key={category.id} value={category.id}>{category.nome}</option>)}</Select></Field>
-              <Field><FieldLabel htmlFor="preco">Preço</FieldLabel><Input defaultValue={editing?.preco.toFixed(2).replace(".", ",")} id="preco" inputMode="decimal" name="preco" placeholder="27,00" required /></Field>
+              <Field><FieldLabel htmlFor="preco">Preço</FieldLabel><Input id="preco" inputMode="numeric" name="preco" onChange={(event) => setPriceInput(formatCurrencyInput(event.target.value))} placeholder="R$ 27,00" required value={priceInput} /><FieldDescription>Digite os números; centavos e separadores são formatados automaticamente.</FieldDescription></Field>
               <Field><FieldLabel htmlFor="imagem">Imagem</FieldLabel><Input accept="image/jpeg,image/png,image/webp" id="imagem" name="imagem" type="file" />{editing?.imagem_url ? <label className="flex min-h-11 items-center gap-2 text-sm"><input className="size-4 accent-[var(--brand-700)]" name="removeImagem" type="checkbox" value="true" />Remover a imagem atual ao salvar</label> : null}<FieldDescription>JPG, PNG ou WebP. Otimizamos para WebP em até 1200 px antes do envio.</FieldDescription></Field>
             </div>
             <Field><FieldLabel htmlFor="descricao">Descrição</FieldLabel><Textarea defaultValue={editing?.descricao ?? ""} id="descricao" maxLength={1000} name="descricao" placeholder="Conte o que torna este produto especial." rows={4} /></Field>

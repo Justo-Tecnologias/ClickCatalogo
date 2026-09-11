@@ -1,6 +1,7 @@
 import { ImageIcon, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui";
+import { trackProductMetric } from "@/lib/analytics/client";
 import { formatCurrency } from "@/lib/format/currency";
 import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 import type { CatalogProduct } from "@/types/catalog";
@@ -8,6 +9,7 @@ import type { CatalogProduct } from "@/types/catalog";
 import { CatalogImage } from "./catalog-image";
 
 export type ProductCardProps = {
+  analyticsSlug?: string;
   cartQuantity?: number;
   onAdd?: (product: CatalogProduct) => void;
   onDecrement?: (productId: string) => void;
@@ -16,7 +18,7 @@ export type ProductCardProps = {
   whatsapp: string;
 };
 
-export function ProductCard({ cartQuantity = 0, onAdd, onDecrement, product, storeName, whatsapp }: ProductCardProps) {
+export function ProductCard({ analyticsSlug, cartQuantity = 0, onAdd, onDecrement, product, storeName, whatsapp }: ProductCardProps) {
   const orderUrl = createWhatsAppUrl(
     whatsapp,
     `Olá! Tenho interesse no produto “${product.nome}” da ${storeName}.`,
@@ -103,6 +105,9 @@ export function ProductCard({ cartQuantity = 0, onAdd, onDecrement, product, sto
             aria-label={`Pedir ${product.nome} pelo WhatsApp`}
             className={buttonVariants({ className: "w-full", size: "sm", variant: "theme" })}
             href={orderUrl}
+            onClick={() => {
+              if (analyticsSlug) trackProductMetric("whatsapp_order_clicked", analyticsSlug);
+            }}
             rel="noreferrer"
             target="_blank"
           >

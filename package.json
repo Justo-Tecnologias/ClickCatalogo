@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run check:contrast",
     "check:contrast": "node scripts/check-theme-contrast.mjs",
-    "verify": "npm run check && npm run build",
+    "test": "tsx --test tests/asaas-client.test.ts tests/billing-state.test.ts tests/currency.test.ts tests/database-invariants.test.ts tests/recovery-token.test.ts tests/webhook-security.test.ts",
+    "verify": "npm run check && npm test && npm run build",
     "audit:live": "node --env-file-if-exists=.env.local scripts/audit-live.mjs",
     "audit:asaas": "node --env-file-if-exists=.env.local scripts/audit-asaas.mjs",
     "audit:production": "node --env-file-if-exists=.env.local scripts/audit-production.mjs",
@@ -31,6 +32,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.25.0",
     "next": "16.3.3",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sharp": "0.35.4",
@@ -40,11 +42,13 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

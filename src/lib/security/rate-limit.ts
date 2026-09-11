@@ -27,8 +27,12 @@ const store = globalStore.__clickCatalogoRateLimitStore ??= new Map<string, Rate
 
 export const PUBLIC_API_RATE_LIMITS = {
   accountAvailability: { limit: 12, scope: "account-availability", windowMs: 10 * 60 * 1000 },
+  analytics: { limit: 60, scope: "product-analytics", windowMs: 60 * 1000 },
   checkout: { limit: 5, scope: "checkout", windowMs: 10 * 60 * 1000 },
   passwordSetup: { limit: 10, scope: "password-setup", windowMs: 15 * 60 * 1000 },
+  signupRecoveryConsume: { limit: 10, scope: "signup-recovery-consume", windowMs: 15 * 60 * 1000 },
+  signupRecoveryEmail: { limit: 3, scope: "signup-recovery-email", windowMs: 30 * 60 * 1000 },
+  signupRecoveryIp: { limit: 5, scope: "signup-recovery-ip", windowMs: 15 * 60 * 1000 },
   slugAvailability: { limit: 60, scope: "slug-availability", windowMs: 60 * 1000 },
   signupStatus: { limit: 120, scope: "signup-status", windowMs: 10 * 60 * 1000 },
   webhook: { limit: 180, scope: "asaas-webhook", windowMs: 60 * 1000 },
@@ -62,9 +66,9 @@ function reserveStoreSpace(now: number) {
   }
 }
 
-function memoryRateLimit(request: Request, policy: RateLimitPolicy) {
+function memoryRateLimit(identifier: string, policy: RateLimitPolicy) {
   const now = Date.now();
-  const key = `${policy.scope}:${clientIp(request)}`;
+  const key = `${policy.scope}:${identifier}`;
   const current = store.get(key);
 
   if (!current || current.resetAt <= now) {
@@ -111,13 +115,13 @@ function rateLimitResponse(policy: RateLimitPolicy, retryAfter: number, resetAt:
   );
 }
 
-export async function enforceRateLimit(request: Request, policy: RateLimitPolicy) {
+async function enforceIdentifierRateLimit(identifier: string, policy: RateLimitPolicy) {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (isSupabaseConfigured() && secret) {
     try {
       const keyHash = createHmac("sha256", secret)
-        .update(`${policy.scope}:${clientIp(request)}`)
+        .update(`${policy.scope}:${identifier}`)
         .digest("hex");
       const admin = createAdminClient();
       const { data, error } = await admin.rpc("consume_api_rate_limit", {
@@ -147,5 +151,16 @@ export async function enforceRateLimit(request: Request, policy: RateLimitPolicy
     }
   }
 
-  return memoryRateLimit(request, policy);
+  return memoryRateLimit(identifier, policy);
+}
+
+export async function enforceRateLimit(request: Request, policy: RateLimitPolicy) {
+  return enforceIdentifierRateLimit(clientIp(request), policy);
+}
+
+export async function enforceRateLimitForIdentifier(
+  identifier: string,
+  policy: RateLimitPolicy,
+) {
+  return enforceIdentifierRateLimit(identifier.trim().toLowerCase(), policy);
 }
