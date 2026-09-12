@@ -19,6 +19,7 @@ type SubscriptionCancellationProps = {
   demo: boolean;
   initialAccessUntil: string | null;
   initialCancelled: boolean;
+  initialReconciliationStatus: "attention" | "complete" | "not_required" | "pending" | "processing";
   initialScheduled: boolean;
   storeName: string;
 };
@@ -36,6 +37,7 @@ export function SubscriptionCancellation({
   demo,
   initialAccessUntil,
   initialCancelled,
+  initialReconciliationStatus,
   initialScheduled,
   storeName,
 }: SubscriptionCancellationProps) {
@@ -45,6 +47,7 @@ export function SubscriptionCancellation({
     initialCancelled ? "cancelled" : initialScheduled ? "scheduled" : "active",
   );
   const [confirmation, setConfirmation] = useState("");
+  const [reconciliationStatus, setReconciliationStatus] = useState(initialReconciliationStatus);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -83,6 +86,7 @@ export function SubscriptionCancellation({
 
       setState(result.data?.status === "agendado" ? "scheduled" : "cancelled");
       setAccessUntil(result.data?.accessUntil ?? null);
+      setReconciliationStatus(result.data?.reconciliationStatus ?? "pending");
       setOpen(false);
       setConfirmation("");
     });
@@ -101,11 +105,15 @@ export function SubscriptionCancellation({
   }
 
   if (state === "cancelled") {
+    const reconciliationConfirmed = reconciliationStatus === "complete"
+      || reconciliationStatus === "not_required";
     return (
       <div className="grid gap-3">
         <Alert
-          description="Sua loja pública está pausada. Os dados operacionais permanecem preservados durante o prazo de retenção e serão reutilizados quando a renovação for confirmada."
-          title="Assinatura cancelada"
+          description={reconciliationConfirmed
+            ? "Sua loja pública está pausada. Os dados operacionais permanecem preservados durante o prazo de retenção e serão reutilizados quando a renovação for confirmada."
+            : "Sua loja pública está pausada, mas a conferência de cobranças futuras ainda precisa de atendimento antes de uma nova contratação."}
+          title={reconciliationConfirmed ? "Assinatura cancelada" : "Assinatura cancelada — conferência necessária"}
           variant="danger"
         />
         {error ? <Alert title={error} variant="danger" /> : null}
@@ -129,18 +137,42 @@ export function SubscriptionCancellation({
       }
       setState("active");
       setAccessUntil(null);
+      setReconciliationStatus("not_required");
+    });
+  }
+
+  function retryReconciliation() {
+    setError(null);
+    startTransition(async () => {
+      const result = await cancelSubscriptionAction({ confirmation: storeName });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setReconciliationStatus(result.data?.reconciliationStatus ?? "attention");
     });
   }
 
   if (state === "scheduled" && accessUntil) {
+    const reconciliationConfirmed = reconciliationStatus === "complete";
     return (
       <div className="grid gap-3">
         <Alert
-          description={`A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`}
-          title="Cancelamento agendado"
-          variant="warning"
+          description={reconciliationConfirmed
+            ? `A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`
+            : `A recorrência foi interrompida e seu acesso permanece até ${formatDate(accessUntil)}. A conferência de cobranças futuras já geradas ainda precisa ser concluída; fale com o atendimento antes da data de renovação.`}
+          title={reconciliationConfirmed ? "Cancelamento agendado" : "Cancelamento em conferência"}
+          variant={reconciliationConfirmed ? "warning" : "danger"}
         />
         {error ? <Alert title={error} variant="danger" /> : null}
+        {!reconciliationConfirmed ? (
+          <div>
+            <Button disabled={isPending} onClick={retryReconciliation}>
+              {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}
+              {isPending ? "Conferindo..." : "Conferir cobrança novamente"}
+            </Button>
+          </div>
+        ) : null}
         {canRevert ? (
           <div><Button disabled={isPending} onClick={revertCancellation} variant="secondary">
             {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}

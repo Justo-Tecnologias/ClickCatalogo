@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyRound } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,16 @@ function confirmationUrlFromHash() {
 export function RecoveryLinkConfirmation() {
   const confirmationInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const confirmationUrl = confirmationUrlFromHash();
+    if (confirmationInputRef.current) confirmationInputRef.current.value = confirmationUrl ?? "";
+    if (window.location.hash) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
   function prepareSubmission() {
-    if (confirmationInputRef.current) {
+    if (confirmationInputRef.current && !confirmationInputRef.current.value) {
       confirmationInputRef.current.value = confirmationUrlFromHash() ?? "";
     }
   }

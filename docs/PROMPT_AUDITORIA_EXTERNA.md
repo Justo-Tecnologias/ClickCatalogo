@@ -313,7 +313,7 @@ Controles existentes:
 - CSP e headers de segurança;
 - proteção contra iframe e MIME sniffing;
 - validação de origem;
-- rate limit compartilhado no Supabase com HMAC do IP e fallback em memória;
+- rate limit compartilhado no Supabase com HMAC do IP; operações públicas sensíveis falham fechadas e webhook/rotas leves mantêm fallback em memória;
 - cookies HTTP-only, `SameSite=Lax` e `Secure` em produção;
 - Server Actions derivam tenant da sessão;
 - dados financeiros e chaves somente no servidor;

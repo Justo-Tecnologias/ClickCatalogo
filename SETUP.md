@@ -70,7 +70,7 @@ Em bancos que já receberam a migration de hardening, execute também:
 
 `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202608300007_fix_distributed_rate_limit.sql`
 
-Ela corrige uma colisão entre o nome de variável `current_time` e a palavra reservada do PostgreSQL. Sem essa correção, a aplicação continua funcionando com fallback em memória, mas a limitação de abuso não é compartilhada entre as instâncias da Netlify. O arquivo termina com uma chamada real que deve retornar `allowed = true` e `remaining = 1`.
+Ela corrige uma colisão entre o nome de variável `current_time` e a palavra reservada do PostgreSQL. Sem essa correção, webhook e rotas leves usam somente fallback em memória, enquanto checkout, senha inicial e recuperação ficam temporariamente indisponíveis por segurança. O arquivo termina com uma chamada real que deve retornar `allowed = true` e `remaining = 1`.
 
 Depois, execute a migration que versiona os aceites legais:
 
@@ -90,14 +90,17 @@ Depois execute a migration de continuidade do pré-lançamento:
 
 Ela mantém a loja ativa até o fim do período já pago quando a próxima renovação é cancelada, cria a RPC idempotente de encerramento e adiciona uma proteção no catálogo caso a rotina agendada atrase. Esta migration precisa estar aplicada antes do deploy desta versão.
 
-Depois, execute estas duas migrations desta release, na ordem:
+Depois, execute estas três migrations desta release, na ordem:
 
 1. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100011_launch_recovery_and_reactivation.sql`
 2. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100012_first_party_product_metrics.sql`
+3. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120013_cancellation_payment_reconciliation.sql`
+4. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`
+5. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`
 
-A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. Ambas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
+A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. A terceira registra se cobranças futuras já geradas foram conciliadas após interromper a recorrência. A quarta impede a finalização local enquanto essa conciliação não estiver concluída. A quinta adiciona claim/lease para impedir disputa entre o agendador, outra execução e a reativação do titular. Todas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
 
-Depois das duas migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. O teste simula claim concorrente, dez reentregas do mesmo webhook e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste.
+Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria
 
@@ -132,8 +135,8 @@ Depois do schema, execute no SQL Editor:
 
 Esse arquivo não altera dados. Ele deve listar:
 
-- nove tabelas com RLS ativo;
-- quinze funções esperadas, incluindo expiração, reordenação, rate limit, webhook atômico e retenção;
+- onze tabelas inspecionadas com RLS ativo;
+- dezenove funções esperadas, incluindo expiração, reordenação, rate limit, webhook atômico, retenção e claim de conciliação;
 - o bucket `produtos` como público;
 - policies das tabelas e do Storage.
 
@@ -332,14 +335,16 @@ Em contas Netlify Free novas, confirme também que o projeto foi publicado e nã
 
 ### Conferir a rotina de fim de assinatura
 
-O arquivo `C:\Projeto-Github\ClickCatálogo\netlify\functions\finalize-subscription-cancellations.mjs` é publicado como Scheduled Function e executa de hora em hora. Ele usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente no servidor para finalizar acessos cujo período pago terminou.
+O arquivo `C:\Projeto-Github\ClickCatálogo\netlify\functions\finalize-subscription-cancellations.mjs` é publicado como Scheduled Function e executa de hora em hora. Antes de finalizar acessos vencidos, ele usa `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ASAAS_API_KEY` e, somente para chave legada, `ASAAS_API_URL` no servidor para tentar novamente conciliações `pending`/`attention`. Cada item é reservado atomicamente pela RPC da migration 015, passa a `processing` e não pode disputar com a reativação do titular. A rotina respeita orçamento interno de 17 segundos, inativa a recorrência, remove apenas cobranças `PENDING` a partir do fim do período pago, relê todas as cobranças e só grava `complete` quando nenhuma permanece após o corte. O log final informa duração, contagens e idade da pendência mais antiga, sem PII.
 
 Depois do deploy de Produção:
 
 1. abra **Netlify → Project overview → Functions**;
 2. localize `finalize-subscription-cancellations` e confirme o selo **Scheduled**;
 3. abra a função e use **Run now** uma vez;
-4. confira no log uma resposta com `finalized` igual a `0` ou outro número inteiro, sem erro de autenticação.
+4. confira no log um objeto `reconciliation` com contadores e `finalized` igual
+   a `0` ou outro número inteiro, sem erro de autenticação. O log não inclui IDs
+   de cobrança nem dados pessoais.
 
 A rotina agendada só executa automaticamente em deploy publicado. O catálogo possui uma segunda proteção no banco e deixa de exibir uma loja vencida mesmo se essa execução atrasar.
 
@@ -366,6 +371,10 @@ Webhook ativo: sim
 Fila de sincronização: ativa
 ```
 
+No campo **Tipo de envio**, selecione explicitamente **SEQUENTIALLY
+(sequencial)**. Isso reduz eventos de assinatura fora de ordem; o handler também
+mantém proteções contra reentrega e eventos antigos.
+
 Ative estes eventos:
 
 ```text
@@ -373,10 +382,12 @@ CHECKOUT_PAID
 CHECKOUT_CANCELED
 CHECKOUT_EXPIRED
 PAYMENT_CONFIRMED
+PAYMENT_DELETED
 PAYMENT_RECEIVED
 PAYMENT_OVERDUE
 SUBSCRIPTION_DELETED
 SUBSCRIPTION_INACTIVATED
+SUBSCRIPTION_UPDATED
 ```
 
 O checkout custa R$ 27 por mês e atualmente usa cartão de crédito recorrente. Pix recorrente não faz parte deste fluxo.
@@ -495,9 +506,13 @@ O domínio já está vinculado à Netlify. Para uma instalação nova ou migraç
 - continuidade de cancelamento: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100010_prelaunch_continuity.sql`;
 - recuperação e reativação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100011_launch_recovery_and_reactivation.sql`;
 - métricas agregadas sem PII: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100012_first_party_product_metrics.sql`;
+- conciliação de cobranças após cancelamento: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120013_cancellation_payment_reconciliation.sql`;
+- bloqueio da finalização antes da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`;
+- claim exclusivo da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`;
 - template de recuperação: `C:\Projeto-Github\ClickCatálogo\docs\supabase-email-templates\recovery.html`;
 - verificação do banco: `C:\Projeto-Github\ClickCatálogo\supabase\verify-setup.sql`;
 - teste de integração crítico sem cobrança: `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`;
+- teste adversarial entre duas lojas: `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`;
 - exemplo de variáveis: `C:\Projeto-Github\ClickCatálogo\.env.example`;
 - valores locais reais: `C:\Projeto-Github\ClickCatálogo\.env.local`;
 - configuração Netlify: `C:\Projeto-Github\ClickCatálogo\netlify.toml`;

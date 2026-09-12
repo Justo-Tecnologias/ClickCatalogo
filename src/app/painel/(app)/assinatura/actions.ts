@@ -7,8 +7,9 @@ import { z } from "zod";
 import {
   AsaasSubscriptionCancellationError,
   AsaasSubscriptionReactivationError,
-  getAsaasSubscriptionNextDueDate,
+  getAsaasSubscriptionPaidThroughDate,
   inactivateAsaasSubscription,
+  reconcileFuturePendingSubscriptionPayments,
   reactivateAsaasSubscription,
   createRecurringCheckout,
 } from "@/lib/asaas/client";
@@ -31,10 +32,12 @@ const cancellationSchema = z.object({
 
 type CancellationResult = {
   accessUntil?: string;
+  reconciliationStatus?: "attention" | "complete" | "pending";
   status: "cancelado" | "agendado";
 };
 
 const REACTIVATION_LEASE_MS = 10 * 60 * 1000;
+const RECONCILIATION_LEASE_MS = 2 * 60 * 1000;
 
 function todayInBrazil() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -68,7 +71,7 @@ export async function cancelSubscriptionAction(
     const admin = createAdminClient();
     const { data: subscription, error: subscriptionError } = await admin
       .from("subscriptions")
-      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,reactivation_requested_at")
+      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,reactivation_requested_at,cancellation_reconciliation_status,cancellation_reconciliation_checked_at")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -87,8 +90,101 @@ export async function cancelSubscriptionAction(
     }
 
     if (subscription.cancel_at_period_end && subscription.access_until) {
+      if (
+        subscription.cancellation_reconciliation_status === "processing"
+        && subscription.cancellation_reconciliation_checked_at
+        && Date.now() - new Date(subscription.cancellation_reconciliation_checked_at).getTime()
+          < RECONCILIATION_LEASE_MS
+      ) {
+        return {
+          error: "A conferência já está sendo processada. Aguarde um instante e atualize a página.",
+          ok: false,
+        };
+      }
+
+      let reconciliationStatus: "attention" | "complete" | "pending" =
+        subscription.cancellation_reconciliation_status === "complete" ? "complete" : "pending";
+
+      if (reconciliationStatus !== "complete" && subscription.asaas_subscription_id) {
+        const previousStatus = subscription.cancellation_reconciliation_status === "processing"
+          ? "processing"
+          : subscription.cancellation_reconciliation_status;
+        const processingAt = new Date().toISOString();
+        let claimQuery = admin.from("subscriptions")
+          .update({
+            cancellation_reconciliation_checked_at: processingAt,
+            cancellation_reconciliation_status: "processing",
+          })
+          .eq("id", subscription.id)
+          .eq("tenant_id", tenant.id)
+          .eq("cancel_at_period_end", true)
+          .eq("cancellation_reconciliation_status", previousStatus)
+          .is("reactivation_requested_at", null);
+        if (previousStatus === "processing") {
+          claimQuery = subscription.cancellation_reconciliation_checked_at
+            ? claimQuery.eq(
+              "cancellation_reconciliation_checked_at",
+              subscription.cancellation_reconciliation_checked_at,
+            )
+            : claimQuery.is("cancellation_reconciliation_checked_at", null);
+        }
+        const { data: claimed, error: claimError } = await claimQuery
+          .select("id")
+          .maybeSingle();
+        if (claimError) throw claimError;
+        if (!claimed) {
+          return { error: "A assinatura mudou enquanto a conferência começava. Atualize a página.", ok: false };
+        }
+        try {
+          const remoteResult = subscription.asaas_subscription_state === "deleted"
+            ? "deleted" as const
+            : await inactivateAsaasSubscription(subscription.asaas_subscription_id);
+          const reconciliation = await reconcileFuturePendingSubscriptionPayments(
+            subscription.asaas_subscription_id,
+            brazilDateFromIso(subscription.access_until),
+          );
+          reconciliationStatus = "complete";
+          const { data: completed, error: completeError } = await admin.from("subscriptions").update({
+            asaas_subscription_state: remoteResult === "deleted" ? "deleted" : "inactive",
+            cancellation_reconciliation_checked_at: new Date().toISOString(),
+            cancellation_reconciliation_status: "complete",
+          }).eq("id", subscription.id).eq("tenant_id", tenant.id)
+            .eq("cancel_at_period_end", true)
+            .eq("cancellation_reconciliation_status", "processing")
+            .eq("cancellation_reconciliation_checked_at", processingAt)
+            .is("reactivation_requested_at", null)
+            .select("id")
+            .maybeSingle();
+          if (completeError || !completed) {
+            throw completeError ?? new Error("A reserva da conciliação mudou antes da conclusão.");
+          }
+          logInfo("subscription.cancellation.payment_reconciliation", {
+            payment_reconciliation: "complete",
+            removed_count: reconciliation.removedCount,
+            tenant_id: tenant.id,
+          });
+        } catch (reconciliationError) {
+          reconciliationStatus = "attention";
+          await admin.from("subscriptions").update({
+            cancellation_reconciliation_checked_at: new Date().toISOString(),
+            cancellation_reconciliation_status: "attention",
+          }).eq("id", subscription.id).eq("tenant_id", tenant.id)
+            .eq("cancel_at_period_end", true)
+            .eq("cancellation_reconciliation_status", "processing")
+            .eq("cancellation_reconciliation_checked_at", processingAt)
+            .is("reactivation_requested_at", null);
+          logError("subscription.cancellation.payment_reconciliation", reconciliationError, {
+            tenant_id: tenant.id,
+          });
+        }
+      }
+
       return {
-        data: { accessUntil: subscription.access_until, status: "agendado" },
+        data: {
+          accessUntil: subscription.access_until,
+          reconciliationStatus,
+          status: "agendado",
+        },
         ok: true,
       };
     }
@@ -104,8 +200,8 @@ export async function cancelSubscriptionAction(
       };
     }
 
-    const nextDueDate = await getAsaasSubscriptionNextDueDate(subscription.asaas_subscription_id);
-    const accessUntil = brazilDateStartAsIso(nextDueDate);
+    const paidThroughDate = await getAsaasSubscriptionPaidThroughDate(subscription.asaas_subscription_id);
+    const accessUntil = brazilDateStartAsIso(paidThroughDate);
     if (new Date(accessUntil).getTime() <= Date.now()) {
       return {
         error: "O Asaas não informou uma renovação futura. A assinatura não foi cancelada; fale com o atendimento.",
@@ -114,18 +210,24 @@ export async function cancelSubscriptionAction(
     }
 
     const cancellationRequestedAt = new Date().toISOString();
-    const { error: scheduleError } = await admin
+    const { data: scheduled, error: scheduleError } = await admin
       .from("subscriptions")
       .update({
         access_until: accessUntil,
         cancel_at_period_end: true,
+        cancellation_reconciliation_checked_at: cancellationRequestedAt,
+        cancellation_reconciliation_status: "processing",
         cancellation_requested_at: cancellationRequestedAt,
-        next_due_date: nextDueDate,
+        next_due_date: paidThroughDate,
       })
       .eq("id", subscription.id)
-      .eq("tenant_id", tenant.id);
+      .eq("tenant_id", tenant.id)
+      .eq("cancel_at_period_end", false)
+      .is("reactivation_requested_at", null)
+      .select("id")
+      .maybeSingle();
 
-    if (scheduleError) {
+    if (scheduleError || !scheduled) {
       return {
         error: "Não foi possível registrar o fim do período pago. A assinatura não foi cancelada.",
         ok: false,
@@ -141,10 +243,15 @@ export async function cancelSubscriptionAction(
         .update({
           access_until: null,
           cancel_at_period_end: false,
+          cancellation_reconciliation_checked_at: null,
+          cancellation_reconciliation_status: "not_required",
           cancellation_requested_at: null,
         })
         .eq("id", subscription.id)
-        .eq("tenant_id", tenant.id);
+        .eq("tenant_id", tenant.id)
+        .eq("cancellation_reconciliation_status", "processing")
+        .eq("cancellation_reconciliation_checked_at", cancellationRequestedAt)
+        .is("reactivation_requested_at", null);
       if (rollbackError) {
         logError("subscription.cancellation.rollback", rollbackError, {
           tenant_id: tenant.id,
@@ -153,21 +260,50 @@ export async function cancelSubscriptionAction(
       throw error;
     }
 
-    const { error: remoteStateError } = await admin
+    let reconciliationStatus: "attention" | "complete" = "complete";
+    let removedCount = 0;
+    try {
+      const reconciliation = await reconcileFuturePendingSubscriptionPayments(
+        subscription.asaas_subscription_id,
+        paidThroughDate,
+      );
+      removedCount = reconciliation.removedCount;
+    } catch (reconciliationError) {
+      reconciliationStatus = "attention";
+      logError("subscription.cancellation.payment_reconciliation", reconciliationError, {
+        tenant_id: tenant.id,
+      });
+    }
+
+    const reconciliationCheckedAt = new Date().toISOString();
+    const { data: finalizedReconciliation, error: remoteStateError } = await admin
       .from("subscriptions")
-      .update({ asaas_subscription_state: remoteResult === "deleted" ? "deleted" : "inactive" })
+      .update({
+        asaas_subscription_state: remoteResult === "deleted" ? "deleted" : "inactive",
+        cancellation_reconciliation_checked_at: reconciliationCheckedAt,
+        cancellation_reconciliation_status: reconciliationStatus,
+      })
       .eq("id", subscription.id)
-      .eq("tenant_id", tenant.id);
-    if (remoteStateError) {
+      .eq("tenant_id", tenant.id)
+      .eq("cancel_at_period_end", true)
+      .eq("cancellation_reconciliation_status", "processing")
+      .eq("cancellation_reconciliation_checked_at", cancellationRequestedAt)
+      .is("reactivation_requested_at", null)
+      .select("id")
+      .maybeSingle();
+    if (remoteStateError || !finalizedReconciliation) {
+      reconciliationStatus = "attention";
       // A recorrência já foi inativada no Asaas. Não revertemos o estado
       // local, pois isso faria o painel prometer uma renovação inexistente.
-      logError("subscription.cancellation.remote_state", remoteStateError, {
+      logError("subscription.cancellation.remote_state", remoteStateError ?? new Error("Reserva de conciliação perdida."), {
         tenant_id: tenant.id,
       });
     }
 
     logInfo("subscription.cancellation.requested", {
       tenant_id: tenant.id,
+      payment_reconciliation: reconciliationStatus,
+      removed_count: removedCount,
       result: remoteResult,
     });
     await recordProductMetric("cancellation_requested", tenant.id);
@@ -175,7 +311,10 @@ export async function cancelSubscriptionAction(
     revalidatePath("/painel/assinatura");
     revalidatePath(`/loja/${tenant.slug}`);
 
-    return { data: { accessUntil, status: "agendado" }, ok: true };
+    return {
+      data: { accessUntil, reconciliationStatus, status: "agendado" },
+      ok: true,
+    };
   } catch (error) {
     if (error instanceof AsaasSubscriptionCancellationError) {
       return { error: error.message, ok: false };
@@ -197,7 +336,7 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
     const admin = createAdminClient();
     const { data: subscription, error } = await admin
       .from("subscriptions")
-      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,reactivation_requested_at")
+      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,reactivation_requested_at,cancellation_reconciliation_status,cancellation_reconciliation_checked_at")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -216,6 +355,33 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
     }
     if (!subscription.asaas_subscription_id || subscription.asaas_subscription_state === "deleted") {
       return { error: "Esta recorrência antiga foi encerrada definitivamente. O acesso continua até a data informada; depois, use a opção de renovação.", ok: false };
+    }
+
+    if (subscription.cancellation_reconciliation_status === "processing") {
+      const checkedAt = subscription.cancellation_reconciliation_checked_at;
+      const leaseIsActive = checkedAt
+        && Date.now() - new Date(checkedAt).getTime() < RECONCILIATION_LEASE_MS;
+      if (leaseIsActive) {
+        return {
+          error: "A conferência do cancelamento ainda está em andamento. Aguarde um instante e tente novamente.",
+          ok: false,
+        };
+      }
+      let staleLeaseQuery = admin.from("subscriptions")
+        .update({ cancellation_reconciliation_status: "attention" })
+        .eq("id", subscription.id)
+        .eq("tenant_id", tenant.id)
+        .eq("cancellation_reconciliation_status", "processing");
+      staleLeaseQuery = checkedAt
+        ? staleLeaseQuery.eq("cancellation_reconciliation_checked_at", checkedAt)
+        : staleLeaseQuery.is("cancellation_reconciliation_checked_at", null);
+      const { data: released, error: staleLeaseError } = await staleLeaseQuery
+        .select("id")
+        .maybeSingle();
+      if (staleLeaseError) throw staleLeaseError;
+      if (!released) {
+        return { error: "A assinatura mudou enquanto esta ação começava. Atualize a página.", ok: false };
+      }
     }
 
     if (subscription.reactivation_requested_at) {
@@ -240,6 +406,7 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
       .eq("id", subscription.id)
       .eq("tenant_id", tenant.id)
       .eq("cancel_at_period_end", true)
+      .neq("cancellation_reconciliation_status", "processing")
       .is("reactivation_requested_at", null)
       .select("id")
       .maybeSingle();
@@ -267,6 +434,8 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
         access_until: null,
         asaas_subscription_state: "active",
         cancel_at_period_end: false,
+        cancellation_reconciliation_checked_at: null,
+        cancellation_reconciliation_status: "not_required",
         cancellation_requested_at: null,
         reactivation_requested_at: null,
         status: "ativo",
@@ -305,6 +474,25 @@ export async function createReactivationCheckoutAction(): Promise<ActionResult<{
     if (!userEmail) return { error: "Não foi possível confirmar o e-mail titular.", ok: false };
 
     const admin = createAdminClient();
+    const { data: currentSubscription, error: currentSubscriptionError } = await admin
+      .from("subscriptions")
+      .select("cancellation_reconciliation_status")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (currentSubscriptionError) throw currentSubscriptionError;
+    if (
+      currentSubscription?.cancellation_reconciliation_status === "attention"
+      || currentSubscription?.cancellation_reconciliation_status === "pending"
+      || currentSubscription?.cancellation_reconciliation_status === "processing"
+    ) {
+      return {
+        error: "A conferência da cobrança anterior ainda não terminou. Fale com o atendimento antes de renovar.",
+        ok: false,
+      };
+    }
+
     const { data: deletion } = await admin.from("account_deletion_requests")
       .select("status")
       .eq("tenant_id_original", tenant.id)

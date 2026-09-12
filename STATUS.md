@@ -1,10 +1,10 @@
 # Status atual do ClickCatálogo
 
-Relatório consolidado em **12 de agosto de 2026** e revisado em **11 de setembro de 2026** para o pré-lançamento em `clickcatalogo.com`.
+Relatório consolidado em **12 de agosto de 2026** e revisado em **12 de setembro de 2026** para o pré-lançamento em `clickcatalogo.com`.
 
 ## Como o estado foi verificado
 
-- código da branch `master`, partindo do commit publicado `0ee5a16` e incluindo as alterações locais desta rodada;
+- código da branch `master`, partindo do commit publicado `df1aaba` e incluindo as alterações locais desta rodada;
 - schema consolidado e migrations versionadas em `supabase/`;
 - OpenAPI do projeto Supabase real, consultado em modo somente leitura para confirmar colunas, tipos, obrigatoriedade, defaults e relacionamentos expostos;
 - dados agregados do Supabase real, sem registrar e-mails, IDs ou chaves neste arquivo;
@@ -18,7 +18,7 @@ O sistema está **operacional de ponta a ponta no fluxo já validado**: cadastro
 
 O **Modo Carrinho está implementado na loja pública**, 100% client-side e sem persistência. O cliente pode adicionar produtos, alterar quantidades, revisar o pedido em um painel acessível e enviar um pedido consolidado pelo WhatsApp. O pedido individual de cada `ProductCard` foi preservado.
 
-O **cancelamento self-service foi corrigido** em `/painel/assinatura`: exige digitar exatamente o nome da loja, inativa a recorrência no Asaas e preserva o catálogo até o fim do período pago. Durante esse período o titular pode desfazer o cancelamento sem nova cobrança. Assinaturas legadas já removidas no Asaas usam um checkout de reativação vinculado ao tenant existente, sem criar outra loja ou outro usuário.
+O **cancelamento self-service foi corrigido** em `/painel/assinatura`: exige digitar exatamente o nome da loja, deriva o fim do período pago da próxima cobrança já gerada ou do `nextDueDate` autoritativo quando ela ainda não existe, inativa a recorrência no Asaas, remove somente cobranças futuras ainda pendentes a partir desse corte e relê a lista antes de concluir. Somente cobranças de cartão em `CONFIRMED`/`RECEIVED` comprovam pagamento. O banco registra o resultado, o painel não promete ausência de cobrança quando a conferência falha e a rotina horária repete estados pendentes/atenção mesmo sem retorno do titular. Claim atômico, estado `processing`, lease e gravações condicionais serializam o agendador contra “Desfazer cancelamento”. Durante o período pago o titular pode desfazer o cancelamento sem nova cobrança. Assinaturas legadas já removidas no Asaas usam um checkout de reativação vinculado ao tenant existente, sem criar outra loja ou outro usuário.
 
 A **retomada cross-device do cadastro** está implementada localmente em `/cadastro/recuperar`: resposta não enumerável, rate limit por IP e HMAC do e-mail, token aleatório de uso único com 20 minutos, somente hash no banco e envio pela API do Resend. Checkout ainda válido é reutilizado; pagamento continua confirmado exclusivamente pelo webhook.
 
@@ -259,10 +259,10 @@ O painel do carrinho usa o elemento nativo `dialog`, com fechamento por botão, 
 - criação silenciosa do usuário confirmado no Supabase Auth;
 - criação/reativação do tenant e upsert lógico da assinatura;
 - sincronização de `ativo`, `inadimplente/atrasado` e `cancelado`;
-- tratamento de `CHECKOUT_PAID`, `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `SUBSCRIPTION_UPDATED`, `SUBSCRIPTION_DELETED`, `SUBSCRIPTION_INACTIVATED`, `CHECKOUT_CANCELED` e `CHECKOUT_EXPIRED`;
+- tratamento de `CHECKOUT_PAID`, `PAYMENT_CONFIRMED`, `PAYMENT_DELETED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `SUBSCRIPTION_UPDATED`, `SUBSCRIPTION_DELETED`, `SUBSCRIPTION_INACTIVATED`, `CHECKOUT_CANCELED` e `CHECKOUT_EXPIRED`;
 - ausência das chaves retorna erro controlado, sem impedir build do projeto.
 - callbacks usam `NEXT_PUBLIC_SITE_URL` e não há cliente, cartão ou URL de Sandbox fixados no fluxo de negócio.
-- cancelamento self-service reversível via `PUT /v3/subscriptions/{id}` com `status: INACTIVE`, confirmação forte e acesso preservado até o fim do período pago; `SUBSCRIPTION_DELETED` permanece apenas para reconciliação de assinaturas legadas.
+- cancelamento self-service reversível via `PUT /v3/subscriptions/{id}` com `status: INACTIVE`, confirmação forte, corte derivado das datas autoritativas do Asaas, whitelist de cartão liquidado, conciliação de cobranças `PENDING` com releitura final, claim/lease contra reativação e acesso preservado até o fim do período pago; `SUBSCRIPTION_DELETED` permanece apenas para reconciliação de assinaturas legadas.
 
 ### Evidência do banco real em 12/08/2026
 
@@ -305,7 +305,7 @@ Não há Redux, Zustand, Jotai, Context global de compras, biblioteca de modal/d
 4. **Testes automatizados:** existe uma suíte unitária inicial para transições de assinatura, moeda brasileira e tokens de recuperação. A cobertura de integração concorrente do webhook e o E2E completo ainda precisam evoluir antes de escala, sem executar cobranças reais no CI.
 5. **Atualização de produto:** a Server Action devolve o produto salvo e a lista é atualizada no estado local, sem recarregar a página.
 6. **Navegação ativa de categorias:** a pill ativa muda ao clicar, mas não acompanha automaticamente a seção visível durante scroll.
-7. **Rate limiting distribuído:** a RPC compartilhada está ativa após `202608300007_fix_distributed_rate_limit.sql`; a auditoria real confirmou consumo atômico e limpeza do probe técnico. O fallback em memória permanece apenas como contingência de indisponibilidade do Supabase.
+7. **Rate limiting distribuído:** a RPC compartilhada está ativa após `202608300007_fix_distributed_rate_limit.sql`; a auditoria real confirmou consumo atômico e limpeza do probe técnico. O fallback em memória permanece para webhook e rotas leves; operações públicas sensíveis respondem indisponibilidade temporária se a proteção compartilhada falhar.
 
 ### Bugs reportados anteriormente
 
@@ -345,7 +345,7 @@ O carrinho e o polimento visual solicitado foram concluídos. Contadores nas cat
 
 1. **Recuperação self-service:** implementada com `resetPasswordForEmail`, callback PKCE e `updateUser`. SMTP Resend, Redirect URLs, recebimento real no Gmail, troca de senha e novo login foram validados. A versão local do template adiciona uma confirmação intermediária resistente a scanners de link e deve ser reaplicada no Supabase depois do deploy final.
 2. **Asaas em Produção:** o código foi auditado. A chave `$aact_prod_` seleciona automaticamente `https://api.asaas.com/v3`; callbacks usam `NEXT_PUBLIC_SITE_URL` e não há dados de Sandbox fixados no checkout. A primeira cobrança real permanece um teste manual obrigatório e está roteirizada no `SETUP.md`.
-3. **Rate limiting:** implementado por IP em RPC atômica no Supabase, compartilhada entre Functions da Netlify, com HMAC em vez do IP bruto e fallback local. Protege checkout, senha inicial, slug, status e webhook; as migrations `202608290006_prelaunch_hardening.sql` e `202608300007_fix_distributed_rate_limit.sql` já foram aplicadas.
+3. **Rate limiting:** implementado por IP em RPC atômica no Supabase, compartilhada entre Functions da Netlify, com HMAC em vez do IP bruto. Checkout, senha inicial e recuperação falham fechados se o limitador distribuído estiver indisponível; webhook e rotas leves mantêm fallback local para preservar disponibilidade. As migrations `202608290006_prelaunch_hardening.sql` e `202608300007_fix_distributed_rate_limit.sql` já foram aplicadas.
 
 ### P1 — recomendação
 
@@ -370,7 +370,7 @@ O carrinho e o polimento visual solicitado foram concluídos. Contadores nas cat
 | 2 | Origem, autenticação e tenant | **Coberto para o escopo atual.** Checkout e criação inicial de senha exigem origem válida; webhook valida token antes do rate limit; entradas usam Zod e limitador distribuído. Server Actions exigem sessão e derivam o tenant de `requireTenant`. As migrations 007, 008 e 009 foram aplicadas e auditadas. | Repetir `npm run audit:live` após os testes de pagamento em Produção. |
 | 3 | Logs sensíveis | **Coberto.** As mensagens registram contexto técnico limitado e texto de erro, sem gravar senha, payload completo de checkout/webhook, token, chave, e-mail ou número de WhatsApp. A varredura do build e dos arquivos versionados também não encontrou valores reais dos segredos. | Ao adicionar observabilidade, continuar sem registrar objetos completos de request, headers, usuário ou webhook e definir expiração para os logs da plataforma. |
 | 4 | Falha/reentrega do webhook | **Coberto com ressalva operacional.** O Asaas trabalha com entrega `at least once`, tenta novamente falhas de forma progressiva, interrompe a fila após 15 falhas consecutivas e mantém eventos por até 14 dias. O endpoint persiste `event.id`, responde erro quando o processamento falha e ignora somente eventos já concluídos. Uma reentrega que encontra processamento recente agora recebe `409`, não um falso `200`, evitando perder o evento se a primeira execução tiver sido interrompida. | Manter envio sequencial, e-mail de alerta e monitorar **Asaas → Integrações → Logs de Webhooks**. Uma fila assíncrona externa é uma evolução recomendada se o volume crescer, pois hoje o processamento ainda ocorre antes do `200`. Referência: [FAQ oficial de Webhooks](https://docs.asaas.com/docs/faq-de-webhooks). |
-| 5 | Timeout/aparelho perdido após pagamento | **Coberto localmente.** Além do polling com timeout, o titular pode recuperar a intenção por e-mail em outro dispositivo sem revelar o estado da conta e sem criar novo checkout quando o atual ainda vale. | Configurar as duas variáveis do Resend, aplicar migrations 011/012 e executar o teste cross-device no deploy. |
+| 5 | Timeout/aparelho perdido após pagamento | **Coberto localmente.** Além do polling com timeout, o titular pode recuperar a intenção por e-mail em outro dispositivo sem revelar o estado da conta e sem criar novo checkout quando o atual ainda vale. | Configurar as duas variáveis do Resend, aplicar migrations 011/012/013 e executar o teste cross-device no deploy. |
 | 6 | Dois cadastros com o mesmo slug | **Coberto.** A consulta antecipada melhora a mensagem, mas a garantia real está no banco: `tenants.slug` é único e `signup_intents_pending_slug_unique_idx` bloqueia duas reservas iniciais pendentes. Uma colisão `23505` no insert retorna `409` legível. | Nenhuma. |
 | 7 | Valores extremos | **Coberto.** Nome aceita no máximo 120 caracteres no input, Zod e constraint; preço com mais de duas casas agora é rejeitado com mensagem clara; vazios opcionais viram `null`. O bucket real aceitou um arquivo de **2 MB exatos**, rejeitou **2 MB + 1 byte** e o objeto temporário aceito foi removido logo após o teste. | Nenhuma. |
 | 8 | Excluir categoria com produtos | **Coberto e intencional.** A FK do banco usa `on delete restrict`. A aplicação bloqueia a exclusão, informa quantos produtos estão vinculados e orienta mover ou excluir esses produtos primeiro. Nenhum produto é apagado em cascata. | Nenhuma. |
@@ -384,6 +384,10 @@ O carrinho e o polimento visual solicitado foram concluídos. Contadores nas cat
 - interface validada no painel em 375 px, sem overflow e sem alvo interativo menor que 44 px;
 - a recorrência passa de `ACTIVE` para `INACTIVE`; `DELETE` fica restrito ao legado já existente e não é usado em novos cancelamentos;
 - desfazer usa `ACTIVE` com `nextDueDate = access_until`, evitando cobrar novamente o período já pago;
+- a finalização horária agora exige conciliação `complete`; estados `pending` e
+  `attention` são repetidos e nunca escondidos pelo simples vencimento da data;
+- a rotina reserva cada item por RPC, alterna para `processing`, respeita orçamento
+  de 17 segundos e registra quantidade/duração e pendências sem PII;
 - ambiente local configurado confirmado como **Sandbox** e uma assinatura íntegra com IDs Asaas foi localizada no novo Supabase;
 - o fluxo funcional de Sandbox foi validado; a cobrança e o cancelamento controlados em Produção continuam pendentes.
 
@@ -432,7 +436,7 @@ O catálogo público suporta pedidos individuais e com vários produtos; autenti
 - o backup do Storage percorre o bucket inteiro, preserva subpastas e objetos órfãos e registra tamanho e SHA-256 de cada arquivo no manifesto;
 - a configuração local do Asaas continua em Sandbox, portanto nenhuma cobrança real deve ser aceita antes da troca consciente para uma chave de Produção;
 - a identificação legal e o canal público foram cadastrados na Netlify; a confirmação visual será repetida após o deploy final.
-- o webhook `ClickCatalogo Sandbox` foi auditado pela API oficial no domínio final, com fila ativa, envio sequencial e os oito eventos necessários, sem referência remanescente à marca antiga.
+- o webhook `ClickCatalogo Sandbox` foi auditado pela API oficial no domínio final, com fila ativa e envio sequencial; após esta release deve incluir também `PAYMENT_DELETED` e `SUBSCRIPTION_UPDATED`, totalizando dez eventos obrigatórios.
 - a API Key e o webhook de Produção foram preparados manualmente e permanecem fora do projeto; ativação, auditoria e primeira cobrança real serão feitas somente na virada final da Netlify.
 
 ### Fechamento local antes do próximo deploy

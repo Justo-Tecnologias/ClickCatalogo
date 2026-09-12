@@ -13,6 +13,7 @@ export default function TermsPage() {
     <LegalPage
       description="Regras essenciais para usar a plataforma ClickCatálogo e manter seu catálogo publicado."
       title="Termos de uso"
+      updatedAt="10 de setembro de 2026"
     >
       <section>
         <h2>1. O serviço</h2>

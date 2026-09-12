@@ -13,6 +13,7 @@ export default function PrivacyPage() {
     <LegalPage
       description="Como o ClickCatálogo trata os dados necessários à criação, cobrança e operação da sua loja."
       title="Política de privacidade"
+      updatedAt="12 de setembro de 2026"
     >
       <section>
         <h2>1. Controlador e contato</h2>
@@ -32,16 +33,17 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>5. Fornecedores e transferências</h2>
-        <p>Usamos Netlify para hospedagem, Supabase para banco de dados, autenticação e imagens, Asaas para cobrança e Resend como SMTP dos e-mails de autenticação. Esses fornecedores podem processar dados em infraestrutura fora do Brasil e devem tratá-los conforme seus contratos, medidas de segurança e a legislação aplicável.</p>
+        <p>Usamos Netlify para hospedagem, Supabase para banco de dados, autenticação e imagens, Asaas para cobrança e Resend para o envio de e-mails transacionais, incluindo autenticação e recuperação do cadastro. Esses fornecedores podem processar dados em infraestrutura fora do Brasil e devem tratá-los conforme seus contratos, medidas de segurança e a legislação aplicável.</p>
       </section>
       <section>
-        <h2>6. Cookies e carrinho</h2>
-        <p>Usamos cookies essenciais para manter a sessão, selecionar a loja administrada e proteger a demonstração. O carrinho do catálogo permanece somente na memória da página e é descartado quando ela é recarregada. Não usamos cookies de publicidade comportamental ou ferramentas de análise na versão atual.</p>
+        <h2>6. Cookies, carrinho e métricas</h2>
+        <p>Usamos cookies essenciais para manter a sessão, selecionar a loja administrada e proteger a demonstração. O carrinho do catálogo permanece somente na memória da página e é descartado quando ela é recarregada. Não usamos cookies de publicidade comportamental. Registramos contadores agregados diários de uso dos produtos para acompanhar o funcionamento do serviço, sem armazenar nesses contadores IP, e-mail, telefone ou o conteúdo do catálogo.</p>
+        <p>O endereço IP pode ser processado temporariamente para segurança, prevenção de abuso e limitação de requisições. Nesse mecanismo não armazenamos o IP bruto: mantemos apenas um identificador derivado por HMAC, que não permite recuperar o endereço original e expira em até um dia.</p>
       </section>
       <section>
         <h2>7. Retenção e segurança</h2>
         <p>Enquanto a assinatura estiver ativa, inclusive durante o período já pago após o cancelamento da próxima renovação, mantemos os dados necessários para prestar o serviço. Quando esse período termina, a loja fica indisponível e catálogo, produtos, imagens, configurações e acesso permanecem por até 30 dias para encerramento operacional. O titular autenticado pode antecipar esse prazo para até 15 dias na tela Privacidade do painel.</p>
-        <p>Intenções de cadastro canceladas ou expiradas são eliminadas depois de 90 dias. Payloads de webhooks processados com sucesso são mantidos por 180 dias; falhas pendentes ficam preservadas até serem resolvidas. Registros técnicos de limitação de abuso expiram em um dia.</p>
+        <p>Intenções de cadastro canceladas ou expiradas são eliminadas depois de 90 dias. Payloads de webhooks processados com sucesso são mantidos por 180 dias; falhas pendentes ficam preservadas até serem resolvidas. Registros técnicos de limitação de abuso expiram em um dia. Métricas agregadas de produto podem ser mantidas por até 400 dias para análise histórica do serviço.</p>
         <p>Depois da exclusão operacional, preservamos por cinco anos, contados do arquivamento, somente evidências mínimas de contratação, aceite dos documentos e pagamento, sem conteúdo do catálogo, imagens, WhatsApp, endereço ou credenciais. Esse conjunto isolado existe para obrigações legais, prevenção de fraude e exercício regular de direitos. Ao fim do prazo, ele também é eliminado. Aplicamos isolamento entre lojas, controle de acesso, validação de origem, limitação de abuso e chaves exclusivas de servidor.</p>
       </section>
       <section>

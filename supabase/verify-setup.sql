@@ -28,6 +28,7 @@ where routine_schema = 'public'
   and routine_name in (
     'expire_stale_signup_intents',
     'finalize_due_subscription_cancellations',
+    'claim_subscription_cancellation_reconciliations',
     'consume_api_rate_limit',
     'email_has_tenant',
     'get_public_catalog',
@@ -46,6 +47,24 @@ where routine_schema = 'public'
     'increment_product_metric'
   )
 order by routine_name;
+
+select
+  strpos(
+    pg_get_functiondef('public.finalize_due_subscription_cancellations(timestamptz)'::regprocedure),
+    'cancellation_reconciliation_status = ''complete'''
+  ) > 0 as finalizacao_exige_conciliacao_completa;
+
+select
+  has_function_privilege(
+    'service_role',
+    'public.claim_subscription_cancellation_reconciliations(integer)',
+    'EXECUTE'
+  ) as service_role_pode_reservar_conciliacao,
+  not has_function_privilege(
+    'authenticated',
+    'public.claim_subscription_cancellation_reconciliations(integer)',
+    'EXECUTE'
+  ) as usuario_nao_pode_reservar_conciliacao;
 
 select
   id,
@@ -70,7 +89,9 @@ where table_schema = 'public'
       'cancellation_requested_at',
       'access_until',
       'reactivation_requested_at',
-      'asaas_subscription_state'
+      'asaas_subscription_state',
+      'cancellation_reconciliation_status',
+      'cancellation_reconciliation_checked_at'
     ))
     or (table_name = 'signup_intents' and column_name in (
       'intent_type',

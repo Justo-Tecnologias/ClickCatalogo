@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 const eventSchema = z.object({
   checkout: z.record(z.string(), z.unknown()).optional(),
+  dateCreated: z.string().optional(),
   event: z.string().min(1).max(100),
   id: z.string().min(1).max(200),
   payment: z.record(z.string(), z.unknown()).optional(),
@@ -65,6 +66,13 @@ function nextDueDateFrom(event: WebhookEvent) {
     ?? textValue(event.payment, "dueDate");
 }
 
+function eventPredates(event: WebhookEvent, reference: string) {
+  if (!event.dateCreated) return false;
+  const eventTime = new Date(event.dateCreated).getTime();
+  const referenceTime = new Date(reference).getTime();
+  return Number.isFinite(eventTime) && Number.isFinite(referenceTime) && eventTime < referenceTime;
+}
+
 function validToken(received: string | null) {
   let expected: string;
   try { expected = requireAsaasWebhookToken(); } catch { return false; }
@@ -89,6 +97,7 @@ async function findAuthUserIdByEmail(
 }
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
   const requestId = request.headers.get("x-nf-request-id")?.slice(0, 100) ?? randomUUID();
   if (!validToken(request.headers.get("asaas-access-token"))) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
@@ -113,7 +122,12 @@ export async function POST(request: Request) {
   });
   if (claimError) return NextResponse.json({ error: "Falha ao registrar evento." }, { status: 500 });
   if (claim === "repeated") {
-    logInfo("asaas.webhook", { event_id: event.id, request_id: requestId, result: "repeated" });
+    logInfo("asaas.webhook", {
+      duration_ms: Math.round(performance.now() - startedAt),
+      event_id: event.id,
+      request_id: requestId,
+      result: "repeated",
+    });
     return NextResponse.json({ received: true, repeated: true });
   }
   if (claim === "processing") {
@@ -129,6 +143,7 @@ export async function POST(request: Request) {
     const { error: processedUpdateError } = await admin.from("asaas_webhook_events").update({ processed_at: new Date().toISOString(), processing_error: null }).eq("event_id", event.id);
     if (processedUpdateError) throw processedUpdateError;
     logInfo("asaas.webhook", {
+      duration_ms: Math.round(performance.now() - startedAt),
       event_id: event.id,
       event_type: event.event,
       request_id: requestId,
@@ -139,6 +154,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message.slice(0, 500) : "Erro desconhecido";
     await admin.from("asaas_webhook_events").update({ processing_error: message }).eq("event_id", event.id);
     logError("asaas.webhook", error, {
+      duration_ms: Math.round(performance.now() - startedAt),
       event_id: event.id,
       event_type: event.event,
       request_id: requestId,
@@ -159,6 +175,10 @@ async function processEvent(event: WebhookEvent) {
   if (event.event === "PAYMENT_OVERDUE") { await updateSubscriptionStatus(event, "atrasado", "inadimplente"); return; }
   if (event.event === "SUBSCRIPTION_UPDATED") { await completePendingReactivation(event); return; }
   if (event.event === "SUBSCRIPTION_INACTIVATED") { await recordRemoteSubscriptionState(event, "inactive"); return; }
+  if (event.event === "PAYMENT_DELETED") {
+    logInfo("asaas.payment.deleted", { result: "acknowledged" });
+    return;
+  }
   if (event.event === "SUBSCRIPTION_DELETED") {
     if (!await recordRemoteSubscriptionState(event, "deleted")) return;
     await updateSubscriptionStatus(event, "cancelado", "cancelado");
@@ -211,6 +231,7 @@ type ExistingSubscription = {
   id: string;
   matchedBy: "customer" | "subscription";
   next_due_date?: string | null;
+  reactivation_requested_at?: string | null;
   status: "ativo" | "atrasado" | "cancelado";
   tenant_id: string;
 };
@@ -244,7 +265,7 @@ async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSu
   const subscriptionId = subscriptionIdFrom(event);
 
   if (subscriptionId) {
-    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date").eq("asaas_subscription_id", subscriptionId).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date,reactivation_requested_at").eq("asaas_subscription_id", subscriptionId).maybeSingle();
     if (error) throw error;
     if (data) return { ...data, matchedBy: "subscription" };
   }
@@ -252,7 +273,7 @@ async function findExistingSubscription(event: WebhookEvent): Promise<ExistingSu
   const customerId = customerIdFrom(event);
   if (!customerId) return null;
 
-  const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
+  const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date,reactivation_requested_at").eq("asaas_customer_id", customerId).order("created_at", { ascending: false }).limit(2);
   if (error) throw error;
   if (!data?.length) return null;
 
@@ -266,12 +287,15 @@ async function activateExistingSubscription(event: WebhookEvent) {
   if (!existing) return false;
 
   const admin = createAdminClient();
+  if (scheduledCancellationStillHasAccess(existing)) return true;
   if (await cancellationIsTerminal(admin, existing.tenant_id, existing.status)) {
     return true;
   }
 
   const values: Database["public"]["Tables"]["subscriptions"]["Update"] = {
     asaas_subscription_state: "active",
+    cancellation_reconciliation_checked_at: null,
+    cancellation_reconciliation_status: "not_required",
     status: "ativo",
   };
   const customerId = customerIdFrom(event);
@@ -350,7 +374,7 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
 
   let currentSubscription = existingSubscription;
   if (!currentSubscription) {
-    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await admin.from("subscriptions").select("id,status,tenant_id,cancel_at_period_end,access_until,next_due_date,reactivation_requested_at").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     currentSubscription = data ? { ...data, matchedBy: "customer" } : null;
   }
@@ -361,12 +385,21 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
   ) {
     return;
   }
+  if (
+    intent.provisioned_tenant_id
+    && currentSubscription
+    && scheduledCancellationStillHasAccess(currentSubscription)
+  ) {
+    return;
+  }
 
   const { error: tenantError } = await admin.from("tenants").update({ status: "ativo" }).eq("id", tenantId);
   if (tenantError) throw tenantError;
 
   const subscriptionValues: Database["public"]["Tables"]["subscriptions"]["Update"] = {
     asaas_subscription_state: "active",
+    cancellation_reconciliation_checked_at: null,
+    cancellation_reconciliation_status: "not_required",
     status: "ativo",
     valor: value,
   };
@@ -445,6 +478,15 @@ async function recordRemoteSubscriptionState(
   const existing = await findExistingSubscription(event);
   if (!existing) return false;
 
+  if (state === "inactive" && !existing.cancel_at_period_end) {
+    logInfo("asaas.subscription.remote_state", {
+      operation: "unexpected_or_stale_inactivation",
+      result: state,
+      tenant_id: existing.tenant_id,
+    });
+    return true;
+  }
+
   const admin = createAdminClient();
   const { error } = await admin.from("subscriptions")
     .update({ asaas_subscription_state: state })
@@ -453,13 +495,6 @@ async function recordRemoteSubscriptionState(
 
   // A inativação solicitada pelo ClickCatálogo apenas impede novas cobranças.
   // O estado local e o catálogo continuam ativos até access_until.
-  if (state === "inactive" && !existing.cancel_at_period_end) {
-    logInfo("asaas.subscription.remote_state", {
-      operation: "unexpected_inactivation",
-      result: state,
-      tenant_id: existing.tenant_id,
-    });
-  }
   return true;
 }
 
@@ -476,11 +511,14 @@ async function completePendingReactivation(event: WebhookEvent) {
     .single();
   if (error) throw error;
   if (!subscription.reactivation_requested_at) return;
+  if (eventPredates(event, subscription.reactivation_requested_at)) return;
 
   const { error: subscriptionError } = await admin.from("subscriptions").update({
     access_until: null,
     asaas_subscription_state: "active",
     cancel_at_period_end: false,
+    cancellation_reconciliation_checked_at: null,
+    cancellation_reconciliation_status: "not_required",
     cancellation_requested_at: null,
     reactivation_requested_at: null,
     status: "ativo",
@@ -530,6 +568,8 @@ async function provisionReactivation(intent: SignupIntent, event: WebhookEvent) 
     asaas_subscription_id: subscriptionId,
     asaas_subscription_state: "active",
     cancel_at_period_end: false,
+    cancellation_reconciliation_checked_at: null,
+    cancellation_reconciliation_status: "not_required",
     cancellation_requested_at: null,
     reactivation_requested_at: null,
     status: "ativo",

@@ -12,6 +12,7 @@ type RateLimitEntry = {
 };
 
 type RateLimitPolicy = {
+  failureMode?: "closed" | "local";
   limit: number;
   scope: string;
   windowMs: number;
@@ -28,11 +29,11 @@ const store = globalStore.__clickCatalogoRateLimitStore ??= new Map<string, Rate
 export const PUBLIC_API_RATE_LIMITS = {
   accountAvailability: { limit: 12, scope: "account-availability", windowMs: 10 * 60 * 1000 },
   analytics: { limit: 60, scope: "product-analytics", windowMs: 60 * 1000 },
-  checkout: { limit: 5, scope: "checkout", windowMs: 10 * 60 * 1000 },
-  passwordSetup: { limit: 10, scope: "password-setup", windowMs: 15 * 60 * 1000 },
-  signupRecoveryConsume: { limit: 10, scope: "signup-recovery-consume", windowMs: 15 * 60 * 1000 },
-  signupRecoveryEmail: { limit: 3, scope: "signup-recovery-email", windowMs: 30 * 60 * 1000 },
-  signupRecoveryIp: { limit: 5, scope: "signup-recovery-ip", windowMs: 15 * 60 * 1000 },
+  checkout: { failureMode: "closed", limit: 5, scope: "checkout", windowMs: 10 * 60 * 1000 },
+  passwordSetup: { failureMode: "closed", limit: 10, scope: "password-setup", windowMs: 15 * 60 * 1000 },
+  signupRecoveryConsume: { failureMode: "closed", limit: 10, scope: "signup-recovery-consume", windowMs: 15 * 60 * 1000 },
+  signupRecoveryEmail: { failureMode: "closed", limit: 3, scope: "signup-recovery-email", windowMs: 30 * 60 * 1000 },
+  signupRecoveryIp: { failureMode: "closed", limit: 5, scope: "signup-recovery-ip", windowMs: 15 * 60 * 1000 },
   slugAvailability: { limit: 60, scope: "slug-availability", windowMs: 60 * 1000 },
   signupStatus: { limit: 120, scope: "signup-status", windowMs: 10 * 60 * 1000 },
   webhook: { limit: 180, scope: "asaas-webhook", windowMs: 60 * 1000 },
@@ -115,6 +116,19 @@ function rateLimitResponse(policy: RateLimitPolicy, retryAfter: number, resetAt:
   );
 }
 
+function unavailableRateLimitResponse() {
+  return NextResponse.json(
+    { error: "Serviço temporariamente indisponível. Aguarde um instante e tente novamente." },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": "30",
+      },
+      status: 503,
+    },
+  );
+}
+
 async function enforceIdentifierRateLimit(identifier: string, policy: RateLimitPolicy) {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -151,6 +165,7 @@ async function enforceIdentifierRateLimit(identifier: string, policy: RateLimitP
     }
   }
 
+  if (policy.failureMode === "closed") return unavailableRateLimitResponse();
   return memoryRateLimit(identifier, policy);
 }
 

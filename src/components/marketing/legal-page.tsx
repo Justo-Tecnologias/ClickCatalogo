@@ -2,7 +2,7 @@ import { ArrowLeft, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export function LegalPage({ children, description, title }: { children: ReactNode; description: string; title: string }) {
+export function LegalPage({ children, description, title, updatedAt }: { children: ReactNode; description: string; title: string; updatedAt: string }) {
   return (
     <main className="min-h-screen bg-[var(--app-background)]">
       <header className="border-b bg-white">
@@ -36,7 +36,7 @@ export function LegalPage({ children, description, title }: { children: ReactNod
               {description}
             </p>
             <p className="mt-3 text-xs font-medium text-brand-700">
-              Última atualização: 30 de agosto de 2026
+              Última atualização: {updatedAt}
             </p>
           </div>
 

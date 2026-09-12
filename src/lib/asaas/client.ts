@@ -3,6 +3,12 @@ import "server-only";
 import { z } from "zod";
 
 import { recurringCheckoutPayload, subscriptionStatusPayload } from "@/lib/asaas/contracts";
+import {
+  authoritativePaidThroughDate,
+  selectFuturePendingSubscriptionPayments,
+  selectSubscriptionPaymentsAtOrAfter,
+  type AsaasSubscriptionPayment,
+} from "@/lib/asaas/payments";
 import { getAsaasCheckoutPlan } from "@/lib/billing/server-plan";
 import { requireAsaasEnv } from "@/lib/env/server";
 
@@ -11,10 +17,23 @@ const checkoutResponseSchema = z.object({
   link: z.url().optional(),
 });
 
+const subscriptionPaymentSchema = z.object({
+  billingType: z.string().min(1),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  id: z.string().min(1),
+  status: z.string().min(1),
+  subscription: z.string().nullable().optional(),
+}).passthrough();
+
+const subscriptionPaymentsResponseSchema = z.object({
+  data: z.array(subscriptionPaymentSchema),
+  hasMore: z.boolean().optional(),
+}).passthrough();
+
 const subscriptionResponseSchema = z.object({
-  id: z.string(),
+  id: z.string().min(1),
   nextDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+}).passthrough();
 
 export class AsaasSubscriptionCancellationError extends Error {
   constructor(message: string) {
@@ -27,6 +46,13 @@ export class AsaasSubscriptionReactivationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AsaasSubscriptionReactivationError";
+  }
+}
+
+export class AsaasPaymentReconciliationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AsaasPaymentReconciliationError";
   }
 }
 
@@ -134,6 +160,166 @@ export function inactivateAsaasSubscription(subscriptionId: string) {
   return updateAsaasSubscription(subscriptionId, { status: "INACTIVE" });
 }
 
+async function listSubscriptionPayments(subscriptionId: string, status?: "PENDING") {
+  const env = requireAsaasEnv();
+  const payments: AsaasSubscriptionPayment[] = [];
+  const limit = 100;
+
+  for (let offset = 0; offset < 2_000; offset += limit) {
+    const url = new URL(
+      `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
+    );
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    if (status) url.searchParams.set("status", status);
+
+    let response: Response | null = null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        response = await fetch(url, {
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
+            access_token: env.apiKey,
+          },
+          method: "GET",
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (response.ok || response.status < 500 || attempt === 2) break;
+      } catch {
+        if (attempt === 2) {
+          throw new AsaasPaymentReconciliationError(
+            "Não foi possível consultar as cobranças da assinatura.",
+          );
+        }
+      }
+    }
+
+    if (!response?.ok) {
+      throw new AsaasPaymentReconciliationError(
+        "O Asaas não confirmou as cobranças pendentes da assinatura.",
+      );
+    }
+
+    const parsed = subscriptionPaymentsResponseSchema.safeParse(
+      await response.json().catch(() => null),
+    );
+    if (!parsed.success) {
+      throw new AsaasPaymentReconciliationError(
+        "O Asaas devolveu uma lista de cobranças inválida.",
+      );
+    }
+
+    payments.push(...parsed.data.data);
+    if (!parsed.data.hasMore || parsed.data.data.length < limit) return payments;
+  }
+
+  throw new AsaasPaymentReconciliationError(
+    "A assinatura possui cobranças demais para conciliação automática.",
+  );
+}
+
+async function deletePendingPayment(paymentId: string) {
+  const env = requireAsaasEnv();
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(
+        `${env.apiUrl}/payments/${encodeURIComponent(paymentId)}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
+            access_token: env.apiKey,
+          },
+          method: "DELETE",
+          signal: AbortSignal.timeout(15_000),
+        },
+      );
+
+      if (response.ok || response.status === 404) return;
+      if (response.status >= 500 && attempt === 1) continue;
+      throw new AsaasPaymentReconciliationError(
+        "O Asaas não removeu uma cobrança futura pendente.",
+      );
+    } catch (error) {
+      if (error instanceof AsaasPaymentReconciliationError) throw error;
+      if (attempt === 2) {
+        throw new AsaasPaymentReconciliationError(
+          "Não foi possível remover uma cobrança futura pendente.",
+        );
+      }
+    }
+  }
+}
+
+export async function reconcileFuturePendingSubscriptionPayments(
+  subscriptionId: string,
+  accessUntilDate: string,
+) {
+  const payments = await listSubscriptionPayments(subscriptionId, "PENDING");
+  const removable = selectFuturePendingSubscriptionPayments(
+    payments,
+    subscriptionId,
+    accessUntilDate,
+  );
+
+  for (const payment of removable) await deletePendingPayment(payment.id);
+
+  const remaining = selectSubscriptionPaymentsAtOrAfter(
+    await listSubscriptionPayments(subscriptionId),
+    subscriptionId,
+    accessUntilDate,
+  );
+  if (remaining.length > 0) {
+    throw new AsaasPaymentReconciliationError(
+      "Ainda existe uma cobrança do próximo período que requer conferência.",
+    );
+  }
+
+  return { removedCount: removable.length };
+}
+
+export async function getAsaasSubscriptionPaidThroughDate(subscriptionId: string) {
+  try {
+    const env = requireAsaasEnv();
+    const [payments, subscriptionResponse] = await Promise.all([
+      listSubscriptionPayments(subscriptionId),
+      fetch(`${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
+          access_token: env.apiKey,
+        },
+        signal: AbortSignal.timeout(15_000),
+      }),
+    ]);
+    if (!subscriptionResponse.ok) throw new AsaasPaymentReconciliationError("Assinatura não encontrada.");
+    const subscription = subscriptionResponseSchema.safeParse(
+      await subscriptionResponse.json().catch(() => null),
+    );
+    if (!subscription.success || subscription.data.id !== subscriptionId) {
+      throw new AsaasPaymentReconciliationError("Resposta de assinatura inválida.");
+    }
+    return authoritativePaidThroughDate(
+      payments,
+      subscriptionId,
+      subscription.data.nextDueDate,
+    );
+  } catch (error) {
+    if (error instanceof AsaasPaymentReconciliationError) {
+      throw new AsaasSubscriptionCancellationError(
+        "Não foi possível consultar as cobranças para confirmar o período já pago. A assinatura não foi cancelada.",
+      );
+    }
+    throw new AsaasSubscriptionCancellationError(
+      "O Asaas não informou uma cobrança paga que permita cancelar com segurança. A assinatura não foi alterada.",
+    );
+  }
+}
+
 export async function reactivateAsaasSubscription(
   subscriptionId: string,
   nextDueDate: string,
@@ -154,46 +340,6 @@ export async function reactivateAsaasSubscription(
       error instanceof Error
         ? error.message
         : "Não foi possível reativar a assinatura no Asaas.",
-    );
-  }
-}
-
-export async function getAsaasSubscriptionNextDueDate(subscriptionId: string) {
-  const env = requireAsaasEnv();
-
-  try {
-    const response = await fetch(
-      `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
-      {
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
-          access_token: env.apiKey,
-        },
-        method: "GET",
-        signal: AbortSignal.timeout(15_000),
-      },
-    );
-
-    if (!response.ok) {
-      throw new AsaasSubscriptionCancellationError(
-        "Não foi possível confirmar até quando o período atual está pago. A assinatura não foi cancelada.",
-      );
-    }
-
-    const parsed = subscriptionResponseSchema.safeParse(await response.json().catch(() => null));
-    if (!parsed.success || parsed.data.id !== subscriptionId) {
-      throw new AsaasSubscriptionCancellationError(
-        "O Asaas não informou a próxima renovação com segurança. A assinatura não foi cancelada.",
-      );
-    }
-
-    return parsed.data.nextDueDate;
-  } catch (error) {
-    if (error instanceof AsaasSubscriptionCancellationError) throw error;
-    throw new AsaasSubscriptionCancellationError(
-      "Não foi possível consultar o período pago no Asaas. Verifique sua conexão e tente novamente.",
     );
   }
 }

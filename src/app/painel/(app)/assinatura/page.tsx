@@ -38,7 +38,7 @@ export default async function SubscriptionPage() {
           <Card><CardContent className="grid gap-6 p-6 sm:grid-cols-3">
             <div><p className="text-sm text-[var(--app-foreground-muted)]">Status</p><Badge className="mt-2" variant={subscription.status === "ativo" ? "success" : subscription.status === "atrasado" ? "warning" : "danger"}>{subscription.status}</Badge></div>
             <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CreditCard aria-hidden="true" className="size-4" />Valor mensal</p><p className="mt-2 text-xl font-bold">{formatCurrency(Number(subscription.valor))}</p></div>
-            <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CalendarDays aria-hidden="true" className="size-4" />Próxima cobrança</p><p className="mt-2 font-semibold">{subscription.status === "cancelado" || subscription.cancel_at_period_end ? "Não haverá nova cobrança" : subscription.next_due_date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${subscription.next_due_date}T12:00:00Z`)) : "A confirmar"}</p></div>
+            <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CalendarDays aria-hidden="true" className="size-4" />Próxima cobrança</p><p className="mt-2 font-semibold">{subscription.status === "cancelado" ? ["attention", "pending", "processing"].includes(subscription.cancellation_reconciliation_status) ? "Em conferência" : "Não haverá nova cobrança" : subscription.cancel_at_period_end ? subscription.cancellation_reconciliation_status === "complete" ? "Não haverá nova cobrança" : "Em conferência" : subscription.next_due_date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${subscription.next_due_date}T12:00:00Z`)) : "A confirmar"}</p></div>
           </CardContent></Card>
           <SubscriptionCancellation
             canCancel={Boolean(subscription.asaas_subscription_id)}
@@ -46,6 +46,7 @@ export default async function SubscriptionPage() {
             demo={demo}
             initialAccessUntil={subscription.access_until}
             initialCancelled={subscription.status === "cancelado"}
+            initialReconciliationStatus={subscription.cancellation_reconciliation_status}
             initialScheduled={subscription.cancel_at_period_end}
             storeName={tenant.nome_loja}
           />

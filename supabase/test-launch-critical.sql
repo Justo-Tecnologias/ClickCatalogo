@@ -1,5 +1,5 @@
 -- ClickCatálogo — teste de integração financeiro, sem cobrança e sem persistir dados.
--- Execute no SQL Editor depois das migrations 011 e 012. Toda escrita é revertida.
+-- Execute no SQL Editor depois das migrations 011 a 015. Toda escrita é revertida.
 
 begin;
 
@@ -59,6 +59,51 @@ begin
 end;
 $$;
 
+do $$
+declare
+  v_tenant_id uuid;
+  v_subscription_id uuid;
+  v_claimed public.subscriptions%rowtype;
+begin
+  select tenant.id into v_tenant_id
+  from public.tenants as tenant
+  order by tenant.created_at
+  limit 1;
+
+  if v_tenant_id is null then
+    raise exception 'crie ao menos um tenant antes de testar o claim de conciliação';
+  end if;
+
+  insert into public.subscriptions (
+    tenant_id,
+    asaas_subscription_id,
+    status,
+    cancel_at_period_end,
+    cancellation_requested_at,
+    access_until,
+    cancellation_reconciliation_status,
+    cancellation_reconciliation_checked_at
+  ) values (
+    v_tenant_id,
+    'launch-claim-test-' || extensions.gen_random_uuid()::text,
+    'cancelado',
+    true,
+    clock_timestamp() - interval '100 years',
+    clock_timestamp() + interval '1 day',
+    'pending',
+    null
+  ) returning id into v_subscription_id;
+
+  select * into v_claimed
+  from public.claim_subscription_cancellation_reconciliations(1);
+
+  if v_claimed.id is distinct from v_subscription_id
+    or v_claimed.cancellation_reconciliation_status <> 'processing' then
+    raise exception 'claim de conciliação não reservou a assinatura sintética';
+  end if;
+end;
+$$;
+
 rollback;
 
-select 'ok: claims concorrentes, 10 reentregas e rate limit validados; nenhuma escrita persistida' as resultado;
+select 'ok: webhook, claim de conciliação, 10 reentregas e rate limit validados; nenhuma escrita persistida' as resultado;

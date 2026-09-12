@@ -409,6 +409,8 @@ export type Database = {
           asaas_subscription_id: string | null;
           asaas_subscription_state: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end: boolean;
+          cancellation_reconciliation_checked_at: string | null;
+          cancellation_reconciliation_status: "attention" | "complete" | "not_required" | "pending" | "processing";
           cancellation_requested_at: string | null;
           created_at: string;
           id: string;
@@ -426,6 +428,8 @@ export type Database = {
           asaas_subscription_id?: string | null;
           asaas_subscription_state?: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end?: boolean;
+          cancellation_reconciliation_checked_at?: string | null;
+          cancellation_reconciliation_status?: "attention" | "complete" | "not_required" | "pending" | "processing";
           cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
@@ -443,6 +447,8 @@ export type Database = {
           asaas_subscription_id?: string | null;
           asaas_subscription_state?: "active" | "deleted" | "inactive" | "unknown";
           cancel_at_period_end?: boolean;
+          cancellation_reconciliation_checked_at?: string | null;
+          cancellation_reconciliation_status?: "attention" | "complete" | "not_required" | "pending" | "processing";
           cancellation_requested_at?: string | null;
           created_at?: string;
           id?: string;
@@ -524,6 +530,10 @@ export type Database = {
       claim_asaas_webhook_event: {
         Args: { p_event_id: string; p_event_type: string; p_payload: Json; p_stale_seconds?: number };
         Returns: string;
+      };
+      claim_subscription_cancellation_reconciliations: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["subscriptions"]["Row"][];
       };
       consume_api_rate_limit: {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };

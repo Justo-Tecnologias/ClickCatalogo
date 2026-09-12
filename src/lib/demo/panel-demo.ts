@@ -46,6 +46,8 @@ export const DEMO_SUBSCRIPTION: Database["public"]["Tables"]["subscriptions"]["R
   asaas_subscription_id: "sub_demo",
   asaas_subscription_state: "active",
   cancel_at_period_end: false,
+  cancellation_reconciliation_checked_at: null,
+  cancellation_reconciliation_status: "not_required",
   cancellation_requested_at: null,
   created_at: createdAt,
   id: "00000000-0000-4000-8000-000000000301",

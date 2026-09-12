@@ -114,6 +114,8 @@ create table public.subscriptions (
   cancellation_requested_at timestamptz,
   access_until timestamptz,
   reactivation_requested_at timestamptz,
+  cancellation_reconciliation_status text not null default 'not_required',
+  cancellation_reconciliation_checked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -123,6 +125,9 @@ create table public.subscriptions (
   ),
   constraint subscriptions_asaas_state_check check (
     asaas_subscription_state in ('unknown', 'active', 'inactive', 'deleted')
+  ),
+  constraint subscriptions_cancellation_reconciliation_status_check check (
+    cancellation_reconciliation_status in ('not_required', 'pending', 'processing', 'complete', 'attention')
   ),
   constraint subscriptions_scheduled_cancellation_check check (
     not cancel_at_period_end
@@ -141,6 +146,13 @@ create index subscriptions_scheduled_cancellation_idx
   on public.subscriptions (access_until)
   where cancel_at_period_end = true
     and status in ('ativo', 'atrasado');
+
+create index subscriptions_cancellation_reconciliation_attention_idx
+  on public.subscriptions (
+    cancellation_reconciliation_status,
+    cancellation_reconciliation_checked_at
+  )
+  where cancellation_reconciliation_status in ('pending', 'processing', 'attention');
 
 -- Dados coletados antes do pagamento. Somente o backend com chave secreta
 -- acessa esta tabela; o navegador passa por rotas de API validadas.
@@ -810,6 +822,7 @@ begin
     update public.subscriptions
     set status = 'cancelado'
     where cancel_at_period_end = true
+      and cancellation_reconciliation_status = 'complete'
       and access_until <= coalesce(p_now, clock_timestamp())
       and (
         reactivation_requested_at is null
@@ -846,6 +859,10 @@ comment on column public.subscriptions.reactivation_requested_at is
   'Marca uma reativação em curso e impede corrida com a finalização agendada.';
 comment on column public.subscriptions.asaas_subscription_state is
   'Último estado conhecido da recorrência remota no Asaas.';
+comment on column public.subscriptions.cancellation_reconciliation_status is
+  'Confirma se cobranças futuras pendentes foram verificadas após interromper a recorrência.';
+comment on column public.subscriptions.cancellation_reconciliation_checked_at is
+  'Instante da última tentativa de conciliação das cobranças futuras.';
 comment on column public.signup_intents.intent_type is
   'Distingue o cadastro inicial da reativação de um tenant existente.';
 comment on column public.signup_intents.asaas_checkout_url is
@@ -853,7 +870,69 @@ comment on column public.signup_intents.asaas_checkout_url is
 comment on table public.signup_recovery_tokens is
   'Tokens de uso único para retomada cross-device; somente hashes são persistidos.';
 comment on function public.finalize_due_subscription_cancellations(timestamptz) is
-  'Finaliza assinaturas com cancelamento agendado cujo período pago terminou.';
+  'Finaliza somente cancelamentos vencidos cuja conciliação financeira foi concluída.';
+
+create or replace function public.claim_subscription_cancellation_reconciliations(
+  p_limit integer default 1
+)
+returns setof public.subscriptions
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_limit < 1 or p_limit > 10 then
+    raise exception 'Limite de conciliações inválido.' using errcode = '22023';
+  end if;
+
+  return query
+  with candidates as (
+    select subscription.id
+    from public.subscriptions as subscription
+    where subscription.cancel_at_period_end = true
+      and (
+        subscription.cancellation_reconciliation_status = 'pending'
+        or (
+          subscription.cancellation_reconciliation_status = 'attention'
+          and (
+            subscription.cancellation_reconciliation_checked_at is null
+            or subscription.cancellation_reconciliation_checked_at
+              < clock_timestamp() - interval '15 minutes'
+          )
+        )
+        or (
+          subscription.cancellation_reconciliation_status = 'processing'
+          and (
+            subscription.cancellation_reconciliation_checked_at is null
+            or subscription.cancellation_reconciliation_checked_at
+              < clock_timestamp() - interval '2 minutes'
+          )
+        )
+      )
+      and subscription.reactivation_requested_at is null
+    order by subscription.cancellation_reconciliation_checked_at nulls first,
+      subscription.cancellation_requested_at nulls first,
+      subscription.created_at
+    for update skip locked
+    limit p_limit
+  )
+  update public.subscriptions as subscription
+  set
+    cancellation_reconciliation_checked_at = clock_timestamp(),
+    cancellation_reconciliation_status = 'processing'
+  from candidates
+  where subscription.id = candidates.id
+  returning subscription.*;
+end;
+$$;
+
+revoke all on function public.claim_subscription_cancellation_reconciliations(integer)
+  from public, anon, authenticated;
+grant execute on function public.claim_subscription_cancellation_reconciliations(integer)
+  to service_role;
+
+comment on function public.claim_subscription_cancellation_reconciliations(integer) is
+  'Reserva conciliações com lease de dois minutos e impede disputa com reativação.';
 
 create or replace function public.reorder_categories(p_tenant_id uuid, p_ids uuid[])
 returns integer
