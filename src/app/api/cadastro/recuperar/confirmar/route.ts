@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Este link é inválido, expirou ou já foi utilizado." }, { status: 400 });
     }
 
-    const response = NextResponse.json({ next: "/cadastro/continuar" });
+    const response = NextResponse.json({ next: "/painel/acessar-loja/continuar" });
     response.cookies.set(
       SIGNUP_RESUME_COOKIE_NAME,
       recovered.external_reference,

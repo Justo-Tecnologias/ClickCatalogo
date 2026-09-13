@@ -42,14 +42,14 @@ export function SignupRecoveryForm() {
     <form className="grid gap-5" onSubmit={submit}>
       {sent ? (
         <Alert
-          description="Se encontrarmos um cadastro relacionado a este e-mail, enviaremos um link de uso único. Verifique também a caixa de spam."
-          title="Confira seu e-mail"
+          description="Se encontrarmos um cadastro vinculado a este e-mail, enviaremos as instruções para continuar. O link enviado é válido por alguns minutos."
+          title="Verifique seu e-mail"
           variant="success"
         />
       ) : null}
       {error ? <Alert description={error} title="Não concluímos a solicitação" variant="danger" /> : null}
       <Field>
-        <FieldLabel htmlFor="signup-recovery-email">E-mail usado na contratação</FieldLabel>
+        <FieldLabel htmlFor="signup-recovery-email">E-mail</FieldLabel>
         <Input
           autoComplete="email"
           disabled={submitting}
@@ -61,11 +61,11 @@ export function SignupRecoveryForm() {
           type="email"
           value={email}
         />
-        <FieldDescription>O link expira em 20 minutos e funciona uma única vez.</FieldDescription>
+        <FieldDescription>Use o mesmo e-mail informado no ClickCatálogo.</FieldDescription>
       </Field>
       <Button disabled={submitting} size="lg" type="submit">
         {submitting ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Mail aria-hidden="true" />}
-        {submitting ? "Solicitando..." : "Enviar instruções"}
+        {submitting ? "Enviando..." : "Enviar link"}
       </Button>
     </form>
   );

@@ -274,6 +274,8 @@ export type Database = {
           asaas_checkout_url: string | null;
           asaas_customer_id: string | null;
           asaas_subscription_id: string | null;
+          checkout_creation_started_at: string | null;
+          checkout_returned_at: string | null;
           created_at: string;
           email: string;
           expires_at: string;
@@ -299,6 +301,8 @@ export type Database = {
           asaas_checkout_url?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          checkout_creation_started_at?: string | null;
+          checkout_returned_at?: string | null;
           created_at?: string;
           email: string;
           expires_at?: string;
@@ -324,6 +328,8 @@ export type Database = {
           asaas_checkout_url?: string | null;
           asaas_customer_id?: string | null;
           asaas_subscription_id?: string | null;
+          checkout_creation_started_at?: string | null;
+          checkout_returned_at?: string | null;
           created_at?: string;
           email?: string;
           expires_at?: string;
@@ -534,6 +540,10 @@ export type Database = {
       claim_subscription_cancellation_reconciliations: {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["subscriptions"]["Row"][];
+      };
+      claim_signup_checkout_restart: {
+        Args: { p_external_reference: string; p_lease_seconds?: number };
+        Returns: { checkout_url: string | null; claimed_at: string | null; outcome: string }[];
       };
       consume_api_rate_limit: {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };

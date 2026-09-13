@@ -35,8 +35,8 @@ export function SignupRecoveryConfirmation() {
   if (error) {
     return (
       <div className="grid gap-5">
-        <Alert description="Solicite um novo link usando o mesmo e-mail da contratação." title={error} variant="warning" />
-        <Link className={buttonVariants()} href="/cadastro/recuperar">Solicitar novo link</Link>
+        <Alert description="Solicite um novo link usando o mesmo e-mail informado no ClickCatálogo." title={error} variant="warning" />
+        <Link className={buttonVariants()} href="/painel/acessar-loja">Solicitar novo link</Link>
       </div>
     );
   }
@@ -47,7 +47,7 @@ export function SignupRecoveryConfirmation() {
         <LoaderCircle aria-hidden="true" className="size-6 animate-spin" />
       </span>
       <h1 className="mt-5 text-2xl font-bold">Validando seu acesso</h1>
-      <p className="mt-2 text-sm text-[var(--app-foreground-muted)]">Aguarde enquanto recuperamos seu cadastro com segurança.</p>
+      <p className="mt-2 text-sm text-[var(--app-foreground-muted)]">Aguarde enquanto identificamos o próximo passo com segurança.</p>
     </div>
   );
 }

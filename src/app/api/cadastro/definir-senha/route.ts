@@ -97,6 +97,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não foi possível criar a senha agora. Tente novamente." }, { status: 500 });
   }
 
+  if (owner.user.email?.trim().toLowerCase() !== intent.email.trim().toLowerCase()) {
+    return NextResponse.json({ error: "Não foi possível validar o acesso desta loja." }, { status: 403 });
+  }
+
   await recordProductMetric("password_created", intent.provisioned_tenant_id);
 
   const response = NextResponse.json({ configured: true });

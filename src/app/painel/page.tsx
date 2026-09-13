@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { startDemoAction } from "@/app/painel/actions";
 import { LoginForm } from "@/components/painel/login-form";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPanelContext } from "@/lib/auth/session";
 import { isDemoAccessEnabled } from "@/lib/demo/panel-demo";
@@ -49,6 +49,14 @@ export default async function LoginPage() {
               />
             ) : null}
             {context.configured ? <LoginForm /> : null}
+            {context.configured ? (
+              <div className="grid gap-3 border-t pt-5 text-center">
+                <p className="text-sm text-[var(--app-foreground-muted)]">Ainda não conseguiu acessar sua loja?</p>
+                <Link className={buttonVariants({ variant: "secondary" })} href="/painel/acessar-loja">
+                  Acessar minha loja
+                </Link>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2 text-xs leading-5 text-[var(--app-foreground-muted)]">
               <KeyRound aria-hidden="true" className="size-4 shrink-0" />
               Seus dados de acesso são protegidos com segurança.

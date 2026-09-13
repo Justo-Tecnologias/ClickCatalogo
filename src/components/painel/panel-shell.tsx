@@ -1,9 +1,9 @@
 "use client";
 
-import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Package, Settings2, ShieldCheck, ShoppingBag } from "lucide-react";
+import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Menu, Package, Settings2, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { signOutAction } from "@/app/painel/actions";
 import { Badge } from "@/components/ui/badge";
@@ -22,18 +22,49 @@ const links = [
 
 export function PanelShell({ children, demo = false, slug, status, storeName, userEmail }: { children: ReactNode; demo?: boolean; slug: string; status: TenantStatus; storeName: string; userEmail: string | null }) {
   const pathname = usePathname();
-  const navigationRef = useRef<HTMLElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const navigation = navigationRef.current;
-    if (!navigation || window.matchMedia("(min-width: 1024px)").matches) return;
-
-    navigation.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({
-      behavior: "auto",
-      block: "nearest",
-      inline: "center",
-    });
+    const timer = window.setTimeout(() => setMenuOpen(false), 0);
+    return () => window.clearTimeout(timer);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const drawer = drawerRef.current;
+    const focusable = () => Array.from(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? []);
+    focusable()[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      if (elements.length === 0) return;
+      const first = elements[0];
+      const last = elements.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
     <div className="min-h-screen bg-[var(--app-background)] lg:grid lg:grid-cols-[17rem_1fr]">
@@ -43,13 +74,26 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
             <span className="grid size-8 place-items-center rounded-lg bg-brand-900 text-white"><ShoppingBag aria-hidden="true" className="size-4" /></span>
             ClickCatálogo
           </Link>
-          <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status}</Badge>
+            <Button
+              aria-controls="panel-mobile-menu"
+              aria-expanded={menuOpen}
+              aria-label="Abrir menu do painel"
+              className="lg:hidden"
+              onClick={() => setMenuOpen(true)}
+              ref={menuButtonRef}
+              size="icon"
+              variant="ghost"
+            >
+              <Menu aria-hidden="true" />
+            </Button>
+          </div>
         </div>
 
         <nav
           aria-label="Navegação do painel"
-          className="flex gap-1 overflow-x-auto overscroll-x-contain border-t px-3 py-2 [scrollbar-width:none] lg:grid lg:border-t-0 lg:px-3 lg:py-5 [&::-webkit-scrollbar]:hidden"
-          ref={navigationRef}
+          className="hidden gap-1 px-3 py-5 lg:grid"
         >
           {links.map(({ href, icon: Icon, label }) => {
             const active = pathname === href;
@@ -65,12 +109,6 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
               </Link>
             );
           })}
-          <form action={signOutAction} className="shrink-0 lg:hidden">
-            <Button className="min-h-11" type="submit" variant="ghost">
-              <LogOut aria-hidden="true" className="size-4" />
-              Sair
-            </Button>
-          </form>
         </nav>
 
         <div className="mt-auto hidden border-t p-4 lg:block">
@@ -82,6 +120,74 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
           </div>
         </div>
       </aside>
+
+      {menuOpen ? (
+        <div className="lg:hidden">
+          <button
+            aria-label="Fechar menu do painel"
+            className="fixed inset-0 z-40 bg-brand-950/45 backdrop-blur-[1px]"
+            onClick={() => {
+              setMenuOpen(false);
+              menuButtonRef.current?.focus();
+            }}
+            type="button"
+          />
+          <div
+            aria-labelledby="panel-mobile-menu-title"
+            aria-modal="true"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(20rem,calc(100%-3rem))] flex-col border-r bg-white shadow-2xl"
+            id="panel-mobile-menu"
+            ref={drawerRef}
+            role="dialog"
+          >
+            <div className="flex min-h-16 items-center justify-between border-b px-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">ClickCatálogo</p>
+                <h2 className="mt-0.5 font-bold" id="panel-mobile-menu-title">Menu do painel</h2>
+              </div>
+              <Button
+                aria-label="Fechar menu"
+                data-drawer-close
+                onClick={() => {
+                  setMenuOpen(false);
+                  menuButtonRef.current?.focus();
+                }}
+                size="icon"
+                variant="ghost"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </div>
+
+            <nav aria-label="Navegação móvel do painel" className="grid gap-1 overflow-y-auto p-3">
+              {links.map(({ href, icon: Icon, label }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    aria-current={active ? "page" : undefined}
+                    className={cn("flex min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 font-medium transition-colors", active ? "bg-brand-100 text-brand-900" : "text-[var(--app-foreground-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-foreground)]")}
+                    href={href}
+                    key={href}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Icon aria-hidden="true" className="size-5" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto border-t p-4">
+              <p className="truncate text-sm font-semibold">{storeName}</p>
+              <p className="truncate text-xs text-[var(--app-foreground-muted)]">{userEmail}</p>
+              <div className="mt-3 grid gap-2">
+                <Link className={buttonVariants({ variant: "secondary" })} href={`/loja/${slug}`} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />Ver loja</Link>
+                <form action={signOutAction}><Button className="w-full" type="submit" variant="ghost"><LogOut aria-hidden="true" />Sair</Button></form>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-10 lg:py-10">
         <div className="mx-auto grid min-w-0 w-full max-w-6xl gap-5 [&>*]:min-w-0">{demo ? <Alert description="Explore as telas e altere o preview. Nenhuma mudança será salva neste modo." icon={Eye} title="Modo de demonstração — somente visualização" variant="warning" /> : null}{children}</div>

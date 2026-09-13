@@ -1,5 +1,5 @@
 -- ClickCatálogo — teste de integração financeiro, sem cobrança e sem persistir dados.
--- Execute no SQL Editor depois das migrations 011 a 015. Toda escrita é revertida.
+-- Execute no SQL Editor depois das migrations 011 a 016. Toda escrita é revertida.
 
 begin;
 
@@ -44,6 +44,45 @@ begin
       raise exception 'reentrega % deveria retornar repeated, retornou %', v_attempt, v_result;
     end if;
   end loop;
+end;
+$$;
+
+do $$
+declare
+  v_reference uuid;
+  v_result record;
+begin
+  insert into public.signup_intents (
+    email,
+    nome_loja,
+    privacy_accepted_at,
+    slug,
+    status,
+    tema,
+    terms_accepted_at,
+    whatsapp
+  ) values (
+    'continuacao-' || replace(extensions.gen_random_uuid()::text, '-', '') || '@example.com',
+    'Teste de continuidade',
+    clock_timestamp(),
+    'continuacao-' || replace(extensions.gen_random_uuid()::text, '-', ''),
+    'cancelado',
+    'minimal',
+    clock_timestamp(),
+    '5511999999999'
+  ) returning external_reference into v_reference;
+
+  select * into v_result
+  from public.claim_signup_checkout_restart(v_reference, 120);
+  if v_result.outcome <> 'claimed' or v_result.claimed_at is null then
+    raise exception 'primeiro claim de checkout deveria reservar a criação';
+  end if;
+
+  select * into v_result
+  from public.claim_signup_checkout_restart(v_reference, 120);
+  if v_result.outcome <> 'processing' then
+    raise exception 'clique concorrente deveria retornar processing, retornou %', v_result.outcome;
+  end if;
 end;
 $$;
 
@@ -106,4 +145,4 @@ $$;
 
 rollback;
 
-select 'ok: webhook, claim de conciliação, 10 reentregas e rate limit validados; nenhuma escrita persistida' as resultado;
+select 'ok: webhook, checkout concorrente, claim de conciliação, 10 reentregas e rate limit validados; nenhuma escrita persistida' as resultado;

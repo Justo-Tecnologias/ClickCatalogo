@@ -44,6 +44,7 @@ where routine_schema = 'public'
     'claim_account_deletion_requests',
     'purge_expired_operational_records',
     'consume_signup_recovery_token',
+    'claim_signup_checkout_restart',
     'increment_product_metric'
   )
 order by routine_name;
@@ -97,7 +98,9 @@ where table_schema = 'public'
       'intent_type',
       'target_tenant_id',
       'asaas_checkout_url',
-      'asaas_checkout_expires_at'
+      'asaas_checkout_expires_at',
+      'checkout_creation_started_at',
+      'checkout_returned_at'
     ))
   )
 order by table_name, column_name;
@@ -134,3 +137,15 @@ from public.consume_api_rate_limit(
 );
 
 rollback;
+
+select
+  has_function_privilege(
+    'service_role',
+    'public.claim_signup_checkout_restart(uuid, integer)',
+    'EXECUTE'
+  ) as service_role_pode_reservar_checkout,
+  not has_function_privilege(
+    'authenticated',
+    'public.claim_signup_checkout_restart(uuid, integer)',
+    'EXECUTE'
+  ) as usuario_nao_pode_reservar_checkout;

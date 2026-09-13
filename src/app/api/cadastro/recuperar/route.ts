@@ -96,11 +96,11 @@ export async function POST(request: Request) {
       .single();
     if (tokenError || !recovery) throw tokenError ?? new Error("Token não criado.");
 
-    const link = `${getSiteUrl()}/cadastro/recuperar/confirmar#token=${encodeURIComponent(raw)}`;
+    const link = `${getSiteUrl()}/painel/acessar-loja/confirmar#token=${encodeURIComponent(raw)}`;
     try {
       await sendTransactionalEmail({
         html: signupRecoveryEmail(link),
-        subject: "Continue seu cadastro no ClickCatálogo",
+        subject: "Acesse sua loja no ClickCatálogo",
         to: parsed.data.email,
       });
     } catch (error) {
@@ -113,7 +113,6 @@ export async function POST(request: Request) {
     logInfo("signup_recovery.request", {
       request_id: requestId,
       result: "sent",
-      signup_intent_id: intent.id,
     });
   } catch (error) {
     logError("signup_recovery.request", error, { request_id: requestId });

@@ -19,6 +19,10 @@ test("schema preserva isolamento, unicidade e idempotência financeira", async (
   assert.match(sql, /alter table public\.subscriptions enable row level security/);
   assert.match(sql, /tenants\.id::text = \(storage\.foldername\(name\)\)\[1\]/);
   assert.match(sql, /set search_path = ''/);
+  assert.match(sql, /checkout_creation_started_at timestamptz/);
+  assert.match(sql, /checkout_returned_at timestamptz/);
+  assert.match(sql, /create or replace function public\.claim_signup_checkout_restart/);
+  assert.match(sql, /where intent\.external_reference = p_external_reference\s+for update/);
 });
 
 test("recuperação é atômica e não persiste token bruto", async () => {
@@ -56,5 +60,13 @@ test("todas as funções security definer fixam search_path e claim tem grant m�
   assert.match(
     sql,
     /grant execute on function public\.claim_subscription_cancellation_reconciliations\(integer\)\s+to service_role/,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.claim_signup_checkout_restart\(uuid, integer\)\s+from public, anon, authenticated/,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.claim_signup_checkout_restart\(uuid, integer\)\s+to service_role/,
   );
 });

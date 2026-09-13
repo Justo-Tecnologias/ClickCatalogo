@@ -90,17 +90,18 @@ Depois execute a migration de continuidade do pré-lançamento:
 
 Ela mantém a loja ativa até o fim do período já pago quando a próxima renovação é cancelada, cria a RPC idempotente de encerramento e adiciona uma proteção no catálogo caso a rotina agendada atrase. Esta migration precisa estar aplicada antes do deploy desta versão.
 
-Depois, execute estas três migrations desta release, na ordem:
+Depois, execute estas migrations desta release, na ordem:
 
 1. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100011_launch_recovery_and_reactivation.sql`
 2. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609100012_first_party_product_metrics.sql`
 3. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120013_cancellation_payment_reconciliation.sql`
 4. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`
 5. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`
+6. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120016_account_continuation_checkout_lease.sql`
 
 A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. A terceira registra se cobranças futuras já geradas foram conciliadas após interromper a recorrência. A quarta impede a finalização local enquanto essa conciliação não estiver concluída. A quinta adiciona claim/lease para impedir disputa entre o agendador, outra execução e a reativação do titular. Todas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
 
-Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
+Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria
 
@@ -509,6 +510,7 @@ O domínio já está vinculado à Netlify. Para uma instalação nova ou migraç
 - conciliação de cobranças após cancelamento: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120013_cancellation_payment_reconciliation.sql`;
 - bloqueio da finalização antes da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`;
 - claim exclusivo da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`;
+- continuidade de acesso e reserva atômica de checkout: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120016_account_continuation_checkout_lease.sql`;
 - template de recuperação: `C:\Projeto-Github\ClickCatálogo\docs\supabase-email-templates\recovery.html`;
 - verificação do banco: `C:\Projeto-Github\ClickCatálogo\supabase\verify-setup.sql`;
 - teste de integração crítico sem cobrança: `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`;

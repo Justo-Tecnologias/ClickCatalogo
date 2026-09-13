@@ -9,6 +9,8 @@ um único push, para evitar builds desnecessários na Netlify.
 ### P0 coberto pelo código desta release
 
 - retomada do cadastro em outro navegador ou dispositivo por link de uso único;
+- jornada única “Acessar minha loja”, com roteamento servidor entre primeira
+  senha, login, checkout, confirmação, reativação e novo cadastro;
 - token de retomada com 256 bits de entropia, somente hash no banco, expiração
   de 20 minutos e consumo atômico;
 - reaproveitamento de checkout ainda válido, sem gerar cobrança duplicada;
@@ -63,6 +65,7 @@ um único push, para evitar builds desnecessários na Netlify.
    permanece aplicada e executar
    `supabase/migrations/202609120014_require_reconciliation_before_finalization.sql`
    e `supabase/migrations/202609120015_claim_cancellation_reconciliation.sql`
+   e `supabase/migrations/202609120016_account_continuation_checkout_lease.sql`
    no Supabase de Produção.
 2. Rodar `supabase/verify-setup.sql` e confirmar que não há item ausente.
 3. Rodar `supabase/test-launch-critical.sql` e confirmar a mensagem `ok`; o
@@ -95,7 +98,7 @@ Use um e-mail controlado e uma loja descartável identificada como teste.
 1. Abra `/cadastro`, valide e-mail/slug antes da etapa de tema e conclua uma
    cobrança real de menor risco permitida pelo plano vigente.
 2. Feche a tela de sucesso antes de criar a senha. Em outro navegador, abra
-   `/cadastro/recuperar`, solicite o link, confirme que ele abre a intenção certa
+   `/painel/acessar-loja`, solicite o link, confirme que ele abre a intenção certa
    e que o segundo uso do mesmo link é rejeitado.
 3. Crie a senha, entre no painel e confirme que existe exatamente um usuário,
    um tenant e uma assinatura para a contratação.

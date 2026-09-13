@@ -8,6 +8,7 @@ Atualizado em 6 de setembro de 2026. Marque cada item somente depois de validar 
 - [x] Executar, na ordem, `202608300007_fix_distributed_rate_limit.sql` e `202608300008_legal_acceptance_versions.sql`.
 - [x] Executar `202608300009_privacy_retention_and_deletion.sql` antes do deploy que contém a área de privacidade.
 - [x] Aplicar as migrations `202609120014_require_reconciliation_before_finalization.sql` e `202609120015_claim_cancellation_reconciliation.sql` no Supabase de Produção.
+- [ ] Aplicar `202609120016_account_continuation_checkout_lease.sql` antes do deploy do fluxo “Acessar minha loja”.
 - [x] Executar `supabase/verify-setup.sql` novamente e confirmar onze tabelas, dezenove funções, o bucket `produtos`, o rate limiting distribuído e os três indicadores de cancelamento como `true`.
 - [x] Publicar o commit auditado e confirmar que o workflow **Qualidade** passou no GitHub.
 - [x] Apontar `clickcatalogo.com` para a Netlify e validar o certificado HTTPS para o domínio raiz e `www`.
