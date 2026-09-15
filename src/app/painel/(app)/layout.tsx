@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { signOutAction } from "@/app/painel/actions";
 import { PanelShell } from "@/components/painel/panel-shell";
 import { Alert } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPanelContext } from "@/lib/auth/session";
 
@@ -25,7 +26,7 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
   if (!context.tenant) {
     return (
       <main className="grid min-h-screen place-items-center px-4">
-        <Card className="max-w-xl"><CardContent className="grid gap-5 p-7"><Alert icon={Clock3} title="Loja não encontrada nesta conta" description="Confira se você entrou com o mesmo e-mail usado para criar a loja." variant="warning" /><form action={signOutAction}><Button type="submit" variant="secondary"><LogOut aria-hidden="true" />Entrar com outra conta</Button></form></CardContent></Card>
+        <Card className="max-w-xl"><CardContent className="grid gap-5 p-7"><Alert icon={Clock3} title="Loja não encontrada nesta conta" description="Confira se você entrou com o mesmo e-mail usado para criar a loja." variant="warning" /><form action={signOutAction}><SubmitButton pendingLabel="Saindo..." variant="secondary"><LogOut aria-hidden="true" />Entrar com outra conta</SubmitButton></form></CardContent></Card>
       </main>
     );
   }

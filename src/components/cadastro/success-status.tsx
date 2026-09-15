@@ -1,12 +1,12 @@
 "use client";
 
 import { Check, CheckCircle2, Clock3, Copy, ExternalLink, RotateCw, ShoppingBag } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PendingLink } from "@/components/ui/pending-link";
 import { PasswordSetupForm } from "@/components/cadastro/password-setup-form";
 
 type StatusResponse = { accessConfigured?: boolean; checkoutUrl?: string | null; configured?: boolean; ready?: boolean; slug?: string | null; status?: "pendente" | "pago" | "expirado" | "cancelado" };
@@ -59,10 +59,10 @@ export function SuccessStatus({ mode, reference }: { mode: "checkout-return" | "
     window.setTimeout(() => setCopied(null), 1800);
   }
 
-  if (!reference) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Acesse sua loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Não encontramos uma confirmação salva neste navegador. Use o mesmo e-mail informado no ClickCatálogo para continuar com segurança.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/acessar-loja">Acessar minha loja</Link><Link className={buttonVariants({ variant: "secondary" })} href="/painel">Já tenho acesso</Link></div></Card>;
-  if (lookupError) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Protegemos este acompanhamento</h1><Alert className="mt-5" description="Solicite um link de uso único usando o mesmo e-mail informado no ClickCatálogo." title={lookupError} variant="warning" /><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Link className={buttonVariants()} href="/painel/acessar-loja">Acessar minha loja</Link><Link className={buttonVariants({ variant: "secondary" })} href="/painel">Entrar no painel</Link></div></Card>;
+  if (!reference) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Acesse sua loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Não encontramos uma confirmação salva neste navegador. Use o mesmo e-mail informado no ClickCatálogo para continuar com segurança.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><PendingLink className={buttonVariants()} href="/painel/acessar-loja" pendingLabel="Abrindo...">Acessar minha loja</PendingLink><PendingLink className={buttonVariants({ variant: "secondary" })} href="/painel" pendingLabel="Abrindo...">Já tenho acesso</PendingLink></div></Card>;
+  if (lookupError) return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Protegemos este acompanhamento</h1><Alert className="mt-5" description="Solicite um link de uso único usando o mesmo e-mail informado no ClickCatálogo." title={lookupError} variant="warning" /><div className="mt-6 flex flex-col gap-3 sm:flex-row"><PendingLink className={buttonVariants()} href="/painel/acessar-loja" pendingLabel="Abrindo...">Acessar minha loja</PendingLink><PendingLink className={buttonVariants({ variant: "secondary" })} href="/painel" pendingLabel="Abrindo...">Entrar no painel</PendingLink></div></Card>;
   if (status.configured === false) return <><h1 className="sr-only">Cadastro temporariamente indisponível</h1><Alert description="Não foi possível consultar a confirmação agora. Aguarde um instante e tente novamente sem realizar outro pagamento." title="Estamos com uma instabilidade momentânea" variant="warning" /></>;
-  if (status.status === "cancelado" || status.status === "expirado") return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Checkout encerrado</h1><Alert className="mt-5" description="Nenhuma loja foi criada por este checkout. Você pode revisar os dados e gerar uma nova sessão segura de pagamento." title="Este checkout foi cancelado ou expirou" variant="warning" /><Link className={`${buttonVariants()} mt-6`} href="/cadastro">Voltar ao cadastro</Link></Card>;
+  if (status.status === "cancelado" || status.status === "expirado") return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Checkout encerrado</h1><Alert className="mt-5" description="Nenhuma loja foi criada por este checkout. Você pode revisar os dados e gerar uma nova sessão segura de pagamento." title="Este checkout foi cancelado ou expirou" variant="warning" /><PendingLink className={`${buttonVariants()} mt-6`} href="/cadastro" pendingLabel="Abrindo cadastro...">Voltar ao cadastro</PendingLink></Card>;
 
   if (mode === "resume" && status.status === "pendente" && status.checkoutUrl) {
     return <Card className="p-6 sm:p-8"><h1 className="text-2xl font-bold">Seu pagamento ainda está pendente</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Você pode retornar ao checkout já criado. Se acabou de pagar, aguarde a confirmação automática antes de tentar novamente.</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a className={buttonVariants()} href={status.checkoutUrl}>Continuar pagamento</a><Button onClick={() => setCheckCycle((cycle) => cycle + 1)} variant="secondary"><RotateCw aria-hidden="true" />Já paguei, verificar</Button></div></Card>;
@@ -82,7 +82,7 @@ export function SuccessStatus({ mode, reference }: { mode: "checkout-return" | "
       {status.accessConfigured ? (
         <div className="mt-6 grid gap-4">
           <Alert description="Entre usando o e-mail da assinatura e a senha que você criou." title="Acesso ao painel configurado" variant="success" />
-          <Link className={buttonVariants({ size: "lg" })} href="/painel">Acessar meu painel</Link>
+          <PendingLink className={buttonVariants({ size: "lg" })} href="/painel" pendingLabel="Abrindo painel...">Acessar meu painel</PendingLink>
         </div>
       ) : (
         <PasswordSetupForm

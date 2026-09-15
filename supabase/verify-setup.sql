@@ -17,7 +17,8 @@ where schemaname = 'public'
     'signup_recovery_tokens',
     'product_metrics_daily',
     'account_deletion_requests',
-    'legal_retention_records'
+    'legal_retention_records',
+    'tenant_slug_history'
   )
 order by tablename;
 
@@ -45,7 +46,10 @@ where routine_schema = 'public'
     'purge_expired_operational_records',
     'consume_signup_recovery_token',
     'claim_signup_checkout_restart',
-    'increment_product_metric'
+    'increment_product_metric',
+    'change_tenant_slug',
+    'resolve_public_store_slug',
+    'get_own_tenant_redirect_slugs'
   )
 order by routine_name;
 
@@ -149,3 +153,15 @@ select
     'public.claim_signup_checkout_restart(uuid, integer)',
     'EXECUTE'
   ) as usuario_nao_pode_reservar_checkout;
+
+select
+  has_function_privilege('authenticated', 'public.change_tenant_slug(text)', 'EXECUTE')
+    as titular_pode_alterar_slug,
+  has_function_privilege('anon', 'public.resolve_public_store_slug(text)', 'EXECUTE')
+    as visitante_pode_resolver_redirecionamento,
+  not has_table_privilege('authenticated', 'public.tenant_slug_history', 'SELECT')
+    as historico_nao_exposto_ao_usuario;
+
+select
+  has_function_privilege('authenticated', 'public.get_own_tenant_redirect_slugs()', 'EXECUTE')
+    as titular_pode_listar_seus_redirects;

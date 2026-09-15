@@ -9,6 +9,9 @@ import { signOutAction } from "@/app/painel/actions";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { PendingLink } from "@/components/ui/pending-link";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { ToastProvider } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
 import type { TenantStatus } from "@/types/database";
 
@@ -68,14 +71,35 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
 
   return (
     <div className="min-h-screen bg-[var(--app-background)] lg:grid lg:grid-cols-[17rem_1fr]">
-      <aside className="border-b bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-b-0">
+      <aside className="sticky top-0 z-30 border-b bg-white lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-b-0">
         <div className="flex h-16 items-center justify-between px-4 lg:px-6">
           <Link className="flex min-h-11 items-center gap-2 font-bold tracking-tight" href="/painel/loja">
             <span className="grid size-8 place-items-center rounded-lg bg-brand-900 text-white"><ShoppingBag aria-hidden="true" className="size-4" /></span>
             ClickCatálogo
           </Link>
           <div className="flex items-center gap-2">
-            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status}</Badge>
+            <Badge className="hidden min-[480px]:inline-flex" variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}</Badge>
+            <span
+              aria-label={status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}
+              className={`size-3 rounded-full min-[480px]:hidden ${status === "ativo" ? "bg-[var(--app-success)]" : status === "inadimplente" ? "bg-amber-500" : "bg-red-500"}`}
+              role="status"
+              title={status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}
+            />
+            <Link
+              aria-label="Abrir loja pública em uma nova aba"
+              className={buttonVariants({
+                className: "lg:hidden sm:w-auto sm:px-3",
+                size: "icon",
+                variant: "secondary",
+              })}
+              href={`/loja/${slug}`}
+              rel="noreferrer"
+              target="_blank"
+              title="Abrir loja"
+            >
+              <ExternalLink aria-hidden="true" />
+              <span className="hidden sm:inline">Abrir loja</span>
+            </Link>
             <Button
               aria-controls="panel-mobile-menu"
               aria-expanded={menuOpen}
@@ -98,15 +122,16 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
           {links.map(({ href, icon: Icon, label }) => {
             const active = pathname === href;
             return (
-              <Link
+              <PendingLink
                 aria-current={active ? "page" : undefined}
                 className={cn("flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors", active ? "bg-brand-100 text-brand-900" : "text-[var(--app-foreground-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-foreground)]")}
                 href={href}
                 key={href}
+                pendingLabel={label}
               >
                 <Icon aria-hidden="true" className="size-4" />
                 {label}
-              </Link>
+              </PendingLink>
             );
           })}
         </nav>
@@ -116,7 +141,7 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
           <p className="truncate text-xs text-[var(--app-foreground-muted)]">{userEmail}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link className={buttonVariants({ size: "sm", variant: "secondary" })} href={`/loja/${slug}`} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" className="size-4" />Ver loja</Link>
-            <form action={signOutAction}><Button className="w-full" size="sm" type="submit" variant="ghost"><LogOut aria-hidden="true" />Sair</Button></form>
+            <form action={signOutAction}><SubmitButton className="w-full" pendingLabel="Saindo..." size="sm" variant="ghost"><LogOut aria-hidden="true" />Sair</SubmitButton></form>
           </div>
         </div>
       </aside>
@@ -163,16 +188,17 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
               {links.map(({ href, icon: Icon, label }) => {
                 const active = pathname === href;
                 return (
-                  <Link
+                  <PendingLink
                     aria-current={active ? "page" : undefined}
                     className={cn("flex min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 font-medium transition-colors", active ? "bg-brand-100 text-brand-900" : "text-[var(--app-foreground-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-foreground)]")}
                     href={href}
                     key={href}
                     onClick={() => setMenuOpen(false)}
+                    pendingLabel={label}
                   >
                     <Icon aria-hidden="true" className="size-5" />
                     {label}
-                  </Link>
+                  </PendingLink>
                 );
               })}
             </nav>
@@ -182,7 +208,7 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
               <p className="truncate text-xs text-[var(--app-foreground-muted)]">{userEmail}</p>
               <div className="mt-3 grid gap-2">
                 <Link className={buttonVariants({ variant: "secondary" })} href={`/loja/${slug}`} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />Ver loja</Link>
-                <form action={signOutAction}><Button className="w-full" type="submit" variant="ghost"><LogOut aria-hidden="true" />Sair</Button></form>
+                <form action={signOutAction}><SubmitButton className="w-full" pendingLabel="Saindo..." variant="ghost"><LogOut aria-hidden="true" />Sair</SubmitButton></form>
               </div>
             </div>
           </div>
@@ -190,7 +216,9 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
       ) : null}
 
       <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-10 lg:py-10">
-        <div className="mx-auto grid min-w-0 w-full max-w-6xl gap-5 [&>*]:min-w-0">{demo ? <Alert description="Explore as telas e altere o preview. Nenhuma mudança será salva neste modo." icon={Eye} title="Modo de demonstração — somente visualização" variant="warning" /> : null}{children}</div>
+        <ToastProvider>
+          <div className="mx-auto grid min-w-0 w-full max-w-6xl gap-5 [&>*]:min-w-0">{demo ? <Alert description="Explore as telas e altere o preview. Nenhuma mudança será salva neste modo." icon={Eye} title="Modo de demonstração — somente visualização" variant="warning" /> : null}{children}</div>
+        </ToastProvider>
       </main>
     </div>
   );

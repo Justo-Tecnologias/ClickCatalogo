@@ -522,6 +522,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      tenant_slug_history: {
+        Row: {
+          created_at: string;
+          redirect_until: string;
+          slug: string;
+          tenant_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          redirect_until: string;
+          slug: string;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          redirect_until?: string;
+          slug?: string;
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -544,6 +568,10 @@ export type Database = {
       claim_signup_checkout_restart: {
         Args: { p_external_reference: string; p_lease_seconds?: number };
         Returns: { checkout_url: string | null; claimed_at: string | null; outcome: string }[];
+      };
+      change_tenant_slug: {
+        Args: { p_slug: string };
+        Returns: Json;
       };
       consume_api_rate_limit: {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };
@@ -573,6 +601,10 @@ export type Database = {
         Args: { p_slug: string };
         Returns: string | null;
       };
+      get_own_tenant_redirect_slugs: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
       increment_product_metric: {
         Args: { p_event_name: string; p_tenant_id?: string | null };
         Returns: undefined;
@@ -580,6 +612,10 @@ export type Database = {
       reorder_categories: {
         Args: { p_ids: string[]; p_tenant_id: string };
         Returns: number;
+      };
+      resolve_public_store_slug: {
+        Args: { p_slug: string };
+        Returns: string | null;
       };
       purge_expired_operational_records: {
         Args: { p_now?: string };

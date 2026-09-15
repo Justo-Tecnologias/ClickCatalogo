@@ -23,6 +23,12 @@ test("schema preserva isolamento, unicidade e idempotência financeira", async (
   assert.match(sql, /checkout_returned_at timestamptz/);
   assert.match(sql, /create or replace function public\.claim_signup_checkout_restart/);
   assert.match(sql, /where intent\.external_reference = p_external_reference\s+for update/);
+  assert.match(sql, /create table public\.tenant_slug_history/);
+  assert.match(sql, /create or replace function public\.change_tenant_slug/);
+  assert.match(sql, /create or replace function public\.resolve_public_store_slug/);
+  assert.match(sql, /redirect_until > clock_timestamp\(\)/);
+  assert.match(sql, /v_active_aliases >= 3/);
+  assert.match(sql, /create or replace function public\.get_own_tenant_redirect_slugs/);
 });
 
 test("recuperação é atômica e não persiste token bruto", async () => {

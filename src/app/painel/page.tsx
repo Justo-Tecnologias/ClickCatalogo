@@ -6,8 +6,10 @@ import { redirect } from "next/navigation";
 import { startDemoAction } from "@/app/painel/actions";
 import { LoginForm } from "@/components/painel/login-form";
 import { Alert } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PendingLink } from "@/components/ui/pending-link";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getPanelContext } from "@/lib/auth/session";
 import { isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 
@@ -52,9 +54,9 @@ export default async function LoginPage() {
             {context.configured ? (
               <div className="grid gap-3 border-t pt-5 text-center">
                 <p className="text-sm text-[var(--app-foreground-muted)]">Ainda não conseguiu acessar sua loja?</p>
-                <Link className={buttonVariants({ variant: "secondary" })} href="/painel/acessar-loja">
+                <PendingLink className={buttonVariants({ variant: "secondary" })} href="/painel/acessar-loja" pendingLabel="Abrindo...">
                   Acessar minha loja
-                </Link>
+                </PendingLink>
               </div>
             ) : null}
             <div className="flex items-center gap-2 text-xs leading-5 text-[var(--app-foreground-muted)]">
@@ -69,10 +71,10 @@ export default async function LoginPage() {
                   <span className="h-px flex-1 bg-[var(--app-border)]" />
                 </div>
                 <form action={startDemoAction}>
-                  <Button className="w-full" type="submit" variant="secondary">
+                  <SubmitButton className="w-full" pendingLabel="Abrindo demonstração..." variant="secondary">
                     <Eye aria-hidden="true" />
                     Ver demonstração
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <p className="text-center text-xs leading-5 text-[var(--app-foreground-muted)]">Abre um catálogo preenchido e somente leitura. Nenhum dado real será alterado.</p>
               </div>
@@ -82,7 +84,7 @@ export default async function LoginPage() {
 
         <p className="mt-5 text-center text-sm text-[var(--app-foreground-muted)]">
           Ainda não tem catálogo?{" "}
-          <Link className="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline" href="/cadastro">Criar minha loja</Link>
+          <PendingLink className="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline" href="/cadastro" pendingLabel="Abrindo cadastro...">Criar minha loja</PendingLink>
         </p>
       </div>
     </main>

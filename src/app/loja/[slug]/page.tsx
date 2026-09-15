@@ -1,7 +1,7 @@
 import { Ban, Settings, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { StorePreview } from "@/components/loja-publica/store-preview";
 import { buttonVariants } from "@/components/ui/button";
@@ -44,6 +44,7 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const store = await getPublicStore(slug);
 
+  if (store.kind === "redirect") redirect(`/loja/${encodeURIComponent(store.slug)}`);
   if (store.kind === "missing") notFound();
   if (store.kind === "unconfigured") {
     return <StoreMessage icon={Settings} title="Catálogo aguardando configuração" description="A tela pública está pronta. Configure as chaves do Supabase para carregar os dados reais desta loja." />;

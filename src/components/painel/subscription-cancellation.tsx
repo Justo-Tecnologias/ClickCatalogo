@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CreditCard, LoaderCircle, TriangleAlert, X } from "lucide-react";
+import { Ban, CreditCard, ExternalLink, LoaderCircle, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
@@ -9,7 +9,7 @@ import {
   revertSubscriptionCancellationAction,
 } from "@/app/painel/(app)/assinatura/actions";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -21,6 +21,7 @@ type SubscriptionCancellationProps = {
   initialCancelled: boolean;
   initialReconciliationStatus: "attention" | "complete" | "not_required" | "pending" | "processing";
   initialScheduled: boolean;
+  portalUrl: string | null;
   storeName: string;
 };
 
@@ -39,6 +40,7 @@ export function SubscriptionCancellation({
   initialCancelled,
   initialReconciliationStatus,
   initialScheduled,
+  portalUrl,
   storeName,
 }: SubscriptionCancellationProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -117,11 +119,12 @@ export function SubscriptionCancellation({
           variant="danger"
         />
         {error ? <Alert title={error} variant="danger" /> : null}
-        <div>
+        <div className="flex flex-wrap gap-3">
           <Button disabled={isPending} onClick={renewSubscription}>
             {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <CreditCard aria-hidden="true" />}
             {isPending ? "Abrindo renovação..." : "Renovar assinatura"}
           </Button>
+          <AsaasBillingLink cancelled portalUrl={portalUrl} />
         </div>
       </div>
     );
@@ -162,25 +165,27 @@ export function SubscriptionCancellation({
             ? `A próxima renovação foi cancelada. Sua loja e o painel permanecem disponíveis até ${formatDate(accessUntil)}; não haverá nova cobrança desta assinatura.`
             : `A recorrência foi interrompida e seu acesso permanece até ${formatDate(accessUntil)}. A conferência de cobranças futuras já geradas ainda precisa ser concluída; fale com o atendimento antes da data de renovação.`}
           title={reconciliationConfirmed ? "Cancelamento agendado" : "Cancelamento em conferência"}
-          variant={reconciliationConfirmed ? "warning" : "danger"}
+          variant="warning"
         />
         {error ? <Alert title={error} variant="danger" /> : null}
-        {!reconciliationConfirmed ? (
-          <div>
+        <div className="flex flex-wrap gap-3">
+          {!reconciliationConfirmed ? (
             <Button disabled={isPending} onClick={retryReconciliation}>
               {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}
-              {isPending ? "Conferindo..." : "Conferir cobrança novamente"}
+              {isPending ? "Verificando..." : "Verificar cancelamento"}
             </Button>
-          </div>
-        ) : null}
-        {canRevert ? (
-          <div><Button disabled={isPending} onClick={revertCancellation} variant="secondary">
+          ) : null}
+          {canRevert ? (
+            <Button disabled={isPending} onClick={revertCancellation} variant="secondary">
             {isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}
             {isPending ? "Reativando..." : "Desfazer cancelamento"}
-          </Button></div>
-        ) : (
+            </Button>
+          ) : null}
+          <AsaasBillingLink portalUrl={portalUrl} />
+        </div>
+        {!canRevert ? (
           <Alert description="Esta assinatura antiga foi encerrada de forma definitiva no Asaas. Seu acesso permanece até a data acima; depois disso, será possível renovar sem perder a loja." title="Renovação necessária ao fim do período" />
-        )}
+        ) : null}
       </div>
     );
   }
@@ -204,10 +209,13 @@ export function SubscriptionCancellation({
               Interrompe as próximas renovações. Sua loja e o painel continuam disponíveis até o fim do período já pago.
             </p>
           </div>
-          <Button disabled={!canCancel} onClick={() => setOpen(true)} variant="danger">
-            <Ban aria-hidden="true" />
-            Cancelar assinatura
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <AsaasBillingLink portalUrl={portalUrl} />
+            <Button disabled={!canCancel} onClick={() => setOpen(true)} variant="danger">
+              <Ban aria-hidden="true" />
+              Cancelar assinatura
+            </Button>
+          </div>
         </div>
         {!canCancel ? (
           <p className="mt-3 text-sm text-[var(--app-danger)]">
@@ -295,5 +303,16 @@ export function SubscriptionCancellation({
         </section>
       </dialog>
     </>
+  );
+}
+
+function AsaasBillingLink({ cancelled = false, portalUrl }: { cancelled?: boolean; portalUrl: string | null }) {
+  if (!portalUrl) return null;
+
+  return (
+    <a className={buttonVariants({ variant: "secondary" })} href={portalUrl} rel="noreferrer" target="_blank">
+      <ExternalLink aria-hidden="true" />
+      {cancelled ? "Ver última cobrança no Asaas" : "Ver cobrança no Asaas"}
+    </a>
   );
 }

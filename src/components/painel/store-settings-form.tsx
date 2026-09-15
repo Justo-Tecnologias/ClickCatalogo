@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, ImageIcon, Save, Trash2, Upload } from "lucide-react";
+import { ExternalLink, Eye, ImageIcon, LoaderCircle, Save, Settings2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -11,12 +11,15 @@ import { ThemePicker } from "@/components/loja-publica/theme-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { formatBrazilWhatsApp, normalizeBrazilWhatsAppInput } from "@/lib/whatsapp/url";
 import { compressImageForUpload } from "@/lib/images/compress-upload";
 import { normalizeInstagramUsername } from "@/lib/instagram/username";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { cn } from "@/lib/utils/cn";
 import type { PublicCatalog } from "@/types/catalog";
 import type { TenantTheme } from "@/types/database";
@@ -126,14 +129,19 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
   const [logoImage, setLogoImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.logo_url, remove: false, savedUrl: catalog.logo_url });
   const [bannerImage, setBannerImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.banner_url, remove: false, savedUrl: catalog.banner_url });
   const [message, setMessage] = useState<{ text: string; type: "danger" | "success" } | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [isPending, startTransition] = useTransition();
   const objectUrls = useRef<Partial<Record<StoreImageKind, string>>>({});
+  const notify = useToast();
+  const unsavedNavigation = useUnsavedChanges(dirty && !isPending);
 
   useEffect(() => () => {
     Object.values(objectUrls.current).forEach((url) => URL.revokeObjectURL(url));
   }, []);
 
   function selectImage(kind: StoreImageKind, file: File | null) {
+    setDirty(true);
     const previousObjectUrl = objectUrls.current[kind];
     if (previousObjectUrl) URL.revokeObjectURL(previousObjectUrl);
 
@@ -151,6 +159,7 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
   }
 
   function removeImage(kind: StoreImageKind) {
+    setDirty(true);
     const previousObjectUrl = objectUrls.current[kind];
     if (previousObjectUrl) URL.revokeObjectURL(previousObjectUrl);
     delete objectUrls.current[kind];
@@ -185,12 +194,9 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
         if (optimizedLogo) formData.set("logo", optimizedLogo);
         if (optimizedBanner) formData.set("banner", optimizedBanner);
       } catch (compressionError) {
-        setMessage({
-          text: compressionError instanceof Error
-            ? compressionError.message
-            : "Não foi possível otimizar as imagens.",
-          type: "danger",
-        });
+        const text = compressionError instanceof Error ? compressionError.message : "Não foi possível otimizar as imagens.";
+        setMessage({ text, type: "danger" });
+        notify({ title: text, variant: "danger" });
         return;
       }
 
@@ -201,8 +207,11 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
           input.value = "";
         });
         setMessage({ text: "Alterações publicadas na sua loja.", type: "success" });
+        setDirty(false);
+        notify({ title: "Alterações publicadas na sua loja", variant: "success" });
       } else {
         setMessage({ text: result.error, type: "danger" });
+        notify({ title: result.error, variant: "danger" });
       }
     });
   }
@@ -219,15 +228,20 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
   };
 
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(25rem,0.9fr)]">
-      <Card className="p-5 sm:p-6">
-        <form className="grid gap-5" onSubmit={submit}>
+    <div className={cn("grid gap-4", dirty && "pb-20 xl:pb-0")}>
+      <div aria-label="Visualização da configuração" className="grid grid-cols-2 rounded-[var(--radius-control)] border bg-white p-1 xl:hidden" role="tablist">
+        <Button aria-selected={mobileView === "edit"} className="w-full" onClick={() => setMobileView("edit")} role="tab" variant={mobileView === "edit" ? "primary" : "ghost"}><Settings2 aria-hidden="true" />Editar</Button>
+        <Button aria-selected={mobileView === "preview"} className="w-full" onClick={() => setMobileView("preview")} role="tab" variant={mobileView === "preview" ? "primary" : "ghost"}><Eye aria-hidden="true" />Prévia</Button>
+      </div>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(25rem,0.9fr)]">
+      <Card className={cn("p-5 sm:p-6", mobileView !== "edit" && "hidden xl:block")}>
+        <form className="grid gap-5" id="store-settings-form" onChange={() => setDirty(true)} onSubmit={submit}>
           {message ? <Alert title={message.text} variant={message.type} /> : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field className="sm:col-span-2"><FieldLabel htmlFor="nomeLoja">Nome da loja</FieldLabel><Input id="nomeLoja" maxLength={100} name="nomeLoja" onChange={(event) => setName(event.target.value)} required value={name} /></Field>
             <StoreImageField description="Escolha uma imagem quadrada para representar sua loja." id="logo" kind="logo" label="Logo da loja" onChange={(file) => selectImage("logo", file)} onRemove={() => removeImage("logo")} state={logoImage} />
             <StoreImageField description="Escolha uma imagem larga para o topo da loja. Mantenha textos e elementos importantes no centro, pois as laterais podem ser recortadas em algumas telas." id="banner" kind="banner" label="Banner da loja" onChange={(file) => selectImage("banner", file)} onRemove={() => removeImage("banner")} state={bannerImage} />
-            <Field className="sm:col-span-2"><FieldLabel htmlFor="descricaoCurta">Descrição curta</FieldLabel><Textarea id="descricaoCurta" maxLength={180} name="descricaoCurta" onChange={(event) => setDescription(event.target.value)} placeholder="Conte em uma frase o que sua loja oferece." rows={3} value={description} /></Field>
+            <Field className="sm:col-span-2"><FieldLabel htmlFor="descricaoCurta">Descrição curta</FieldLabel><Textarea id="descricaoCurta" maxLength={180} name="descricaoCurta" onChange={(event) => setDescription(event.target.value)} placeholder="Conte em uma frase o que sua loja oferece." rows={3} value={description} /><FieldDescription>{description.length}/180 caracteres</FieldDescription></Field>
             <Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} name="whatsapp" onChange={(event) => setWhatsapp(normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(whatsapp)} /><FieldDescription>Digite o número completo com 55 e o DDD. Exemplo: +55 (11) 99999-9999.</FieldDescription></Field>
             <Field>
               <FieldLabel htmlFor="instagram">Instagram da loja</FieldLabel>
@@ -251,12 +265,15 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
             <Field className="sm:col-span-2"><FieldLabel htmlFor="endereco">Endereço</FieldLabel><Input defaultValue={catalog.endereco ?? ""} id="endereco" maxLength={240} name="endereco" placeholder="Rua, número, bairro e cidade" /></Field>
           </div>
 
-          <div><p className="mb-3 text-sm font-semibold">Tema da loja</p><input name="tema" type="hidden" value={theme} /><ThemePicker onValueChange={setTheme} value={theme} /></div>
-          <div className="flex flex-wrap gap-2"><Button disabled={isPending} type="submit"><Save aria-hidden="true" />{isPending ? "Publicando..." : "Salvar alterações"}</Button><Link className={buttonVariants({ variant: "secondary" })} href={`/loja/${catalog.slug}`} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />Abrir loja</Link></div>
+          <div><p className="mb-3 text-sm font-semibold">Tema da loja</p><input name="tema" type="hidden" value={theme} /><ThemePicker onValueChange={(value) => { setTheme(value); setDirty(true); }} value={theme} /></div>
+          <div className="flex flex-wrap gap-2"><Button disabled={isPending || !dirty} type="submit">{isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Save aria-hidden="true" />}{isPending ? "Publicando..." : dirty ? "Salvar alterações" : "Tudo salvo"}</Button><Link className={buttonVariants({ variant: "secondary" })} href={`/loja/${catalog.slug}`} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />Abrir loja</Link></div>
         </form>
       </Card>
 
-      <div className="self-start xl:sticky xl:top-6"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Como sua loja vai aparecer</p><StorePreview catalog={previewCatalog} framed theme={theme} /></div>
+      <div className={cn("self-start xl:sticky xl:top-6", mobileView !== "preview" && "hidden xl:block")}><p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Como sua loja vai aparecer</p><StorePreview catalog={previewCatalog} framed theme={theme} /></div>
+      </div>
+      {dirty && mobileView === "edit" ? <div className="fixed inset-x-4 bottom-4 z-20 rounded-[var(--radius-card)] border bg-white p-2 shadow-[var(--shadow-elevation)] xl:hidden"><Button className="w-full" disabled={isPending} form="store-settings-form" type="submit">{isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Save aria-hidden="true" />}{isPending ? "Publicando..." : "Salvar alterações"}</Button></div> : null}
+      <ConfirmDialog confirmLabel="Sair sem salvar" description="As alterações feitas na configuração da loja serão perdidas." onCancel={unsavedNavigation.cancelNavigation} onConfirm={unsavedNavigation.confirmNavigation} open={unsavedNavigation.navigationPending} title="Descartar alterações?" />
     </div>
   );
 }

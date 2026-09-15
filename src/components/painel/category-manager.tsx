@@ -5,11 +5,14 @@ import { useState, useTransition } from "react";
 
 import { deleteCategoryAction, reorderCategoriesAction, saveCategoryAction } from "@/app/painel/(app)/categorias/actions";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PendingLink } from "@/components/ui/pending-link";
+import { useToast } from "@/components/ui/toast";
 
 export type CategoryItem = { id: string; nome: string; ordem: number; productCount: number };
 
@@ -20,14 +23,23 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
   const [error, setError] = useState<string | null>(null);
   const [showGroupingSuggestion, setShowGroupingSuggestion] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CategoryItem | null>(null);
+  const [linkedCategory, setLinkedCategory] = useState<CategoryItem | null>(null);
+  const [operation, setOperation] = useState<"delete" | "reorder" | "save" | null>(null);
   const [isPending, startTransition] = useTransition();
+  const notify = useToast();
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    setOperation("save");
     startTransition(async () => {
       const result = await saveCategoryAction({ id: editing?.id, nome: String(form.get("nome") ?? "") });
-      if (!result.ok) return setError(result.error);
+      if (!result.ok) {
+        setOperation(null);
+        notify({ title: result.error, variant: "danger" });
+        return setError(result.error);
+      }
       const savedCategory = result.data?.category;
       if (savedCategory) {
         setCategories((current) => editing
@@ -40,6 +52,8 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
       setError(null);
       setCreating(false);
       setEditing(null);
+      setOperation(null);
+      notify({ title: editing ? "Categoria atualizada" : "Categoria criada", variant: "success" });
     });
   }
 
@@ -49,16 +63,29 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
         ? "1 produto vinculado"
         : `${category.productCount} produtos vinculados`;
       setError(`A categoria “${category.nome}” possui ${label}. Crie outra categoria e mova os produtos para ela, ou exclua os produtos, antes de excluir a categoria.`);
+      setLinkedCategory(category);
       return;
     }
+    setLinkedCategory(null);
+    setDeleteTarget(category);
+  }
 
-    if (!window.confirm(`Excluir a categoria “${category.nome}”?`)) return;
-
+  function confirmRemove() {
+    if (!deleteTarget) return;
+    const category = deleteTarget;
+    setOperation("delete");
     startTransition(async () => {
       const result = await deleteCategoryAction(category.id);
-      if (!result.ok) return setError(result.error);
+      if (!result.ok) {
+        setOperation(null);
+        notify({ title: result.error, variant: "danger" });
+        return setError(result.error);
+      }
       setCategories((current) => current.filter((item) => item.id !== category.id));
       setError(null);
+      setDeleteTarget(null);
+      setOperation(null);
+      notify({ title: "Categoria excluída", variant: "success" });
     });
   }
 
@@ -66,14 +93,18 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
     const previous = categories;
     setCategories(next);
     setDraggedId(null);
+    setOperation("reorder");
     startTransition(async () => {
       const result = await reorderCategoriesAction(next.map((item) => item.id));
       if (!result.ok) {
         setCategories(previous);
         setError(result.error);
+        notify({ title: result.error, variant: "danger" });
       } else {
         setError(null);
+        notify({ title: "Ordem das categorias atualizada", variant: "success" });
       }
+      setOperation(null);
     });
   }
 
@@ -103,11 +134,16 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
     <div className="grid gap-5">
       {error ? (
         <div className="relative">
-          <Alert className="pr-14" title={error} variant="danger" />
+          <Alert
+            className="pr-14"
+            description={linkedCategory ? <PendingLink className={`${buttonVariants({ size: "sm", variant: "secondary" })} mt-2`} href={`/painel/produtos?categoria=${encodeURIComponent(linkedCategory.id)}`} pendingLabel="Abrindo produtos...">Ver produtos desta categoria</PendingLink> : undefined}
+            title={error}
+            variant="danger"
+          />
           <Button
             aria-label="Fechar aviso"
             className="absolute right-1.5 top-1.5"
-            onClick={() => setError(null)}
+            onClick={() => { setError(null); setLinkedCategory(null); }}
             size="icon"
             variant="ghost"
           >
@@ -143,8 +179,8 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
               <Input autoFocus defaultValue={editing?.nome} id="nome" maxLength={80} name="nome" placeholder="Ex.: Bebidas, Presentes, Serviços" required />
             </Field>
             <div className="flex gap-2">
-              <Button disabled={isPending} type="submit"><Plus aria-hidden="true" />{isPending ? "Salvando..." : editing ? "Salvar" : "Adicionar"}</Button>
-              {categories.length > 0 ? <Button onClick={() => { setCreating(false); setEditing(null); }} type="button" variant="ghost"><X aria-hidden="true" />Cancelar</Button> : null}
+              <Button disabled={isPending} type="submit"><Plus aria-hidden="true" />{operation === "save" ? "Salvando..." : editing ? "Salvar" : "Adicionar"}</Button>
+              {categories.length > 0 ? <Button disabled={isPending} onClick={() => { setCreating(false); setEditing(null); }} type="button" variant="ghost"><X aria-hidden="true" />Cancelar</Button> : null}
             </div>
           </form>
         </Card>
@@ -157,6 +193,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
       ) : categories.length > 0 ? (
         <div className="grid gap-2">
           <p className="text-xs text-[var(--app-foreground-muted)]">Arraste pelo ícone ou use as setas para reordenar. A ordem aparece igual na loja.</p>
+          <p aria-live="polite" className="sr-only">{operation === "reorder" ? "Salvando nova ordem das categorias" : ""}</p>
           {categories.map((category, index) => (
             <Card
               className="flex items-center gap-3 p-3 sm:p-4"
@@ -169,14 +206,24 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
             >
               <GripVertical aria-hidden="true" className="size-5 shrink-0 cursor-grab text-[var(--app-foreground-muted)]" />
               <div className="min-w-0 flex-1"><p className="truncate font-semibold">{category.nome}</p></div>
-              <Button aria-label={`Mover ${category.nome} para cima`} disabled={isPending || index === 0} onClick={() => move(category.id, -1)} size="icon" variant="ghost"><ArrowUp aria-hidden="true" /></Button>
-              <Button aria-label={`Mover ${category.nome} para baixo`} disabled={isPending || index === categories.length - 1} onClick={() => move(category.id, 1)} size="icon" variant="ghost"><ArrowDown aria-hidden="true" /></Button>
-              <Button aria-label={`Editar ${category.nome}`} onClick={() => { setCreating(false); setEditing(category); }} size="icon" variant="ghost"><Pencil aria-hidden="true" /></Button>
-              <Button aria-label={`Excluir ${category.nome}`} disabled={isPending} onClick={() => remove(category)} size="icon" variant="ghost"><Trash2 aria-hidden="true" /></Button>
+              <Button aria-label={`Mover ${category.nome} para cima`} disabled={isPending || index === 0} onClick={() => move(category.id, -1)} size="icon" title="Mover para cima" variant="ghost"><ArrowUp aria-hidden="true" /></Button>
+              <Button aria-label={`Mover ${category.nome} para baixo`} disabled={isPending || index === categories.length - 1} onClick={() => move(category.id, 1)} size="icon" title="Mover para baixo" variant="ghost"><ArrowDown aria-hidden="true" /></Button>
+              <Button aria-label={`Editar ${category.nome}`} disabled={isPending} onClick={() => { setCreating(false); setEditing(category); }} size="icon" title="Editar categoria" variant="ghost"><Pencil aria-hidden="true" /></Button>
+              <Button aria-label={`Excluir ${category.nome}`} disabled={isPending} onClick={() => remove(category)} size="icon" title="Excluir categoria" variant="ghost"><Trash2 aria-hidden="true" /></Button>
             </Card>
           ))}
         </div>
       ) : null}
+      <ConfirmDialog
+        confirmLabel="Excluir categoria"
+        description={deleteTarget ? `A categoria “${deleteTarget.nome}” será excluída. Esta ação não pode ser desfeita.` : ""}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmRemove}
+        open={Boolean(deleteTarget)}
+        pending={operation === "delete"}
+        pendingLabel="Excluindo..."
+        title="Excluir categoria?"
+      />
     </div>
   );
 }

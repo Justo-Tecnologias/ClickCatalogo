@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { StoreSettingsForm } from "@/components/painel/store-settings-form";
 import { StoreLaunchTools } from "@/components/painel/store-launch-tools";
+import { StoreSlugForm } from "@/components/painel/store-slug-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireTenant } from "@/lib/auth/session";
 import { DEMO_CATALOG } from "@/lib/demo/panel-demo";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function StorePage() {
   const { demo, tenant } = await requireTenant();
   if (demo) {
-    return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreSettingsForm catalog={DEMO_CATALOG} /></div>;
+    return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreSlugForm currentSlug={DEMO_CATALOG.slug} demo siteUrl={getSiteUrl()} /><StoreSettingsForm catalog={DEMO_CATALOG} /></div>;
   }
   const supabase = await createClient();
   const [{ data: categories }, { data: products }] = await Promise.all([
@@ -38,5 +39,5 @@ export default async function StorePage() {
   };
 
   const activeProducts = catalog.categorias.reduce((total, category) => total + category.produtos.length, 0);
-  return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreLaunchTools bannerReady={Boolean(catalog.banner_url)} categoryCount={catalog.categorias.length} logoReady={Boolean(catalog.logo_url)} productCount={activeProducts} storeName={catalog.nome_loja} storeUrl={`${getSiteUrl()}/loja/${encodeURIComponent(catalog.slug)}`} whatsappReady={Boolean(catalog.whatsapp)} /><StoreSettingsForm catalog={catalog} /></div>;
+  return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreLaunchTools bannerReady={Boolean(catalog.banner_url)} categoryCount={catalog.categorias.length} logoReady={Boolean(catalog.logo_url)} productCount={activeProducts} storeName={catalog.nome_loja} storeUrl={`${getSiteUrl()}/loja/${encodeURIComponent(catalog.slug)}`} whatsappReady={Boolean(catalog.whatsapp)} /><StoreSlugForm currentSlug={catalog.slug} siteUrl={getSiteUrl()} /><StoreSettingsForm catalog={catalog} /></div>;
 }

@@ -98,8 +98,10 @@ Depois, execute estas migrations desta release, na ordem:
 4. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`
 5. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`
 6. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120016_account_continuation_checkout_lease.sql`
+7. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609130017_tenant_slug_history.sql`
+8. `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609130018_direct_slug_redirects.sql`
 
-A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. A terceira registra se cobranças futuras já geradas foram conciliadas após interromper a recorrência. A quarta impede a finalização local enquanto essa conciliação não estiver concluída. A quinta adiciona claim/lease para impedir disputa entre o agendador, outra execução e a reativação do titular. Todas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
+A primeira cria a recuperação cross-device por token de uso único, a retomada do checkout existente e os estados necessários para cancelamento reversível/reativação sem duplicar tenant. A segunda cria somente contadores diários agregados, sem armazenar eventos individuais ou PII. A terceira registra se cobranças futuras já geradas foram conciliadas após interromper a recorrência. A quarta impede a finalização local enquanto essa conciliação não estiver concluída. A quinta adiciona claim/lease para impedir disputa entre o agendador, outra execução e a reativação do titular. A sétima permite alterar o endereço público da loja, preserva o endereço anterior por 30 dias e limita a três redirecionamentos ativos por loja. A oitava garante que todos os endereços antigos sejam invalidados e apontem diretamente para o atual. Todas são incrementais e não excluem dados existentes. Aplique-as antes de publicar o código desta release.
 
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
@@ -116,6 +118,7 @@ Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-l
 - `public.product_metrics_daily` — contadores diários agregados sem PII;
 - `public.account_deletion_requests` — fila, tentativas e estado das exclusões;
 - `public.legal_retention_records` — evidências mínimas isoladas do conteúdo operacional;
+- `public.tenant_slug_history` — endereços antigos protegidos e redirecionados por 30 dias;
 - constraints, índices e gatilhos de `updated_at`;
 - RLS e grants para isolamento multi-tenant;
 - RPCs `get_public_catalog` e `get_public_store_status` para a loja pública;
@@ -136,8 +139,8 @@ Depois do schema, execute no SQL Editor:
 
 Esse arquivo não altera dados. Ele deve listar:
 
-- onze tabelas inspecionadas com RLS ativo;
-- dezenove funções esperadas, incluindo expiração, reordenação, rate limit, webhook atômico, retenção e claim de conciliação;
+- doze tabelas inspecionadas com RLS ativo;
+- vinte e três funções esperadas, incluindo expiração, reordenação, rate limit, webhook atômico, retenção, claim de conciliação e troca segura de endereço;
 - o bucket `produtos` como público;
 - policies das tabelas e do Storage.
 
@@ -511,6 +514,8 @@ O domínio já está vinculado à Netlify. Para uma instalação nova ou migraç
 - bloqueio da finalização antes da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120014_require_reconciliation_before_finalization.sql`;
 - claim exclusivo da conciliação: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120015_claim_cancellation_reconciliation.sql`;
 - continuidade de acesso e reserva atômica de checkout: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609120016_account_continuation_checkout_lease.sql`;
+- histórico e troca segura do endereço da loja: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609130017_tenant_slug_history.sql`;
+- invalidação direta de todos os endereços antigos: `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609130018_direct_slug_redirects.sql`;
 - template de recuperação: `C:\Projeto-Github\ClickCatálogo\docs\supabase-email-templates\recovery.html`;
 - verificação do banco: `C:\Projeto-Github\ClickCatálogo\supabase\verify-setup.sql`;
 - teste de integração crítico sem cobrança: `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`;

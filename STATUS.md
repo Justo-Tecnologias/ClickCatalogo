@@ -1,6 +1,6 @@
 # Status atual do ClickCatálogo
 
-Relatório consolidado em **12 de agosto de 2026** e revisado em **12 de setembro de 2026** para o pré-lançamento em `clickcatalogo.com`.
+Relatório consolidado em **12 de agosto de 2026** e revisado em **15 de setembro de 2026** para o pré-lançamento em `clickcatalogo.com`.
 
 ## Como o estado foi verificado
 
@@ -17,6 +17,8 @@ Relatório consolidado em **12 de agosto de 2026** e revisado em **12 de setembr
 O sistema está **operacional de ponta a ponta no fluxo já validado**: cadastro, checkout recorrente, webhook, provisionamento do usuário/tenant/assinatura, criação inicial de senha, recuperação self-service, painel com dados reais, uploads e catálogo público. A configuração de Produção é selecionada pela chave do ambiente; a primeira cobrança real e o cancelamento controlado continuam sendo testes obrigatórios depois desta release.
 
 O **Modo Carrinho está implementado na loja pública**, 100% client-side e sem persistência. O cliente pode adicionar produtos, alterar quantidades, revisar o pedido em um painel acessível e enviar um pedido consolidado pelo WhatsApp. O pedido individual de cada `ProductCard` foi preservado.
+
+O **painel recebeu a revisão final de usabilidade mobile**: navegação lateral, atalho superior para abrir a loja, estados de carregamento, notificações padronizadas, confirmações acessíveis, proteção contra saída sem salvar, busca e filtros de produtos, preview alternável e salvamento fixo no celular. A troca do endereço público também está disponível com validação de disponibilidade, até três aliases protegidos, redirecionamento direto por 30 dias e liberação posterior do slug para outra loja.
 
 O **cancelamento self-service foi corrigido** em `/painel/assinatura`: exige digitar exatamente o nome da loja, deriva o fim do período pago da próxima cobrança já gerada ou do `nextDueDate` autoritativo quando ela ainda não existe, inativa a recorrência no Asaas, remove somente cobranças futuras ainda pendentes a partir desse corte e relê a lista antes de concluir. Somente cobranças de cartão em `CONFIRMED`/`RECEIVED` comprovam pagamento. O banco registra o resultado, o painel não promete ausência de cobrança quando a conferência falha e a rotina horária repete estados pendentes/atenção mesmo sem retorno do titular. Claim atômico, estado `processing`, lease e gravações condicionais serializam o agendador contra “Desfazer cancelamento”. Durante o período pago o titular pode desfazer o cancelamento sem nova cobrança. Assinaturas legadas já removidas no Asaas usam um checkout de reativação vinculado ao tenant existente, sem criar outra loja ou outro usuário.
 
@@ -43,7 +45,7 @@ As categorias receberam refinamento visual de pills, títulos, indicador lateral
 | `/painel` | Implementada | Login real por e-mail e senha via Supabase Auth, link de recuperação e demonstração separada/somente leitura quando `DEMO_ACCESS_ENABLED` não é `false`. |
 | `/painel/recuperar-senha` | Implementada e testada | Solicita recuperação pelo Supabase Auth sem revelar se o e-mail possui conta. SMTP Resend, recebimento, callback e troca de senha foram validados; o template visual em português está versionado para aplicação manual. |
 | `/painel/nova-senha` | Implementada | Exige sessão válida criada pelo link de recuperação e atualiza a senha com `supabase.auth.updateUser`. |
-| `/painel/loja` | Implementada | Lê e atualiza dados reais do tenant; edita nome, descrição, WhatsApp, Instagram, endereço e tema; envia logo/banner ao Storage; comprime imagens no navegador; mostra preview reutilizando a loja pública. |
+| `/painel/loja` | Implementada | Lê e atualiza dados reais do tenant; edita nome, descrição, WhatsApp, Instagram, endereço, tema e slug público; envia logo/banner ao Storage; comprime imagens no navegador; protege alterações não salvas; mostra preview reutilizando a loja pública. Slugs antigos redirecionam diretamente ao atual por 30 dias. |
 | `/painel/categorias` | Implementada | CRUD real, reordenação atômica por arrastar ou setas, bloqueio de exclusão quando existem produtos vinculados e aviso não bloqueante ao criar a 16ª categoria. |
 | `/painel/produtos` | Implementada | CRUD real, upload, substituição ou remoção de imagem, compressão para WebP, ativar/ocultar e limpeza do arquivo antigo no Storage. |
 | `/painel/assinatura` | Implementada localmente | Lê status e cobrança, agenda cancelamento no fim do período, permite desfazer enquanto há acesso e oferece nova contratação para recorrências legadas/depois do fim do acesso. |
@@ -60,7 +62,7 @@ As rotas públicas `/`, `/cadastro`, `/cadastro/sucesso`, `/painel`, `/loja/just
 
 | Endpoint/ação | Estado | Responsabilidade |
 |---|---|---|
-| `GET /api/slug-disponivel` | Implementado | Valida o formato, limita a 60 consultas/min por IP e consulta `tenants` e reservas ativas em `signup_intents`. |
+| `GET /api/slug-disponivel` | Implementado | Valida o formato, limita a 60 consultas/min por IP e consulta `tenants`, reservas ativas em `signup_intents` e aliases ainda protegidos em `tenant_slug_history`. |
 | `POST /api/checkout/asaas` | Implementado | Valida o cadastro, aplica limite de 5 tentativas/10 min por IP, reserva o slug, cria checkout recorrente mensal de R$ 27 e devolve a URL hospedada pelo Asaas. |
 | `POST /api/webhooks/asaas` | Implementado | Aplica limite de 180 chamadas/min por IP, valida token, registra evento, evita duplicidade, provisiona ou atualiza assinatura e sincroniza status do tenant. |
 | `GET /api/cadastro/status` | Implementado | Informa estado da intenção, slug e acesso; grava cookie HTTP-only do tenant pago para o painel abrir a loja correta. |

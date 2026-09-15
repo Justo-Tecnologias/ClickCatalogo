@@ -138,7 +138,7 @@ export function DataPrivacyManagement({
               href="/atendimento?assunto=dados"
             >
               <FileDown aria-hidden="true" />
-              Solicitar atendimento sobre dados
+              Falar sobre meus dados
             </a>
           ) : (
             <Alert description="O canal de privacidade será exibido assim que o e-mail de suporte for configurado." title="Canal em configuração" variant="warning" />

@@ -17,6 +17,7 @@ import Link from "next/link";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PendingLink } from "@/components/ui/pending-link";
 import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
@@ -80,12 +81,12 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <BrandLink />
           <div className="flex items-center gap-2">
-            <Link className={buttonVariants({ size: "sm", variant: "ghost" })} href="/painel">
+            <PendingLink className={buttonVariants({ size: "sm", variant: "ghost" })} href="/painel" pendingLabel="Abrindo...">
               Entrar
-            </Link>
-            <Link className={buttonVariants({ size: "sm" })} href="/cadastro">
+            </PendingLink>
+            <PendingLink className={buttonVariants({ size: "sm" })} href="/cadastro" pendingLabel="Abrindo...">
               Quero minha loja
-            </Link>
+            </PendingLink>
           </div>
         </div>
       </nav>
@@ -106,10 +107,10 @@ export default function HomePage() {
               WhatsApp — sem complicação.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link className={buttonVariants({ size: "lg" })} href="/cadastro">
+              <PendingLink className={buttonVariants({ size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
                 Quero minha loja
                 <ArrowRight aria-hidden="true" />
-              </Link>
+              </PendingLink>
               <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="#temas">
                 Ver os temas
               </Link>
@@ -206,16 +207,17 @@ export default function HomePage() {
                 <span className="pb-1 text-white/80">/mês</span>
               </p>
               <p className="mt-4 text-sm leading-6 text-white/80">Pagamento mensal no cartão de crédito. Cancele quando quiser.</p>
-              <Link
+              <PendingLink
                 className={buttonVariants({
                   className: "mt-7 bg-[var(--brand-accent)] text-brand-900 hover:bg-white",
                   size: "lg",
                 })}
                 href="/cadastro"
+                pendingLabel="Abrindo cadastro..."
               >
                 Quero minha loja
                 <ArrowRight aria-hidden="true" />
-              </Link>
+              </PendingLink>
             </div>
           </Card>
         </div>
@@ -250,10 +252,10 @@ export default function HomePage() {
           <p className="mt-4 text-[var(--app-foreground-muted)]">
             Crie seu catálogo, compartilhe o link e deixe seus produtos trabalharem por você.
           </p>
-          <Link className={buttonVariants({ className: "mt-7", size: "lg" })} href="/cadastro">
+          <PendingLink className={buttonVariants({ className: "mt-7", size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
             Quero minha loja
             <ArrowRight aria-hidden="true" />
-          </Link>
+          </PendingLink>
         </div>
       </section>
 

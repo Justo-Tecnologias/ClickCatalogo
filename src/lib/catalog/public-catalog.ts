@@ -38,9 +38,12 @@ export type PublicStoreResult =
   | { catalog: PublicCatalog; kind: "available" }
   | { kind: "canceled" }
   | { kind: "missing" }
+  | { kind: "redirect"; slug: string }
   | { kind: "unconfigured" };
 
-const queryPublicStore = unstable_cache(async (slug: string): Promise<PublicStoreResult> => {
+type CachedPublicStoreResult = Exclude<PublicStoreResult, { kind: "redirect" }>;
+
+const queryPublicStore = unstable_cache(async (slug: string): Promise<CachedPublicStoreResult> => {
   const parsedSlug = tenantSlugSchema.safeParse(slug);
   if (!parsedSlug.success) return { kind: "missing" };
 
@@ -59,7 +62,22 @@ const queryPublicStore = unstable_cache(async (slug: string): Promise<PublicStor
 
   const { data: status, error: statusError } = await supabase.rpc("get_public_store_status", { p_slug: slug });
   if (statusError) throw new Error("Não foi possível verificar o status desta loja.");
-  return status === "cancelado" ? { kind: "canceled" } : { kind: "missing" };
+  if (status === "cancelado") return { kind: "canceled" };
+
+  return { kind: "missing" };
 }, ["public-store"], { revalidate: 60 });
 
-export const getPublicStore = cache(queryPublicStore);
+export const getPublicStore = cache(async (slug: string): Promise<PublicStoreResult> => {
+  const result = await queryPublicStore(slug);
+  if (result.kind !== "missing" || !isSupabaseConfigured()) return result;
+
+  const parsedSlug = tenantSlugSchema.safeParse(slug);
+  if (!parsedSlug.success) return result;
+
+  // O destino de um endereço antigo não entra no cache de 60 segundos. Assim,
+  // qualquer alias sempre resolve diretamente para o slug atual da loja.
+  const supabase = createPublicClient();
+  const { data: redirectSlug, error } = await supabase.rpc("resolve_public_store_slug", { p_slug: parsedSlug.data });
+  if (error) throw new Error("Não foi possível verificar o endereço desta loja.");
+  return redirectSlug && redirectSlug !== parsedSlug.data ? { kind: "redirect", slug: redirectSlug } : result;
+});

@@ -8,6 +8,7 @@ import { requireTenant } from "@/lib/auth/session";
 import { normalizeInstagramUsername } from "@/lib/instagram/username";
 import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
+import { tenantSlugSchema } from "@/lib/tenants/slug";
 import type { TenantTheme } from "@/types/database";
 
 const themes = ["classico", "natural", "tech", "delivery", "elegante", "minimal"] as const;
@@ -98,5 +99,44 @@ export async function updateStoreAction(formData: FormData): Promise<ActionResul
       try { const supabase = await createClient(); await supabase.storage.from("produtos").remove(uploaded); } catch { /* Mantém o erro original. */ }
     }
     return actionError(error, "Não foi possível salvar os dados da loja.");
+  }
+}
+
+const changedSlugResultSchema = z.object({
+  new_slug: z.string(),
+  old_slug: z.string(),
+  redirect_until: z.string().nullable(),
+});
+
+export async function updateStoreSlugAction(input: { slug: string }): Promise<ActionResult<{ newSlug: string; oldSlug: string }>> {
+  const parsed = tenantSlugSchema.safeParse(input.slug);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Endereço inválido.", ok: false };
+
+  try {
+    const { demo, tenant } = await requireTenant();
+    if (demo) return { error: "O modo de demonstração não altera o endereço da loja.", ok: false };
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("change_tenant_slug", { p_slug: parsed.data });
+    if (error) {
+      if (error.code === "23505" || error.code === "54000" || error.code === "22023") {
+        return { error: error.message, ok: false };
+      }
+      throw error;
+    }
+
+    const result = changedSlugResultSchema.safeParse(data);
+    if (!result.success) throw new Error("O banco retornou uma confirmação inválida.");
+
+    const { data: redirectSlugs, error: redirectSlugsError } = await supabase.rpc("get_own_tenant_redirect_slugs");
+    if (redirectSlugsError) console.error("Não foi possível listar aliases para revalidação:", redirectSlugsError.message);
+
+    revalidatePath("/painel/loja");
+    revalidatePath(`/loja/${tenant.slug}`);
+    revalidatePath(`/loja/${result.data.new_slug}`);
+    for (const redirectSlug of redirectSlugs ?? []) revalidatePath(`/loja/${redirectSlug}`);
+    return { data: { newSlug: result.data.new_slug, oldSlug: result.data.old_slug }, ok: true };
+  } catch (error) {
+    return actionError(error, "Não foi possível alterar o endereço da loja.");
   }
 }

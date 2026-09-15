@@ -72,13 +72,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const [{ count: tenantCount }, { count: intentCount }, { count: emailIntentCount }] = await Promise.all([
+  const [tenantResult, intentResult, emailIntentResult, historyResult] = await Promise.all([
     admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", parsed.data.slug),
-    admin.from("signup_intents").select("id", { count: "exact", head: true }).eq("slug", parsed.data.slug).in("status", ["pendente", "pago"]),
-    admin.from("signup_intents").select("id", { count: "exact", head: true }).eq("email", parsed.data.email).in("status", ["pendente", "pago"]),
+    admin.from("signup_intents").select("id", { count: "exact", head: true }).eq("slug", parsed.data.slug).or("status.eq.pendente,and(status.eq.pago,provisioned_tenant_id.is.null)"),
+    admin.from("signup_intents").select("id", { count: "exact", head: true }).eq("email", parsed.data.email).or("status.eq.pendente,and(status.eq.pago,provisioned_tenant_id.is.null)"),
+    admin.from("tenant_slug_history").select("slug", { count: "exact", head: true }).eq("slug", parsed.data.slug).gt("redirect_until", new Date().toISOString()),
   ]);
-  if ((tenantCount ?? 0) > 0 || (intentCount ?? 0) > 0) return NextResponse.json({ error: "Este endereço acabou de ser reservado. Escolha outro slug." }, { status: 409 });
-  if ((emailIntentCount ?? 0) > 0) return NextResponse.json({ error: "Já existe um cadastro ou pagamento em andamento para este e-mail." }, { status: 409 });
+  const availabilityError = tenantResult.error ?? intentResult.error ?? emailIntentResult.error ?? historyResult.error;
+  if (availabilityError) {
+    logError("checkout.availability_lookup", availabilityError, { request_id: requestId });
+    return NextResponse.json({ error: "Não foi possível validar o cadastro agora. Tente novamente." }, { status: 503 });
+  }
+  if ((tenantResult.count ?? 0) > 0 || (intentResult.count ?? 0) > 0 || (historyResult.count ?? 0) > 0) {
+    return NextResponse.json({ error: "Este endereço acabou de ser reservado. Escolha outro." }, { status: 409 });
+  }
+  if ((emailIntentResult.count ?? 0) > 0) return NextResponse.json({ error: "Já existe um cadastro ou pagamento em andamento para este e-mail." }, { status: 409 });
 
   const now = new Date().toISOString();
   const { data: intent, error: intentError } = await admin.from("signup_intents").insert({

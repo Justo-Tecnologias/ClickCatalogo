@@ -1,10 +1,9 @@
-import { CalendarDays, CreditCard, ExternalLink, ReceiptText } from "lucide-react";
+import { CalendarDays, CreditCard, ReceiptText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,7 +35,7 @@ export default async function SubscriptionPage() {
         <div className="grid gap-5">
           {subscription.status === "atrasado" ? <Alert description="Sua loja continua visível, mas regularize a cobrança para evitar a suspensão." title="Pagamento pendente" variant="warning" /> : null}
           <Card><CardContent className="grid gap-6 p-6 sm:grid-cols-3">
-            <div><p className="text-sm text-[var(--app-foreground-muted)]">Status</p><Badge className="mt-2" variant={subscription.status === "ativo" ? "success" : subscription.status === "atrasado" ? "warning" : "danger"}>{subscription.status}</Badge></div>
+            <div><p className="text-sm text-[var(--app-foreground-muted)]">Status</p><Badge className="mt-2" variant={subscription.status === "ativo" ? "success" : subscription.status === "atrasado" ? "warning" : "danger"}>{subscription.status === "ativo" ? "Assinatura ativa" : subscription.status === "atrasado" ? "Pagamento pendente" : "Assinatura cancelada"}</Badge></div>
             <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CreditCard aria-hidden="true" className="size-4" />Valor mensal</p><p className="mt-2 text-xl font-bold">{formatCurrency(Number(subscription.valor))}</p></div>
             <div><p className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]"><CalendarDays aria-hidden="true" className="size-4" />Próxima cobrança</p><p className="mt-2 font-semibold">{subscription.status === "cancelado" ? ["attention", "pending", "processing"].includes(subscription.cancellation_reconciliation_status) ? "Em conferência" : "Não haverá nova cobrança" : subscription.cancel_at_period_end ? subscription.cancellation_reconciliation_status === "complete" ? "Não haverá nova cobrança" : "Em conferência" : subscription.next_due_date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${subscription.next_due_date}T12:00:00Z`)) : "A confirmar"}</p></div>
           </CardContent></Card>
@@ -48,9 +47,10 @@ export default async function SubscriptionPage() {
             initialCancelled={subscription.status === "cancelado"}
             initialReconciliationStatus={subscription.cancellation_reconciliation_status}
             initialScheduled={subscription.cancel_at_period_end}
+            portalUrl={subscription.portal_url}
             storeName={tenant.nome_loja}
           />
-          {subscription.portal_url ? <div><Link className={buttonVariants()} href={subscription.portal_url} rel="noreferrer" target="_blank"><ExternalLink aria-hidden="true" />{subscription.status === "cancelado" ? "Ver última cobrança no Asaas" : "Ver cobrança no Asaas"}</Link></div> : subscription.status !== "cancelado" ? <Alert description="O link da cobrança aparecerá aqui quando for enviado pelo Asaas." title="Cobrança ainda sem link" /> : null}
+          {!demo && !subscription.portal_url && subscription.status !== "cancelado" ? <Alert description="O link da cobrança aparecerá aqui quando for enviado pelo Asaas." title="Cobrança ainda sem link" /> : null}
           {supportEmail && !demo ? (
             <Alert
               description={(

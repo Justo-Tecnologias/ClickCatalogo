@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       admin.from("signup_intents")
         .select("id", { count: "exact", head: true })
         .eq("email", parsed.data.email)
-        .in("status", ["pendente", "pago"]),
+        .or("status.eq.pendente,and(status.eq.pago,provisioned_tenant_id.is.null)"),
     ]);
 
     if (tenantError || intentError) throw tenantError ?? intentError;
