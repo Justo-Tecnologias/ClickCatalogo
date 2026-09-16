@@ -7,16 +7,20 @@ import { cn } from "@/lib/utils/cn";
 
 export type CategoryNavProps = {
   categories: Pick<CatalogCategory, "id" | "nome">[];
+  highlightSelection?: boolean;
+  targetIdPrefix: string;
   sticky?: boolean;
 };
 
-export function CategoryNav({ categories, sticky = false }: CategoryNavProps) {
+export function CategoryNav({ categories, highlightSelection = true, sticky = false, targetIdPrefix }: CategoryNavProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(categories[0]?.id ?? null);
   const [edgeFade, setEdgeFade] = useState({ end: false, start: false });
-  const activeId = categories.some((category) => category.id === selectedId)
-    ? selectedId
-    : categories[0]?.id;
+  const activeId = highlightSelection
+    ? categories.some((category) => category.id === selectedId)
+      ? selectedId
+      : categories[0]?.id
+    : null;
 
   const updateEdgeFade = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -69,6 +73,7 @@ export function CategoryNav({ categories, sticky = false }: CategoryNavProps) {
         >
           {categories.map((category) => {
             const active = category.id === activeId;
+            const targetId = `${targetIdPrefix}-${category.id}`;
 
             return (
               <a
@@ -78,9 +83,19 @@ export function CategoryNav({ categories, sticky = false }: CategoryNavProps) {
                     ? "inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--cor-primaria)] bg-[var(--cor-primaria)] px-4 py-2 text-sm font-semibold text-[var(--cor-fundo)] shadow-sm outline-none transition-[opacity,transform,box-shadow] hover:-translate-y-px hover:opacity-95 focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
                     : "inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-2 text-sm font-medium text-[var(--cor-texto-suave)] shadow-[0_1px_2px_color-mix(in_srgb,var(--cor-primaria)_8%,transparent)] outline-none transition-[border-color,color,background-color,transform] hover:-translate-y-px hover:border-[var(--cor-primaria)] hover:bg-[color-mix(in_srgb,var(--cor-superficie)_92%,var(--cor-acao))] hover:text-[var(--cor-texto)] focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
                 }
-                href={`#categoria-${category.id}`}
+                href={`#${targetId}`}
                 key={category.id}
-                onClick={() => setSelectedId(category.id)}
+                onClick={(event) => {
+                  setSelectedId(category.id);
+                  const target = document.getElementById(targetId);
+                  if (!target) return;
+
+                  event.preventDefault();
+                  target.scrollIntoView({
+                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                    block: "start",
+                  });
+                }}
               >
                 {category.nome}
               </a>

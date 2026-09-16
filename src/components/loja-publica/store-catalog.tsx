@@ -39,6 +39,7 @@ function normalizeSearch(value: string) {
 
 export function StoreCatalog({ analyticsSlug, categories, enableCart = true, framed = false, storeName, whatsapp }: StoreCatalogProps) {
   const searchId = useId();
+  const categoryTargetIdPrefix = `${searchId.replace(/:/g, "")}-categoria`;
   const totalProducts = useMemo(
     () => categories.reduce((total, category) => total + category.produtos.length, 0),
     [categories],
@@ -77,6 +78,7 @@ export function StoreCatalog({ analyticsSlug, categories, enableCart = true, fra
     () => filteredCategories.reduce((total, category) => total + category.produtos.length, 0),
     [filteredCategories],
   );
+  const searching = normalizeSearch(search).length > 0;
   const showSearch = totalProducts > SEARCH_THRESHOLD;
   const stickyCategories =
     categories.length > STICKY_CATEGORY_THRESHOLD || totalProducts > SEARCH_THRESHOLD;
@@ -143,7 +145,7 @@ export function StoreCatalog({ analyticsSlug, categories, enableCart = true, fra
 
   return (
     <>
-      <CategoryNav categories={filteredCategories} sticky={stickyCategories} />
+      <CategoryNav categories={filteredCategories} highlightSelection={!searching} key={searching ? "searching" : "browsing"} sticky={stickyCategories} targetIdPrefix={categoryTargetIdPrefix} />
 
       <Content className="mx-auto w-full max-w-[var(--content-width)] px-4 py-6 @2xl/store:px-6 @2xl/store:py-8 @5xl/store:px-8">
         <div className="mb-4 flex items-end justify-between gap-4 @2xl/store:mb-6">
@@ -212,16 +214,16 @@ export function StoreCatalog({ analyticsSlug, categories, enableCart = true, fra
 
               return (
                 <section
-                  aria-labelledby={`titulo-categoria-${category.id}`}
+                  aria-labelledby={`${categoryTargetIdPrefix}-titulo-${category.id}`}
                   className="scroll-mt-20"
-                  id={`categoria-${category.id}`}
+                  id={`${categoryTargetIdPrefix}-${category.id}`}
                   key={category.id}
                 >
                   <div className="mb-5 flex items-center gap-3">
                     <span aria-hidden="true" className="h-6 w-1 rounded-full bg-[var(--cor-acao)]" />
                     <h3
                       className="text-lg font-semibold tracking-tight text-[var(--cor-texto)] @2xl/store:text-xl"
-                      id={`titulo-categoria-${category.id}`}
+                      id={`${categoryTargetIdPrefix}-titulo-${category.id}`}
                     >
                       {category.nome}
                     </h3>

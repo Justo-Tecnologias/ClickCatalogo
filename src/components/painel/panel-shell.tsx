@@ -78,28 +78,10 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
             ClickCatálogo
           </Link>
           <div className="flex items-center gap-2">
-            <Badge className="hidden min-[480px]:inline-flex" variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}</Badge>
-            <span
-              aria-label={status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}
-              className={`size-3 rounded-full min-[480px]:hidden ${status === "ativo" ? "bg-[var(--app-success)]" : status === "inadimplente" ? "bg-amber-500" : "bg-red-500"}`}
-              role="status"
-              title={status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}
-            />
-            <Link
-              aria-label="Abrir loja pública em uma nova aba"
-              className={buttonVariants({
-                className: "lg:hidden sm:w-auto sm:px-3",
-                size: "icon",
-                variant: "secondary",
-              })}
-              href={`/loja/${slug}`}
-              rel="noreferrer"
-              target="_blank"
-              title="Abrir loja"
-            >
-              <ExternalLink aria-hidden="true" />
-              <span className="hidden sm:inline">Abrir loja</span>
-            </Link>
+            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>
+              <span className="min-[480px]:hidden">{status === "ativo" ? "Ativa" : status === "inadimplente" ? "Pendente" : "Cancelada"}</span>
+              <span className="hidden min-[480px]:inline">{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}</span>
+            </Badge>
             <Button
               aria-controls="panel-mobile-menu"
               aria-expanded={menuOpen}

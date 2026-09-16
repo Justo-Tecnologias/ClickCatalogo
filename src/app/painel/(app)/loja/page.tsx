@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { StoreSettingsForm } from "@/components/painel/store-settings-form";
-import { StoreLaunchTools } from "@/components/painel/store-launch-tools";
+import { StoreOnboardingChecklist, StoreShareActions, StoreTopActions } from "@/components/painel/store-launch-tools";
 import { StoreSlugForm } from "@/components/painel/store-slug-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireTenant } from "@/lib/auth/session";
@@ -16,12 +16,21 @@ export const dynamic = "force-dynamic";
 export default async function StorePage() {
   const { demo, tenant } = await requireTenant();
   if (demo) {
-    return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreSlugForm currentSlug={DEMO_CATALOG.slug} demo siteUrl={getSiteUrl()} /><StoreSettingsForm catalog={DEMO_CATALOG} /></div>;
+    const siteUrl = getSiteUrl();
+    const storeUrl = `${siteUrl}/loja/${encodeURIComponent(DEMO_CATALOG.slug)}`;
+    return (
+      <div className="grid min-w-0 gap-5 pb-28 xl:gap-6 xl:pb-0 [&>*]:min-w-0">
+        <PageHeader actions={<StoreTopActions storeHref={`/loja/${DEMO_CATALOG.slug}`} storeName={DEMO_CATALOG.nome_loja} storeUrl={storeUrl} />} description="Personalize o que seus clientes veem." eyebrow="Configuração" title="Minha loja" />
+        <div className="order-3 xl:order-5"><StoreSettingsForm catalog={DEMO_CATALOG} /></div>
+        <div className="order-4 xl:order-3"><StoreShareActions storeName={DEMO_CATALOG.nome_loja} storeUrl={storeUrl}><StoreSlugForm currentSlug={DEMO_CATALOG.slug} demo embedded hasActiveRedirects={false} siteUrl={siteUrl} /></StoreShareActions></div>
+      </div>
+    );
   }
   const supabase = await createClient();
-  const [{ data: categories }, { data: products }] = await Promise.all([
+  const [{ data: categories }, { data: products }, { data: redirectSlugs }] = await Promise.all([
     supabase.from("categories").select("id,nome,ordem").eq("tenant_id", tenant.id).order("ordem").order("created_at"),
     supabase.from("products").select("id,nome,preco,descricao,imagem_url,variacao_info,ordem,category_id").eq("tenant_id", tenant.id).eq("ativo", true).order("ordem").order("created_at"),
+    supabase.rpc("get_own_tenant_redirect_slugs"),
   ]);
 
   const catalog: PublicCatalog = {
@@ -39,5 +48,14 @@ export default async function StorePage() {
   };
 
   const activeProducts = catalog.categorias.reduce((total, category) => total + category.produtos.length, 0);
-  return <div className="grid gap-7"><PageHeader description="Personalize a identidade e as informações que seus clientes veem." eyebrow="Configuração" title="Minha loja" /><StoreLaunchTools bannerReady={Boolean(catalog.banner_url)} categoryCount={catalog.categorias.length} logoReady={Boolean(catalog.logo_url)} productCount={activeProducts} storeName={catalog.nome_loja} storeUrl={`${getSiteUrl()}/loja/${encodeURIComponent(catalog.slug)}`} whatsappReady={Boolean(catalog.whatsapp)} /><StoreSlugForm currentSlug={catalog.slug} siteUrl={getSiteUrl()} /><StoreSettingsForm catalog={catalog} /></div>;
+  const siteUrl = getSiteUrl();
+  const storeUrl = `${siteUrl}/loja/${encodeURIComponent(catalog.slug)}`;
+  return (
+    <div className="grid min-w-0 gap-5 pb-28 xl:gap-6 xl:pb-0 [&>*]:min-w-0">
+      <PageHeader actions={<StoreTopActions storeHref={`/loja/${catalog.slug}`} storeName={catalog.nome_loja} storeUrl={storeUrl} />} description="Personalize o que seus clientes veem." eyebrow="Configuração" title="Minha loja" />
+      <div className="order-2"><StoreOnboardingChecklist bannerReady={Boolean(catalog.banner_url)} categoryCount={catalog.categorias.length} logoReady={Boolean(catalog.logo_url)} productCount={activeProducts} storeName={catalog.nome_loja} storeUrl={storeUrl} whatsappReady={Boolean(catalog.whatsapp)} /></div>
+      <div className="order-3 xl:order-5"><StoreSettingsForm catalog={catalog} /></div>
+      <div className="order-4 xl:order-3"><StoreShareActions storeName={catalog.nome_loja} storeUrl={storeUrl}><StoreSlugForm currentSlug={catalog.slug} embedded hasActiveRedirects={Boolean(redirectSlugs?.length)} siteUrl={siteUrl} /></StoreShareActions></div>
+    </div>
+  );
 }

@@ -56,7 +56,7 @@ export default async function SubscriptionPage() {
               description={(
                 <span>
                   Para dúvidas sobre cobrança ou para solicitar acesso, correção ou exclusão de dados, escreva para{" "}
-                  <Link className="font-semibold underline underline-offset-4" href="/atendimento?assunto=cobranca">
+                  <Link className="font-semibold underline underline-offset-4" href="/atendimento?assunto=cobranca&origem=assinatura">
                     {supportEmail}
                   </Link>.
                 </span>

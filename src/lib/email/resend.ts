@@ -4,6 +4,8 @@ import { getResendEnv } from "@/lib/env/server";
 
 type SendEmailInput = {
   html: string;
+  idempotencyKey?: string;
+  replyTo?: string;
   subject: string;
   to: string;
 };
@@ -16,12 +18,14 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
     body: JSON.stringify({
       from: env.from,
       html: input.html,
+      reply_to: input.replyTo,
       subject: input.subject,
       to: [input.to],
     }),
     headers: {
       Authorization: `Bearer ${env.apiKey}`,
       "Content-Type": "application/json",
+      ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
     },
     method: "POST",
     signal: AbortSignal.timeout(15_000),

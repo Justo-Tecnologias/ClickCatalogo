@@ -35,6 +35,8 @@ export const PUBLIC_API_RATE_LIMITS = {
   signupRecoveryEmail: { failureMode: "closed", limit: 3, scope: "signup-recovery-email", windowMs: 30 * 60 * 1000 },
   signupRecoveryIp: { failureMode: "closed", limit: 5, scope: "signup-recovery-ip", windowMs: 15 * 60 * 1000 },
   slugAvailability: { limit: 60, scope: "slug-availability", windowMs: 60 * 1000 },
+  supportEmail: { failureMode: "closed", limit: 3, scope: "support-email", windowMs: 30 * 60 * 1000 },
+  supportIp: { failureMode: "closed", limit: 5, scope: "support-ip", windowMs: 30 * 60 * 1000 },
   signupStatus: { limit: 120, scope: "signup-status", windowMs: 10 * 60 * 1000 },
   webhook: { limit: 180, scope: "asaas-webhook", windowMs: 60 * 1000 },
 } satisfies Record<string, RateLimitPolicy>;

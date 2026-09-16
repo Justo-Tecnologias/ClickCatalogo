@@ -1731,6 +1731,7 @@ declare
   v_tenant public.tenants%rowtype;
   v_history_owner uuid;
   v_active_aliases integer;
+  v_next_alias_release_on date;
 begin
   if auth.uid() is null then
     raise exception 'Autenticação necessária.' using errcode = '42501';
@@ -1755,7 +1756,9 @@ begin
     return jsonb_build_object('old_slug', v_tenant.slug, 'new_slug', v_tenant.slug, 'redirect_until', null);
   end if;
 
-  delete from public.tenant_slug_history where redirect_until <= clock_timestamp();
+  delete from public.tenant_slug_history
+  where (redirect_until at time zone 'America/Sao_Paulo')::date
+    <= (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
 
   if exists (select 1 from public.tenants as tenant where tenant.slug = v_new_slug) then
     raise exception 'Este endereço já está em uso.' using errcode = '23505';
@@ -1777,12 +1780,19 @@ begin
     raise exception 'Este endereço já está reservado por um cadastro.' using errcode = '23505';
   end if;
 
-  select count(*)::integer into v_active_aliases
+  select
+    count(*)::integer,
+    min((history.redirect_until at time zone 'America/Sao_Paulo')::date)
+  into v_active_aliases, v_next_alias_release_on
   from public.tenant_slug_history as history
-  where history.tenant_id = v_tenant.id and history.redirect_until > clock_timestamp();
+  where history.tenant_id = v_tenant.id
+    and (history.redirect_until at time zone 'America/Sao_Paulo')::date
+      > (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
 
   if v_active_aliases >= 3 and v_history_owner is null then
-    raise exception 'Você já possui três endereços antigos protegidos. Aguarde a liberação de um deles.' using errcode = '54000';
+    raise exception 'Você já possui três links antigos protegidos. Reutilize um deles ou escolha um novo a partir de %.',
+      to_char(v_next_alias_release_on, 'DD/MM/YYYY')
+      using errcode = '54000';
   end if;
 
   delete from public.tenant_slug_history where slug = v_new_slug and tenant_id = v_tenant.id;

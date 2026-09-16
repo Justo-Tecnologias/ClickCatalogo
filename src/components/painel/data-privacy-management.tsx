@@ -135,7 +135,7 @@ export function DataPrivacyManagement({
           {supportEmail ? (
             <a
               className={`${buttonVariants({ variant: "secondary" })} w-full sm:w-fit`}
-              href="/atendimento?assunto=dados"
+              href="/atendimento?assunto=dados&origem=privacidade"
             >
               <FileDown aria-hidden="true" />
               Falar sobre meus dados

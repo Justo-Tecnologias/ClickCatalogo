@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Link2, LoaderCircle, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Link2, LoaderCircle, Pencil, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -25,9 +25,11 @@ function normalizeSlugInput(value: string) {
     .slice(0, 60);
 }
 
-export function StoreSlugForm({ currentSlug: initialSlug, demo = false, siteUrl }: { currentSlug: string; demo?: boolean; siteUrl: string }) {
+export function StoreSlugForm({ currentSlug: initialSlug, demo = false, embedded = false, hasActiveRedirects = false, siteUrl }: { currentSlug: string; demo?: boolean; embedded?: boolean; hasActiveRedirects?: boolean; siteUrl: string }) {
   const [currentSlug, setCurrentSlug] = useState(initialSlug);
   const [slug, setSlug] = useState(initialSlug);
+  const [editing, setEditing] = useState(false);
+  const [hasPreviousSlug, setHasPreviousSlug] = useState(hasActiveRedirects);
   const [availability, setAvailability] = useState<Availability>({ message: "Este é o endereço atual da sua loja.", state: "unknown" });
   const [isPending, startTransition] = useTransition();
   const notify = useToast();
@@ -44,7 +46,7 @@ export function StoreSlugForm({ currentSlug: initialSlug, demo = false, siteUrl 
     const timeout = window.setTimeout(async () => {
       setAvailability({ message: "Verificando disponibilidade...", state: "checking" });
       try {
-        const response = await fetch(`/api/slug-disponivel?slug=${encodeURIComponent(parsed.data)}`, { signal: controller.signal });
+        const response = await fetch(`/api/slug-disponivel?slug=${encodeURIComponent(parsed.data)}&context=panel`, { signal: controller.signal });
         const result = await response.json() as { available: boolean | null; message?: string };
         if (!response.ok || result.available === null) {
           setAvailability({ message: result.message ?? "Não foi possível verificar agora.", state: "unknown" });
@@ -93,7 +95,9 @@ export function StoreSlugForm({ currentSlug: initialSlug, demo = false, siteUrl 
       }
       setCurrentSlug(result.data.newSlug);
       setSlug(result.data.newSlug);
+      setHasPreviousSlug(true);
       setAvailability({ message: "Novo endereço publicado.", state: "available" });
+      setEditing(false);
       notify({
         description: "O endereço anterior redirecionará os clientes por 30 dias.",
         title: "Endereço da loja alterado",
@@ -111,11 +115,24 @@ export function StoreSlugForm({ currentSlug: initialSlug, demo = false, siteUrl 
         ? <TriangleAlert aria-hidden="true" className="size-4 text-red-700" />
         : null;
 
+  if (embedded && !editing) {
+    return (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {demo ? <p className="text-sm leading-6 text-[var(--app-foreground-muted)]">Na demonstração, o link é somente para visualização.</p> : null}
+        {!demo && hasPreviousSlug ? <p className="text-sm leading-6 text-[var(--app-foreground-muted)]">Links anteriores continuam redirecionando clientes por 30 dias.</p> : null}
+        <Button className="w-full sm:w-auto" disabled={demo} onClick={() => setEditing(true)} variant="secondary">
+          <Pencil aria-hidden="true" />
+          Alterar link
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Card className="grid gap-5 p-5 sm:p-6">
-      <div className="flex items-start gap-3">
+    <Card className={embedded ? "grid gap-4 border-0 bg-transparent p-0 shadow-none" : "grid gap-5 p-5 sm:p-6"}>
+      <div className={embedded ? "hidden" : "flex items-start gap-3"}>
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700"><Link2 aria-hidden="true" className="size-5" /></span>
-        <div><h2 className="text-lg font-bold">Endereço da loja</h2><p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">Escolha o link curto que você compartilha com seus clientes.</p></div>
+        <div><h2 className="text-lg font-bold">Link da loja</h2><p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">Escolha o link curto que você compartilha com seus clientes.</p></div>
       </div>
 
       {demo ? <Alert title="Na demonstração, o endereço é somente para visualização." variant="info" /> : null}
@@ -130,11 +147,11 @@ export function StoreSlugForm({ currentSlug: initialSlug, demo = false, siteUrl 
           </div>
           <div aria-live="polite" className="flex items-center gap-2 text-xs leading-5" id="store-slug-status">{statusIcon}<span className={availability.state === "invalid" || availability.state === "unavailable" ? "text-red-800" : "text-[var(--app-foreground-muted)]"}>{availability.message}</span></div>
           {availability.state === "invalid" ? <FieldError>Corrija o endereço antes de salvar.</FieldError> : null}
-          <FieldDescription>Ao trocar, o link anterior continuará levando à sua loja por 30 dias. Para evitar reservas excessivas, até três links antigos podem ficar protegidos ao mesmo tempo.</FieldDescription>
+          <FieldDescription>O link anterior continuará funcionando por 30 dias. Até três links antigos podem ficar protegidos; você pode reutilizá-los a qualquer momento.</FieldDescription>
         </Field>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={demo || isPending || !changed || availability.state !== "available"} type="submit">{isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Link2 aria-hidden="true" />}{isPending ? "Alterando..." : "Alterar endereço"}</Button>
-          {changed ? <Button disabled={isPending} onClick={() => changeValue(currentSlug)} type="button" variant="secondary">Cancelar</Button> : null}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex">
+          <Button className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-4" disabled={demo || isPending || !changed || availability.state !== "available"} type="submit">{isPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Link2 aria-hidden="true" />}{isPending ? "Salvando..." : "Salvar novo link"}</Button>
+          <Button className="px-3 sm:px-4" disabled={isPending} onClick={() => { changeValue(currentSlug); if (embedded) setEditing(false); }} type="button" variant="secondary">Cancelar</Button>
         </div>
       </form>
     </Card>

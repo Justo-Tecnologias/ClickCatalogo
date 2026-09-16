@@ -31,13 +31,21 @@ export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
 
 export const DEMO_CATEGORIES: Database["public"]["Tables"]["categories"]["Row"][] = [
   { created_at: createdAt, id: "00000000-0000-4000-8000-000000000101", nome: "Cafés", ordem: 0, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
-  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000102", nome: "Presentes", ordem: 1, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000102", nome: "Doces", ordem: 1, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000103", nome: "Presentes", ordem: 2, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000104", nome: "Combos", ordem: 3, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
 ];
 
 export const DEMO_PRODUCTS: Database["public"]["Tables"]["products"]["Row"][] = [
   { ativo: true, category_id: DEMO_CATEGORIES[0].id, created_at: createdAt, descricao: "Café coado na hora, com grãos selecionados.", id: "00000000-0000-4000-8000-000000000201", imagem_url: "/demo/caneca-orvalho.svg", nome: "Café especial", ordem: 0, preco: 12, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Pequeno ou grande" },
-  { ativo: true, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Uma seleção delicada para presentear.", id: "00000000-0000-4000-8000-000000000202", imagem_url: "/demo/kit-afeto.svg", nome: "Kit carinho", ordem: 0, preco: 59.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Cartão personalizado incluso" },
-  { ativo: false, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Caneca artesanal em edição limitada.", id: "00000000-0000-4000-8000-000000000203", imagem_url: "/demo/vela-aurora.svg", nome: "Caneca artesanal", ordem: 1, preco: 42, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
+  { ativo: true, category_id: DEMO_CATEGORIES[0].id, created_at: createdAt, descricao: "Espresso intenso finalizado com leite cremoso.", id: "00000000-0000-4000-8000-000000000202", imagem_url: "/demo/caneca-orvalho.svg", nome: "Cappuccino da casa", ordem: 1, preco: 16.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Tradicional ou canela" },
+  { ativo: true, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Brownie intenso com casquinha crocante.", id: "00000000-0000-4000-8000-000000000203", imagem_url: "/demo/vela-aurora.svg", nome: "Brownie artesanal", ordem: 0, preco: 12, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
+  { ativo: true, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Cookie macio com gotas de chocolate.", id: "00000000-0000-4000-8000-000000000204", imagem_url: "/demo/vela-aurora.svg", nome: "Cookie especial", ordem: 1, preco: 9.5, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
+  { ativo: true, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Uma seleção delicada para presentear.", id: "00000000-0000-4000-8000-000000000205", imagem_url: "/demo/kit-afeto.svg", nome: "Kit carinho", ordem: 0, preco: 59.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Cartão personalizado incluso" },
+  { ativo: true, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Caneca acompanhada de café selecionado.", id: "00000000-0000-4000-8000-000000000206", imagem_url: "/demo/caneca-orvalho.svg", nome: "Caneca com café", ordem: 1, preco: 49.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Embalagem para presente" },
+  { ativo: true, category_id: DEMO_CATEGORIES[3].id, created_at: createdAt, descricao: "Dois cafés e dois doces para compartilhar.", id: "00000000-0000-4000-8000-000000000207", imagem_url: "/demo/bolsa-essencial.svg", nome: "Pausa para dois", ordem: 0, preco: 39.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Serve duas pessoas" },
+  { ativo: true, category_id: DEMO_CATEGORIES[3].id, created_at: createdAt, descricao: "Café, bolo e doces em uma combinação especial.", id: "00000000-0000-4000-8000-000000000208", imagem_url: "/demo/kit-afeto.svg", nome: "Combo da praça", ordem: 1, preco: 79.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Serve até quatro pessoas" },
+  { ativo: false, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Caneca artesanal em edição limitada.", id: "00000000-0000-4000-8000-000000000209", imagem_url: "/demo/vela-aurora.svg", nome: "Caneca artesanal", ordem: 2, preco: 42, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
 ];
 
 export const DEMO_SUBSCRIPTION: Database["public"]["Tables"]["subscriptions"]["Row"] = {

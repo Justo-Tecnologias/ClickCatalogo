@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SupportContact } from "@/components/marketing/support-contact";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getPanelContext } from "@/lib/auth/session";
 import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
@@ -13,23 +14,34 @@ export const metadata: Metadata = {
   title: "Atendimento",
 };
 
-const subjects = {
-  cobranca: "Atendimento sobre cobrança — ClickCatálogo",
-  dados: "Direitos sobre dados — ClickCatálogo",
-  geral: "Atendimento — ClickCatálogo",
+const topics = ["cobranca", "dados", "geral"] as const;
+type SupportTopic = (typeof topics)[number];
+
+const returnRoutes = {
+  assinatura: "/painel/assinatura",
+  privacidade: "/painel/privacidade",
 } as const;
 
 export default async function SupportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assunto?: string | string[] }>;
+  searchParams: Promise<{ assunto?: string | string[]; origem?: string | string[] }>;
 }) {
-  const rawSubject = (await searchParams).assunto;
+  const params = await searchParams;
+  const rawSubject = params.assunto;
   const subjectKey = Array.isArray(rawSubject) ? rawSubject[0] : rawSubject;
-  const subject = subjectKey && subjectKey in subjects
-    ? subjects[subjectKey as keyof typeof subjects]
-    : subjects.geral;
+  const defaultTopic: SupportTopic = topics.includes(subjectKey as SupportTopic)
+    ? subjectKey as SupportTopic
+    : "geral";
+  const rawOrigin = Array.isArray(params.origem) ? params.origem[0] : params.origem;
+  const returnHref = rawOrigin && rawOrigin in returnRoutes
+    ? returnRoutes[rawOrigin as keyof typeof returnRoutes]
+    : "/";
+  const returnLabel = returnHref.startsWith("/painel/") ? "Voltar ao painel" : "Voltar";
   const { supportEmail } = getLegalIdentity();
+  const panelContext = await getPanelContext();
+  const defaultEmail = panelContext.authenticated && !panelContext.demo ? panelContext.userEmail ?? "" : "";
+  const defaultName = panelContext.authenticated && !panelContext.demo ? panelContext.tenant?.nome_loja ?? "" : "";
 
   return (
     <main className="min-h-screen bg-[var(--app-background)]">
@@ -39,8 +51,8 @@ export default async function SupportPage({
             <span className="grid size-8 place-items-center rounded-lg bg-brand-900 text-white"><ShoppingBag aria-hidden="true" className="size-4" /></span>
             ClickCatálogo
           </Link>
-          <Link className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--app-foreground-muted)] hover:text-brand-700" href="/">
-            <ArrowLeft aria-hidden="true" className="size-4" />Voltar
+          <Link className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--app-foreground-muted)] hover:text-brand-700" href={returnHref}>
+            <ArrowLeft aria-hidden="true" className="size-4" />{returnLabel}
           </Link>
         </div>
       </header>
@@ -50,13 +62,12 @@ export default async function SupportPage({
           <CardHeader>
             <span className="mb-3 grid size-11 place-items-center rounded-xl bg-brand-100 text-brand-700"><Headphones aria-hidden="true" className="size-5" /></span>
             <CardTitle as="h1" className="text-2xl">Como podemos ajudar?</CardTitle>
-            <CardDescription>Use o canal oficial abaixo. Para proteger sua conta, podemos pedir a confirmação do e-mail cadastrado.</CardDescription>
+            <CardDescription>Envie sua dúvida por aqui. Para proteger sua conta, podemos pedir a confirmação do e-mail cadastrado.</CardDescription>
           </CardHeader>
           <CardContent>
-            {supportEmail ? <SupportContact email={supportEmail} subject={subject} /> : <Alert description="O endereço oficial precisa ser configurado antes de receber solicitações." title="Canal em configuração" variant="warning" />}
+            {supportEmail ? <SupportContact defaultEmail={defaultEmail} defaultName={defaultName} defaultTopic={defaultTopic} supportEmail={supportEmail} /> : <Alert description="O endereço oficial precisa ser configurado antes de receber solicitações." title="Canal em configuração" variant="warning" />}
           </CardContent>
         </Card>
-        <p className="text-center text-sm leading-6 text-[var(--app-foreground-muted)]">Não envie senha, número completo de cartão ou código de autenticação.</p>
       </div>
     </main>
   );
