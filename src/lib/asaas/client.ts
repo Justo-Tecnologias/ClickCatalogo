@@ -221,7 +221,7 @@ async function listSubscriptionPayments(subscriptionId: string, status?: "PENDIN
       );
     }
 
-    if (parsed.data.data.some((payment) => payment.subscription !== subscriptionId)) {
+    if (parsed.data.data.some((payment) => payment.subscription && payment.subscription !== subscriptionId)) {
       throw new AsaasPaymentReconciliationError(
         "O Asaas devolveu uma cobrança sem vínculo confirmado com a assinatura.",
       );

@@ -72,13 +72,28 @@ async function listSubscriptionPayments(env, subscriptionId, status, deadline) {
     if (!response.ok) throw new Error(`Falha ao listar cobranças (${response.status}).`);
     const payload = await response.json();
     if (!Array.isArray(payload?.data)) throw new Error("Lista de cobranças inválida.");
-    if (payload.data.some((payment) => payment?.subscription !== subscriptionId)) {
+    if (payload.data.some((payment) => payment?.subscription && payment.subscription !== subscriptionId)) {
       throw new Error("Cobrança sem vínculo confirmado com a assinatura.");
     }
     all.push(...payload.data);
     if (!payload.hasMore || payload.data.length < limit) return all;
   }
   throw new Error("Limite de cobranças excedido.");
+}
+
+async function isDeletedSubscription(env, subscriptionId, deadline) {
+  const limit = 100;
+  for (let offset = 0; offset < 2_000; offset += limit) {
+    ensureTimeBudget(deadline);
+    const params = new URLSearchParams({ deletedOnly: "true", limit: String(limit), offset: String(offset) });
+    const response = await asaasRequest(env, `/subscriptions?${params}`);
+    if (!response.ok) return false;
+    const payload = await response.json();
+    if (!Array.isArray(payload?.data)) return false;
+    if (payload.data.some((subscription) => subscription?.id === subscriptionId)) return true;
+    if (!payload.hasMore || payload.data.length < limit) return false;
+  }
+  return false;
 }
 
 function isAtOrAfterCutoff(payment, cutoff, subscriptionId) {
@@ -127,10 +142,12 @@ async function reconcileOne(env, row, deadline) {
     body: JSON.stringify({ status: "INACTIVE" }),
     method: "PUT",
   });
-  if (!inactivation.ok && inactivation.status !== 404) {
+  const deleted = inactivation.status === 404
+    || (!inactivation.ok && await isDeletedSubscription(env, subscriptionId, deadline));
+  if (!inactivation.ok && !deleted) {
     throw new Error(`Falha ao inativar assinatura (${inactivation.status}).`);
   }
-  const remoteState = inactivation.status === 404 ? "deleted" : "inactive";
+  const remoteState = deleted ? "deleted" : "inactive";
 
   const payments = await listSubscriptionPayments(env, subscriptionId, undefined, deadline);
   const cutoff = authoritativePaidThroughDate(payments, subscriptionId);
@@ -178,6 +195,7 @@ async function retryPendingReconciliations(env) {
       attention += 1;
       const reason = error instanceof Error ? error.message : "Falha desconhecida.";
       failureReasons[reason] = (failureReasons[reason] ?? 0) + 1;
+      console.error(JSON.stringify({ event: "subscription.cancellation.reconciliation_failed", reason }));
       try {
         await setReconciliationState(env, row, "attention");
       } catch {

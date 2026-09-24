@@ -36,7 +36,10 @@ test("assinatura já excluída é conciliada e acesso volta ao mês comprovadame
       }] : []);
     }
     if (url.pathname.endsWith("/subscriptions/sub_deleted") && init?.method === "PUT") {
-      return new Response(null, { status: 404 });
+      return response({ errors: [{ description: "Assinatura removida" }] }, 400);
+    }
+    if (url.pathname.endsWith("/subscriptions") && url.searchParams.get("deletedOnly") === "true") {
+      return response({ data: [{ id: "sub_deleted" }], hasMore: false });
     }
     if (url.pathname.endsWith("/payments") && init?.method !== "DELETE") {
       assert.equal(url.searchParams.get("subscription"), "sub_deleted");
@@ -45,7 +48,6 @@ test("assinatura já excluída é conciliada e acesso volta ao mês comprovadame
         dueDate: "2026-09-10",
         id: "pay_confirmed",
         status: "CONFIRMED",
-        subscription: "sub_deleted",
       }], hasMore: false });
     }
     if (url.pathname.endsWith("/subscriptions") && init?.method === "PATCH") {
