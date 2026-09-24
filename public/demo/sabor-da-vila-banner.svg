@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 600" role="img" aria-labelledby="title description">
+  <title id="title">Banner Sabor da Vila</title>
+  <description id="description">Composição em verde e creme com xícara de café e a marca Sabor da Vila.</description>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17382d"/><stop offset="1" stop-color="#3d5940"/></linearGradient>
+  </defs>
+  <rect width="1600" height="600" fill="url(#bg)"/>
+  <circle cx="1390" cy="80" r="310" fill="#627941" opacity=".52"/>
+  <circle cx="1320" cy="570" r="250" fill="#f2ecdc" opacity=".1"/>
+  <g transform="translate(1040 115)">
+    <path d="M75 125h300v145c0 96-67 164-150 164S75 366 75 270z" fill="#f2ecdc"/>
+    <path d="M375 165h46c69 0 102 45 94 98-9 58-57 88-126 72" fill="none" stroke="#f2ecdc" stroke-width="44" stroke-linecap="round"/>
+    <path d="M160 78c-26-46 35-66 13-117M257 78c-26-46 35-66 13-117" fill="none" stroke="#c8d7b0" stroke-width="24" stroke-linecap="round"/>
+  </g>
+  <text x="120" y="250" fill="#f2ecdc" font-family="Georgia, serif" font-size="104" font-weight="700">Sabor da Vila</text>
+  <text x="126" y="335" fill="#c8d7b0" font-family="Arial, sans-serif" font-size="38" letter-spacing="3">CAFÉS • DOCES • PRESENTES</text>
+  <text x="126" y="420" fill="#ffffff" font-family="Arial, sans-serif" font-size="34" opacity=".82">Pequenos momentos preparados com carinho.</text>
+</svg>

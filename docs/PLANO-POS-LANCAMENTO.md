@@ -1,6 +1,6 @@
 # ClickCatálogo — Plano pós-lançamento e evolução do produto
 
-Última revisão: **15 de setembro de 2026**.
+Última revisão: **23 de setembro de 2026**.
 
 Este documento organiza o trabalho após a primeira publicação comercial do ClickCatálogo. Ele deve ser usado como fonte principal para decidir a ordem das próximas entregas, registrar validações e impedir que novas funcionalidades sejam misturadas com correções urgentes de produção.
 
@@ -30,25 +30,107 @@ O objetivo imediato é lançar com segurança, observar o comportamento real do 
 9. **Sem segredos no Git:** chaves reais ficam somente no ambiente local ignorado, Netlify, Supabase, Asaas ou fornecedor correspondente.
 10. **Evidência de conclusão:** nenhuma tarefa é considerada concluída somente porque o código foi escrito; ela precisa de teste e critério de aceite verificável.
 
-## 3. Estado inicial deste planejamento
+## 3. Estado atual deste planejamento
 
-Na criação deste documento, a release de refinamento do painel e URLs seguras está no commit:
+A release publicada de refinamento do painel, loja pública e ciclo de assinatura está no commit:
 
 ```text
-2504310 feat: refine panel UX and secure store slugs
+8384939 feat: refine storefront and subscription lifecycle
 ```
 
-Validações conhecidas dessa release:
+Existe uma correção local pronta para o próximo deploy:
+
+```text
+9b44703 fix: reconcile deleted Asaas subscriptions
+```
+
+Ela trata assinaturas que já foram excluídas no Asaas, aceita a ausência do
+campo `subscription` quando a cobrança veio da consulta oficial filtrada pela
+assinatura e registra o motivo de falhas futuras nos logs da Scheduled Function.
+
+Validações conhecidas da candidata atual:
 
 - lint e TypeScript aprovados;
 - contraste AA aprovado nos seis temas;
-- 40 testes automatizados aprovados;
+- 52 testes automatizados aprovados;
 - build de produção aprovado;
 - `npm audit --omit=dev` sem vulnerabilidades;
-- migrations `017` e `018` aplicadas;
+- migrations de continuidade, reconciliação, checkout concorrente e aliases aplicadas;
 - permissões de troca, resolução e listagem privada de aliases validadas;
-- URL atual e redirecionamento de URL antiga testados localmente;
-- painel mobile inspecionado em 375 px.
+- landing, cadastro, login, retomada, painel e loja pública revisados localmente;
+- painel e catálogo inspecionados em contexto mobile;
+- rotas públicas, identidade legal, headers de segurança, Open Graph, robots e sitemap conferidos em produção.
+
+### 3.1 Fila imediata de execução
+
+Esta é a ordem operacional a seguir. Não iniciar funcionalidade nova enquanto
+os itens P0 e P1 não estiverem concluídos.
+
+#### P0 — concluir o deploy financeiro atual
+
+- [ ] Enviar o commit `9b44703` para `master`.
+- [ ] Confirmar que a Netlify publicou exatamente esse commit.
+- [ ] Aguardar ou executar a Scheduled Function de cancelamentos uma vez.
+- [ ] Confirmar que a assinatura de teste saiu de `attention` para `complete`.
+- [ ] Confirmar `asaas_subscription_state = deleted` para a assinatura já removida.
+- [ ] Confirmar que `access_until` representa somente o período realmente pago.
+- [ ] Abrir novamente a tela Assinatura e conferir a data final exibida ao cliente.
+
+Critério de aceite: nenhuma assinatura cancelada fica indefinidamente como
+`attention`, nenhuma cobrança futura é criada e o acesso não ultrapassa o período
+comprovadamente pago.
+
+#### P1 — limpar a apresentação pública de teste
+
+O sitemap atual publica `sabor-da-vila4` e `loja-teste-netlify`. A primeira usa
+nome ScannerTec, URL de restaurante e produtos de segmentos diferentes. Isso
+não é vazamento entre tenants, mas prejudica credibilidade, compartilhamento e SEO.
+
+- [ ] Escolher somente uma loja como demonstração pública coerente.
+- [ ] Alinhar nome, slug, descrição, logo, banner, categorias e produtos dessa demo.
+- [ ] Remover a duplicidade `Destaque`/`Destaques`.
+- [ ] Retirar do índice qualquer loja exclusivamente técnica ou de pagamento.
+- [ ] Conferir novamente sitemap, metadata e imagem Open Graph.
+
+Critério de aceite: todo endereço de loja enviado ao Google ou compartilhado
+publicamente parece uma loja real e possui identidade visual e catálogo coerentes.
+
+#### P1 — validar o primeiro ciclo comercial completo
+
+- [ ] Abrir um novo checkout e confirmar o valor oficial de R$ 27.
+- [ ] Fazer uma contratação controlada com outro e-mail.
+- [ ] Confirmar webhook, criação da senha, login e provisionamento sem duplicidade.
+- [ ] Criar categoria e produto, compartilhar a loja e montar pedido no WhatsApp.
+- [ ] Solicitar cancelamento e confirmar que a recorrência deixa de existir no Asaas.
+- [ ] Confirmar que a loja permanece acessível somente até o fim do período pago.
+
+Critério de aceite: um cliente consegue sair da landing, pagar, criar acesso,
+publicar e cancelar sem intervenção manual do operador.
+
+#### P1 — operação da primeira semana
+
+- [ ] Revisar diariamente Functions da Netlify, logs do Supabase, Asaas e Resend.
+- [ ] Rodar diariamente a simulação `npm run privacy:purge`.
+- [ ] Executar o expurgo confirmado somente quando existirem registros elegíveis.
+- [ ] Fazer backup semanal do banco e do bucket `produtos`.
+- [ ] Definir limites/alertas de consumo dos fornecedores.
+- [ ] Registrar incidentes com horário, rota, impacto e request ID, sem PII.
+
+Critério de aceite: existe uma rotina que pode ser executada por outra pessoa
+seguindo `docs/OPERACAO.md`, sem depender da memória de quem desenvolveu.
+
+#### P2 — dívida técnica curta da próxima release
+
+- [ ] Atualizar `audit:production`: a loja usa o título `Catálogo`, mas o auditor
+  ainda procura `Produtos em destaque` e produz falha falsa.
+- [ ] Criar E2E somente para cadastro/retomada, login, CRUD essencial, carrinho e
+  cancelamento; não tentar automatizar todas as combinações visuais.
+- [ ] Adicionar monitoramento de exceções sem dados pessoais.
+- [ ] Automatizar alerta para Scheduled Function atrasada ou reconciliação em
+  `attention`, sem automatizar imediatamente a exclusão destrutiva.
+
+Critério de aceite: falhas críticas são detectadas pelo operador antes de virarem
+uma sequência de chamados de clientes.
 
 ## 4. Fase 0 — estabilização do deploy publicado
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title description">
+  <title id="title">Ateliê Aurora</title>
+  <description id="description">Monograma dourado com chama rosé sobre fundo escuro.</description>
+  <rect width="800" height="800" rx="190" fill="#121212"/>
+  <circle cx="400" cy="400" r="282" fill="#1f1f22" stroke="#dca58f" stroke-width="18"/>
+  <path d="M400 166c84 104 129 174 129 258 0 87-57 159-129 159s-129-72-129-159c0-65 31-118 94-196-2 70 20 105 55 132 27-57 22-112-20-194z" fill="#dca58f"/>
+  <path d="M400 348c45 55 66 94 66 132 0 45-30 82-66 82s-66-37-66-82c0-38 22-77 66-132z" fill="#f8e8df"/>
+  <path d="M238 626h324" stroke="#dca58f" stroke-width="16" stroke-linecap="round"/>
+</svg>

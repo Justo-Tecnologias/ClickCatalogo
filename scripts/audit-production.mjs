@@ -133,7 +133,7 @@ if (storeSlug) {
     const { body, response } = await request(`/loja/${encodeURIComponent(storeSlug)}`);
     assert(
       "loja-real",
-      response.status === 200 && body.includes("Produtos em destaque"),
+      response.status === 200 && body.includes("Catálogo"),
       `HTTP ${response.status}; catálogo não confirmado.`,
     );
     results.push({ check: "loja-real", slug: storeSlug, status: response.status });
