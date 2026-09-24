@@ -38,6 +38,10 @@ export function CartPanel({
     () => items.reduce((sum, item) => sum + item.product.preco * item.quantity, 0),
     [items],
   );
+  const itemCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items],
+  );
   const orderUrl = items.length
     ? createWhatsAppUrl(whatsapp, createCartMessage(storeName, items))
     : null;
@@ -77,9 +81,9 @@ export function CartPanel({
       <section className="flex h-full flex-col border-l border-[var(--cor-borda)] bg-[var(--cor-fundo)]">
         <header className="flex min-h-16 items-center justify-between gap-4 border-b border-[var(--cor-borda)] px-4 sm:px-5">
           <div>
-            <h2 className="font-bold" id="cart-panel-title">Seu carrinho</h2>
+            <h2 className="font-bold" id="cart-panel-title">Seu pedido</h2>
             <p className="text-xs text-[var(--cor-texto-suave)]">
-              {items.length === 1 ? "1 produto selecionado" : `${items.length} produtos selecionados`}
+              {itemCount === 1 ? "1 item selecionado" : `${itemCount} itens selecionados`}
             </p>
           </div>
           <Button aria-label="Fechar carrinho" autoFocus onClick={onClose} size="icon" variant="themeSecondary">
@@ -155,11 +159,14 @@ export function CartPanel({
               </ul>
             </div>
 
-            <footer className="border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+            <footer className="border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <span className="text-sm text-[var(--cor-texto-suave)]">Total do pedido</span>
                 <strong className="text-xl text-[var(--cor-primaria)]">{formatCurrency(total)}</strong>
               </div>
+              <p className="mb-4 text-xs leading-5 text-[var(--cor-texto-suave)]">
+                O pagamento e a confirmação são combinados diretamente com a loja.
+              </p>
               {messageTooLong ? (
                 <Alert
                   className="mb-4"
@@ -170,16 +177,16 @@ export function CartPanel({
               ) : null}
               {orderUrl && !messageTooLong ? (
                 <a
-                  className={buttonVariants({ className: "w-full", size: "lg", variant: "theme" })}
+                  className={buttonVariants({ className: "w-full text-sm sm:text-base", size: "lg", variant: "theme" })}
                   href={orderUrl}
                   onClick={() => {
                     if (analyticsSlug) trackProductMetric("whatsapp_order_clicked", analyticsSlug);
                   }}
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   target="_blank"
                 >
                   <MessageCircle aria-hidden="true" />
-                  Finalizar pedido no WhatsApp
+                  Enviar pedido pelo WhatsApp
                 </a>
               ) : null}
             </footer>

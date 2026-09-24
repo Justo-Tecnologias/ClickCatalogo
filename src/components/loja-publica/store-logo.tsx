@@ -17,7 +17,7 @@ export function StoreLogo({ className, eager = false, logoUrl, storeName }: Stor
   return (
     <div
       className={cn(
-        "relative grid aspect-square size-16 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[var(--cor-superficie)] bg-[var(--cor-imagem-fundo)] text-[var(--cor-primaria)] shadow-[var(--shadow-elevation)]",
+        "relative grid aspect-square size-[4.5rem] shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[var(--cor-superficie)] bg-[var(--cor-imagem-fundo)] text-[var(--cor-primaria)] shadow-[var(--shadow-elevation)]",
         className,
       )}
     >
@@ -28,7 +28,7 @@ export function StoreLogo({ className, eager = false, logoUrl, storeName }: Stor
           fallback={fallback}
           fill
           loading={eager ? "eager" : "lazy"}
-          sizes="64px"
+          sizes="72px"
           src={logoUrl}
         />
       ) : (

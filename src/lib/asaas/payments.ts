@@ -1,3 +1,7 @@
+import { authoritativePaidThroughDate } from "./paid-period.mjs";
+
+export { authoritativePaidThroughDate };
+
 export type AsaasSubscriptionPayment = {
   billingType?: string | null;
   dueDate: string;
@@ -7,7 +11,6 @@ export type AsaasSubscriptionPayment = {
 };
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SETTLED_CARD_PAYMENT_STATUSES = new Set(["CONFIRMED", "RECEIVED"]);
 
 function isValidIsoDate(value: string) {
   if (!DATE_PATTERN.test(value)) return false;
@@ -17,44 +20,6 @@ function isValidIsoDate(value: string) {
 
 function belongsToSubscription(payment: AsaasSubscriptionPayment, subscriptionId: string) {
   return !payment.subscription || payment.subscription === subscriptionId;
-}
-
-export function authoritativePaidThroughDate(
-  payments: AsaasSubscriptionPayment[],
-  subscriptionId: string,
-  remoteNextDueDate?: string | null,
-) {
-  const latestSettledDueDate = payments
-    .filter((payment) => (
-      payment.billingType === "CREDIT_CARD"
-      && SETTLED_CARD_PAYMENT_STATUSES.has(payment.status)
-      && isValidIsoDate(payment.dueDate)
-      && belongsToSubscription(payment, subscriptionId)
-    ))
-    .map((payment) => payment.dueDate)
-    .sort()
-    .at(-1);
-
-  if (!latestSettledDueDate) {
-    throw new Error("Nenhuma cobrança paga foi encontrada para definir o período de acesso.");
-  }
-
-  const nextGeneratedDueDate = payments
-    .filter((payment) => (
-      isValidIsoDate(payment.dueDate)
-      && payment.dueDate > latestSettledDueDate
-      && belongsToSubscription(payment, subscriptionId)
-    ))
-    .map((payment) => payment.dueDate)
-    .sort()
-    .at(0);
-
-  if (nextGeneratedDueDate) return nextGeneratedDueDate;
-  if (remoteNextDueDate && isValidIsoDate(remoteNextDueDate) && remoteNextDueDate > latestSettledDueDate) {
-    return remoteNextDueDate;
-  }
-
-  throw new Error("O Asaas não informou a próxima fronteira do período pago.");
 }
 
 export function selectSubscriptionPaymentsAtOrAfter(

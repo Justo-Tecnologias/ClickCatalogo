@@ -46,7 +46,7 @@ test("finaliza acesso vencido mesmo se a rotina externa atrasar", async () => {
 
   assert.match(sql, /subscription\.access_until <= now\(\)/);
   assert.match(sql, /cancellation_reconciliation_status = 'complete'\s+and access_until <= coalesce/);
-  assert.match(sql, /reactivation_requested_at is null\s+or reactivation_requested_at < coalesce/);
+  assert.match(sql, /cancellation_reconciliation_status = 'complete'\s+and access_until <= coalesce\(p_now, clock_timestamp\(\)\)\s+and reactivation_requested_at is null/);
   assert.match(sql, /intent\.target_tenant_id = request\.tenant_id_original/);
   assert.match(sql, /intent\.intent_type = 'reactivation'/);
 });

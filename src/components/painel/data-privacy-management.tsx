@@ -8,6 +8,7 @@ import {
   withdrawExpeditedDeletionAction,
 } from "@/app/painel/(app)/privacidade/actions";
 import { Alert } from "@/components/ui/alert";
+import { lastPaidAccessInstant } from "@/lib/billing/access-period";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
@@ -22,15 +23,18 @@ type RequestSummary = {
 
 type DataPrivacyManagementProps = {
   canceledAt: string | null;
+  cancellationReconciliationComplete: boolean;
+  cancellationScheduled: boolean;
   defaultScheduledFor: string | null;
   demo: boolean;
   request: RequestSummary;
+  scheduledAccessUntil: string | null;
   storeName: string;
   supportEmail: string | null;
   tenantStatus: TenantStatus;
 };
 
-function formatDate(value: string) {
+function formatDate(value: Date | string) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "long",
     timeZone: "America/Sao_Paulo",
@@ -39,9 +43,12 @@ function formatDate(value: string) {
 
 export function DataPrivacyManagement({
   canceledAt,
+  cancellationReconciliationComplete,
+  cancellationScheduled,
   defaultScheduledFor,
   demo,
   request: initialRequest,
+  scheduledAccessUntil,
   storeName,
   supportEmail,
   tenantStatus,
@@ -154,7 +161,7 @@ export function DataPrivacyManagement({
               Exclusão dos dados da conta
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">
-              Depois do fim do período pago, catálogo, produtos, imagens e acesso são preservados por até 30 dias para tratamento operacional. Você pode antecipar esse prazo para até 15 dias.
+              Após o fim do período já pago, a loja sai do ar e começa a retenção dos dados operacionais por até 30 dias. Nesse período, é possível solicitar a exclusão antecipada para, no máximo, 15 dias após o pedido, sem ultrapassar o prazo padrão.
             </p>
           </div>
           {tenantStatus === "cancelado" && !demo && !isExpedited && !requestIsProcessing && !requestIsComplete ? (
@@ -168,8 +175,15 @@ export function DataPrivacyManagement({
         <div className="mt-5 grid gap-4">
           {demo ? (
             <Alert description="Nenhum dado real é alterado no modo de demonstração." title="Demonstração protegida" />
+          ) : tenantStatus === "ativo" && cancellationScheduled ? (
+            <Alert
+              description={cancellationReconciliationComplete
+                ? `A assinatura foi cancelada. O último dia de acesso à loja e ao painel é ${scheduledAccessUntil ? formatDate(lastPaidAccessInstant(scheduledAccessUntil)) : "o fim do período pago"}. A exclusão antecipada ficará disponível após o encerramento do acesso.`
+                : "Recebemos o pedido de cancelamento, mas ele ainda não foi confirmado por completo. Consulte Assinatura para verificar o estado atual. A exclusão antecipada ficará disponível após o encerramento do acesso."}
+              title={cancellationReconciliationComplete ? "Cancelamento programado" : "Cancelamento em andamento"}
+            />
           ) : tenantStatus !== "cancelado" ? (
-            <Alert description="Primeiro encerre a recorrência na tela Assinatura. Cancelar a cobrança não apaga os dados imediatamente." title="Assinatura ainda não cancelada" variant="warning" />
+            <Alert description="A assinatura ainda está em vigor. Para encerrar as próximas renovações, acesse Assinatura. A exclusão antecipada ficará disponível após o fim do período pago." title="Assinatura em vigor" />
           ) : requestIsProcessing ? (
             <Alert description="O processo já começou e pode envolver remoção de imagens, catálogo e acesso. Nesta fase ele não pode mais ser interrompido pelo painel." title="Exclusão em processamento" variant="danger" />
           ) : requestIsComplete ? (
@@ -230,7 +244,7 @@ export function DataPrivacyManagement({
               </span>
               <div>
                 <h2 className="text-lg font-bold" id="delete-account-title">Solicitar exclusão da conta</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">O prazo operacional será antecipado para até 15 dias.</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">A data será o menor prazo entre 15 dias após este pedido e o limite padrão de 30 dias após o cancelamento.</p>
               </div>
             </div>
             <Button aria-label="Fechar confirmação" disabled={isPending} onClick={closeDialog} size="icon" variant="ghost">

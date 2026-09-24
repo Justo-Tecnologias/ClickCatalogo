@@ -1,3 +1,5 @@
+import { authoritativePaidThroughDate, brazilDateStartAsIso } from "../../src/lib/asaas/paid-period.mjs";
+
 const REQUEST_TIMEOUT_MS = 3_000;
 const RECONCILIATION_LIMIT = 10;
 const RECONCILIATION_TIME_BUDGET_MS = 17_000;
@@ -64,12 +66,15 @@ async function listSubscriptionPayments(env, subscriptionId, status, deadline) {
   const limit = 100;
   for (let offset = 0; offset < 2_000; offset += limit) {
     ensureTimeBudget(deadline);
-    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset), subscription: subscriptionId });
     if (status) params.set("status", status);
-    const response = await asaasRequest(env, `/subscriptions/${encodeURIComponent(subscriptionId)}/payments?${params}`);
+    const response = await asaasRequest(env, `/payments?${params}`);
     if (!response.ok) throw new Error(`Falha ao listar cobranças (${response.status}).`);
     const payload = await response.json();
     if (!Array.isArray(payload?.data)) throw new Error("Lista de cobranças inválida.");
+    if (payload.data.some((payment) => payment?.subscription !== subscriptionId)) {
+      throw new Error("Cobrança sem vínculo confirmado com a assinatura.");
+    }
     all.push(...payload.data);
     if (!payload.hasMore || payload.data.length < limit) return all;
   }
@@ -82,12 +87,16 @@ function isAtOrAfterCutoff(payment, cutoff, subscriptionId) {
     && (!payment.subscription || payment.subscription === subscriptionId);
 }
 
-async function setReconciliationState(env, row, status, remoteState) {
+async function setReconciliationState(env, row, status, remoteState, paidThroughDate) {
   const values = {
     cancellation_reconciliation_checked_at: new Date().toISOString(),
     cancellation_reconciliation_status: status,
   };
   if (remoteState) values.asaas_subscription_state = remoteState;
+  if (paidThroughDate) {
+    values.access_until = brazilDateStartAsIso(paidThroughDate);
+    values.next_due_date = paidThroughDate;
+  }
   const filters = new URLSearchParams({
     cancel_at_period_end: "eq.true",
     cancellation_reconciliation_checked_at: `eq.${row.cancellation_reconciliation_checked_at}`,
@@ -109,9 +118,8 @@ async function setReconciliationState(env, row, status, remoteState) {
 
 async function reconcileOne(env, row, deadline) {
   const subscriptionId = row.asaas_subscription_id;
-  const cutoff = row.access_until?.slice(0, 10);
-  if (!subscriptionId || !/^\d{4}-\d{2}-\d{2}$/.test(cutoff ?? "")) {
-    throw new Error("Cancelamento sem assinatura remota ou data de corte válida.");
+  if (!subscriptionId || !row.access_until) {
+    throw new Error("Cancelamento sem assinatura remota ou período de acesso.");
   }
 
   ensureTimeBudget(deadline);
@@ -119,10 +127,15 @@ async function reconcileOne(env, row, deadline) {
     body: JSON.stringify({ status: "INACTIVE" }),
     method: "PUT",
   });
-  if (!inactivation.ok) throw new Error(`Falha ao inativar assinatura (${inactivation.status}).`);
-  const remoteState = "inactive";
+  if (!inactivation.ok && inactivation.status !== 404) {
+    throw new Error(`Falha ao inativar assinatura (${inactivation.status}).`);
+  }
+  const remoteState = inactivation.status === 404 ? "deleted" : "inactive";
 
-  const pending = await listSubscriptionPayments(env, subscriptionId, "PENDING", deadline);
+  const payments = await listSubscriptionPayments(env, subscriptionId, undefined, deadline);
+  const cutoff = authoritativePaidThroughDate(payments, subscriptionId);
+
+  const pending = payments.filter((item) => item.status === "PENDING");
   for (const payment of pending.filter((item) => isAtOrAfterCutoff(item, cutoff, subscriptionId))) {
     ensureTimeBudget(deadline);
     const removal = await asaasRequest(env, `/payments/${encodeURIComponent(payment.id)}`, { method: "DELETE" });
@@ -132,7 +145,7 @@ async function reconcileOne(env, row, deadline) {
     .filter((item) => isAtOrAfterCutoff(item, cutoff, subscriptionId));
   if (remaining.length > 0) throw new Error("Cobrança posterior ao período pago ainda requer conferência.");
 
-  await setReconciliationState(env, row, "complete", remoteState);
+  await setReconciliationState(env, row, "complete", remoteState, cutoff);
 }
 
 async function retryPendingReconciliations(env) {
@@ -140,6 +153,7 @@ async function retryPendingReconciliations(env) {
   const deadline = startedAt + RECONCILIATION_TIME_BUDGET_MS;
   let completed = 0;
   let attention = 0;
+  const failureReasons = {};
   let inspected = 0;
   let timeBudgetReached = false;
   while (inspected < RECONCILIATION_LIMIT) {
@@ -160,8 +174,10 @@ async function retryPendingReconciliations(env) {
     try {
       await reconcileOne(env, row, deadline);
       completed += 1;
-    } catch {
+    } catch (error) {
       attention += 1;
+      const reason = error instanceof Error ? error.message : "Falha desconhecida.";
+      failureReasons[reason] = (failureReasons[reason] ?? 0) + 1;
       try {
         await setReconciliationState(env, row, "attention");
       } catch {
@@ -173,6 +189,7 @@ async function retryPendingReconciliations(env) {
     attention,
     completed,
     duration_ms: Date.now() - startedAt,
+    failure_reasons: failureReasons,
     inspected,
     time_budget_reached: timeBudgetReached,
   };

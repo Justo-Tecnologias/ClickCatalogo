@@ -55,10 +55,19 @@ test("recebimento manual e negativação não comprovam mensalidade de cartão",
   ], "sub_current", "2026-10-10"), /Nenhuma cobrança paga/);
 });
 
-test("sem cobrança futura nem nextDueDate inequívoco o cancelamento é interrompido", () => {
-  assert.throws(() => authoritativePaidThroughDate([
+test("assinatura excluída usa um ciclo mensal a partir da última cobrança paga", () => {
+  assert.equal(authoritativePaidThroughDate([
     { billingType: "CREDIT_CARD", dueDate: "2026-09-10", id: "paid", status: "CONFIRMED" },
-  ], "sub_current", "2026-09-10"), /próxima fronteira/);
+  ], "sub_current", "2026-09-10"), "2026-10-10");
+});
+
+test("próxima data remota que pula um mês não concede acesso sem pagamento", () => {
+  const paid = { billingType: "CREDIT_CARD", dueDate: "2026-09-10", id: "paid", status: "CONFIRMED", subscription: "sub_current" };
+  assert.equal(authoritativePaidThroughDate([paid], "sub_current", "2026-11-10"), "2026-10-10");
+  assert.equal(authoritativePaidThroughDate([
+    paid,
+    { dueDate: "2026-11-10", id: "future", status: "PENDING", subscription: "sub_current" },
+  ], "sub_current", "2026-11-10"), "2026-10-10");
 });
 
 test("conciliação remove somente cobranças pendentes do período futuro da assinatura correta", () => {

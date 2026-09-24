@@ -7,6 +7,7 @@ import type { PublicCatalog } from "@/types/catalog";
 import type { TenantTheme } from "@/types/database";
 
 export type StorePreviewProps = {
+  canonicalUrl?: string;
   catalog: PublicCatalog;
   className?: string;
   framed?: boolean;
@@ -14,6 +15,7 @@ export type StorePreviewProps = {
 };
 
 export function StorePreview({
+  canonicalUrl,
   catalog,
   className,
   framed = false,
@@ -35,26 +37,30 @@ export function StorePreview({
     >
       {!framed ? <CatalogViewTracker slug={catalog.slug} /> : null}
       <StoreHeader
+        analyticsSlug={!framed ? catalog.slug : undefined}
         bannerUrl={catalog.banner_url}
         description={catalog.descricao_curta}
         framed={framed}
         logoUrl={catalog.logo_url}
+        shareUrl={!framed ? canonicalUrl : undefined}
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}
       />
       <StoreCatalog
         categories={categoriesWithProducts}
         enableCart={!framed}
+        footer={(
+          <StoreFooter
+            address={catalog.endereco}
+            instagram={catalog.instagram}
+            storeName={catalog.nome_loja}
+            whatsapp={catalog.whatsapp}
+          />
+        )}
         framed={framed}
         analyticsSlug={!framed ? catalog.slug : undefined}
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}
-      />
-
-      <StoreFooter
-        address={catalog.endereco}
-        instagram={catalog.instagram}
-        storeName={catalog.nome_loja}
       />
     </div>
   );

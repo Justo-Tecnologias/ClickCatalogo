@@ -7,7 +7,9 @@ import { z } from "zod";
 import {
   AsaasSubscriptionCancellationError,
   AsaasSubscriptionReactivationError,
+  AsaasSubscriptionUpdateError,
   getAsaasSubscriptionPaidThroughDate,
+  getAsaasSubscriptionState,
   inactivateAsaasSubscription,
   reconcileFuturePendingSubscriptionPayments,
   reactivateAsaasSubscription,
@@ -28,12 +30,13 @@ import {
 
 const cancellationSchema = z.object({
   confirmation: z.string().trim().min(1).max(100),
+  expectedAccessUntil: z.iso.datetime().optional(),
 });
 
 type CancellationResult = {
   accessUntil?: string;
   reconciliationStatus?: "attention" | "complete" | "pending";
-  status: "cancelado" | "agendado";
+  status: "cancelado" | "agendado" | "processando";
 };
 
 const REACTIVATION_LEASE_MS = 10 * 60 * 1000;
@@ -48,6 +51,31 @@ function todayInBrazil() {
   }).formatToParts(new Date());
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${value.year}-${value.month}-${value.day}`;
+}
+
+export async function prepareSubscriptionCancellationAction(): Promise<ActionResult<{ accessUntil: string }>> {
+  try {
+    const { demo, tenant } = await requireTenant();
+    if (demo) return { error: "A demonstração não possui assinatura real.", ok: false };
+    const admin = createAdminClient();
+    const { data: subscription, error } = await admin.from("subscriptions")
+      .select("asaas_subscription_id,cancel_at_period_end")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !subscription?.asaas_subscription_id || subscription.cancel_at_period_end) {
+      return { error: "A assinatura mudou. Atualize a página antes de cancelar.", ok: false };
+    }
+    const paidThroughDate = await getAsaasSubscriptionPaidThroughDate(subscription.asaas_subscription_id);
+    const accessUntil = brazilDateStartAsIso(paidThroughDate);
+    if (new Date(accessUntil).getTime() <= Date.now()) {
+      return { error: "Não foi possível confirmar um período pago vigente. Peça ajuda pelo atendimento.", ok: false };
+    }
+    return { data: { accessUntil }, ok: true };
+  } catch {
+    return { error: "Não foi possível consultar o período pago agora. Tente novamente mais tarde.", ok: false };
+  }
 }
 
 export async function cancelSubscriptionAction(
@@ -71,7 +99,7 @@ export async function cancelSubscriptionAction(
     const admin = createAdminClient();
     const { data: subscription, error: subscriptionError } = await admin
       .from("subscriptions")
-      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,reactivation_requested_at,cancellation_reconciliation_status,cancellation_reconciliation_checked_at")
+      .select("id,status,asaas_subscription_id,asaas_subscription_state,cancel_at_period_end,access_until,next_due_date,reactivation_requested_at,cancellation_reconciliation_status,cancellation_reconciliation_checked_at")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -202,6 +230,9 @@ export async function cancelSubscriptionAction(
 
     const paidThroughDate = await getAsaasSubscriptionPaidThroughDate(subscription.asaas_subscription_id);
     const accessUntil = brazilDateStartAsIso(paidThroughDate);
+    if (parsed.data.expectedAccessUntil !== accessUntil) {
+      return { error: "A data do período pago mudou. Reabra a confirmação antes de cancelar.", ok: false };
+    }
     if (new Date(accessUntil).getTime() <= Date.now()) {
       return {
         error: "O Asaas não informou uma renovação futura. A assinatura não foi cancelada; fale com o atendimento.",
@@ -238,7 +269,12 @@ export async function cancelSubscriptionAction(
     try {
       remoteResult = await inactivateAsaasSubscription(subscription.asaas_subscription_id);
     } catch (error) {
-      const { error: rollbackError } = await admin
+      if (error instanceof AsaasSubscriptionUpdateError && error.outcome === "unknown") {
+        logError("subscription.cancellation.remote_outcome_unknown", error, { tenant_id: tenant.id });
+        revalidatePath("/painel/assinatura");
+        return { data: { accessUntil, reconciliationStatus: "pending", status: "processando" }, ok: true };
+      }
+      const { data: rolledBack, error: rollbackError } = await admin
         .from("subscriptions")
         .update({
           access_until: null,
@@ -246,16 +282,23 @@ export async function cancelSubscriptionAction(
           cancellation_reconciliation_checked_at: null,
           cancellation_reconciliation_status: "not_required",
           cancellation_requested_at: null,
+          next_due_date: subscription.next_due_date,
         })
         .eq("id", subscription.id)
         .eq("tenant_id", tenant.id)
         .eq("cancellation_reconciliation_status", "processing")
         .eq("cancellation_reconciliation_checked_at", cancellationRequestedAt)
-        .is("reactivation_requested_at", null);
+        .is("reactivation_requested_at", null)
+        .select("id")
+        .maybeSingle();
       if (rollbackError) {
         logError("subscription.cancellation.rollback", rollbackError, {
           tenant_id: tenant.id,
         });
+      }
+      if (rollbackError || !rolledBack) {
+        revalidatePath("/painel/assinatura");
+        return { data: { accessUntil, reconciliationStatus: "pending", status: "processando" }, ok: true };
       }
       throw error;
     }
@@ -328,7 +371,7 @@ export async function cancelSubscriptionAction(
 }
 
 
-export async function revertSubscriptionCancellationAction(): Promise<ActionResult<{ status: "ativo" }>> {
+export async function revertSubscriptionCancellationAction(): Promise<ActionResult<{ status: "ativo" | "processando" }>> {
   try {
     const { demo, tenant } = await requireTenant();
     if (demo) return { error: "A demonstração não possui assinatura real.", ok: false };
@@ -357,31 +400,8 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
       return { error: "Esta recorrência antiga foi encerrada definitivamente. O acesso continua até a data informada; depois, use a opção de renovação.", ok: false };
     }
 
-    if (subscription.cancellation_reconciliation_status === "processing") {
-      const checkedAt = subscription.cancellation_reconciliation_checked_at;
-      const leaseIsActive = checkedAt
-        && Date.now() - new Date(checkedAt).getTime() < RECONCILIATION_LEASE_MS;
-      if (leaseIsActive) {
-        return {
-          error: "A conferência do cancelamento ainda está em andamento. Aguarde um instante e tente novamente.",
-          ok: false,
-        };
-      }
-      let staleLeaseQuery = admin.from("subscriptions")
-        .update({ cancellation_reconciliation_status: "attention" })
-        .eq("id", subscription.id)
-        .eq("tenant_id", tenant.id)
-        .eq("cancellation_reconciliation_status", "processing");
-      staleLeaseQuery = checkedAt
-        ? staleLeaseQuery.eq("cancellation_reconciliation_checked_at", checkedAt)
-        : staleLeaseQuery.is("cancellation_reconciliation_checked_at", null);
-      const { data: released, error: staleLeaseError } = await staleLeaseQuery
-        .select("id")
-        .maybeSingle();
-      if (staleLeaseError) throw staleLeaseError;
-      if (!released) {
-        return { error: "A assinatura mudou enquanto esta ação começava. Atualize a página.", ok: false };
-      }
+    if (subscription.cancellation_reconciliation_status !== "complete") {
+      return { error: "O cancelamento anterior ainda não foi confirmado por completo. Aguarde a atualização ou fale com o atendimento antes de retomar.", ok: false };
     }
 
     if (subscription.reactivation_requested_at) {
@@ -421,11 +441,33 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
         brazilDateFromIso(subscription.access_until),
       );
     } catch (reactivationError) {
-      await admin.from("subscriptions")
-        .update({ reactivation_requested_at: null })
-        .eq("id", subscription.id)
-        .eq("tenant_id", tenant.id);
-      throw reactivationError;
+      if (reactivationError instanceof AsaasSubscriptionUpdateError && reactivationError.outcome === "unknown") {
+        logError("subscription.reactivation.remote_outcome_unknown", reactivationError, { tenant_id: tenant.id });
+        try {
+          const remote = await getAsaasSubscriptionState(subscription.asaas_subscription_id);
+          if (remote.status === "ACTIVE" && remote.nextDueDate === brazilDateFromIso(subscription.access_until)) {
+            logInfo("subscription.reactivation.remote_confirmed_after_timeout", { tenant_id: tenant.id });
+          } else {
+            revalidatePath("/painel/assinatura");
+            return { data: { status: "processando" }, ok: true };
+          }
+        } catch {
+          revalidatePath("/painel/assinatura");
+          return { data: { status: "processando" }, ok: true };
+        }
+      } else {
+        const { error: releaseError } = await admin.from("subscriptions")
+          .update({ reactivation_requested_at: null })
+          .eq("id", subscription.id)
+          .eq("tenant_id", tenant.id)
+          .eq("reactivation_requested_at", requestedAt);
+        if (releaseError) {
+          logError("subscription.reactivation.lease_release", releaseError, { tenant_id: tenant.id });
+          revalidatePath("/painel/assinatura");
+          return { data: { status: "processando" }, ok: true };
+        }
+        throw reactivationError;
+      }
     }
 
     const { error: finalizeError } = await admin
@@ -442,14 +484,22 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
       })
       .eq("id", subscription.id)
       .eq("tenant_id", tenant.id);
-    if (finalizeError) throw finalizeError;
+    if (finalizeError) {
+      logError("subscription.reactivation.local_finalize", finalizeError, { tenant_id: tenant.id });
+      revalidatePath("/painel/assinatura");
+      return { data: { status: "processando" }, ok: true };
+    }
 
     const { error: tenantError } = await admin
       .from("tenants")
       .update({ canceled_at: null, status: "ativo" })
       .eq("id", tenant.id)
       .eq("owner_user_id", tenant.owner_user_id);
-    if (tenantError) throw tenantError;
+    if (tenantError) {
+      logError("subscription.reactivation.tenant_finalize", tenantError, { tenant_id: tenant.id });
+      revalidatePath("/painel/assinatura");
+      return { data: { status: "processando" }, ok: true };
+    }
 
     revalidatePath("/painel/assinatura");
     revalidatePath(`/loja/${tenant.slug}`);
@@ -457,10 +507,70 @@ export async function revertSubscriptionCancellationAction(): Promise<ActionResu
     await recordProductMetric("cancellation_reverted", tenant.id);
     return { data: { status: "ativo" }, ok: true };
   } catch (error) {
+    if (error instanceof AsaasSubscriptionUpdateError) {
+      return { error: error.outcome === "rejected" ? "O Asaas recusou a retomada. Nenhuma alteração foi confirmada; fale com o atendimento." : "Ainda não conseguimos confirmar a retomada. Atualize a página em alguns instantes ou fale com o atendimento.", ok: false };
+    }
     if (error instanceof AsaasSubscriptionReactivationError) {
       return { error: error.message, ok: false };
     }
     return { error: "Não foi possível desfazer o cancelamento agora. Tente novamente.", ok: false };
+  }
+}
+
+export async function checkSubscriptionReactivationAction(): Promise<ActionResult<{ status: "ativo" | "processando" }>> {
+  try {
+    const { demo, tenant } = await requireTenant();
+    if (demo) return { error: "A demonstração não possui assinatura real.", ok: false };
+    const admin = createAdminClient();
+    const { data: subscription, error } = await admin.from("subscriptions")
+      .select("id,asaas_subscription_id,access_until,cancel_at_period_end,reactivation_requested_at")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !subscription) return { error: "Não foi possível consultar a assinatura.", ok: false };
+    if (!subscription.cancel_at_period_end && !subscription.reactivation_requested_at) {
+      return { data: { status: "ativo" }, ok: true };
+    }
+    if (!subscription.reactivation_requested_at || !subscription.asaas_subscription_id || !subscription.access_until) {
+      return { data: { status: "processando" }, ok: true };
+    }
+
+    const remote = await getAsaasSubscriptionState(subscription.asaas_subscription_id);
+    if (remote.status !== "ACTIVE" || remote.nextDueDate !== brazilDateFromIso(subscription.access_until)) {
+      return { data: { status: "processando" }, ok: true };
+    }
+
+    const { data: completed, error: completeError } = await admin.from("subscriptions")
+      .update({
+        access_until: null,
+        asaas_subscription_state: "active",
+        cancel_at_period_end: false,
+        cancellation_reconciliation_checked_at: null,
+        cancellation_reconciliation_status: "not_required",
+        cancellation_requested_at: null,
+        reactivation_requested_at: null,
+        status: "ativo",
+      })
+      .eq("id", subscription.id)
+      .eq("tenant_id", tenant.id)
+      .eq("reactivation_requested_at", subscription.reactivation_requested_at)
+      .select("id")
+      .maybeSingle();
+    if (completeError) throw completeError;
+    if (completed) {
+      const { error: tenantError } = await admin.from("tenants")
+        .update({ canceled_at: null, status: "ativo" })
+        .eq("id", tenant.id)
+        .eq("owner_user_id", tenant.owner_user_id);
+      if (tenantError) throw tenantError;
+    }
+    revalidatePath("/painel/assinatura");
+    revalidatePath(`/loja/${tenant.slug}`);
+    return { data: { status: "ativo" }, ok: true };
+  } catch (error) {
+    logError("subscription.reactivation.status_check", error, {});
+    return { data: { status: "processando" }, ok: true };
   }
 }
 

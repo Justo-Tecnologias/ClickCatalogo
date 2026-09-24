@@ -44,8 +44,9 @@ test("rotina horária reconcilia antes de finalizar o acesso", async () => {
   assert.match(contents, /status\) params\.set\("status", status\)/);
   assert.match(contents, /method: "DELETE"/);
   assert.match(contents, /await listSubscriptionPayments\(env, subscriptionId, undefined, deadline\)/);
-  assert.match(contents, /if \(!inactivation\.ok\) throw new Error/);
-  assert.doesNotMatch(contents, /inactivation\.status === 404 \? "deleted"/);
+  assert.match(contents, /if \(!inactivation\.ok && inactivation\.status !== 404\)/);
+  assert.match(contents, /inactivation\.status === 404 \? "deleted"/);
+  assert.match(contents, /authoritativePaidThroughDate\(payments, subscriptionId\)/);
   assert.match(contents, /"attention"/);
   assert.ok(
     contents.indexOf("retryPendingReconciliations") < contents.indexOf("finalizeExpiredAccess(env)"),

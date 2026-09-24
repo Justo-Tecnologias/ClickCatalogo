@@ -55,8 +55,8 @@ export function CategoryNav({ categories, highlightSelection = true, sticky = fa
     <nav
       aria-label="Categorias de produtos"
       className={cn(
-        "relative border-b border-[var(--cor-borda)]",
-        sticky && "sticky top-0 z-30 bg-[var(--cor-fundo)]",
+        "relative [border-bottom:1px_solid_color-mix(in_srgb,var(--cor-borda)_55%,transparent)]",
+        sticky && "sticky top-0 z-30 bg-[color-mix(in_srgb,var(--cor-fundo)_94%,transparent)] shadow-[0_6px_18px_rgb(0_0_0_/_5%)] backdrop-blur",
       )}
     >
       <div className="relative mx-auto w-full max-w-[var(--content-width)]">
@@ -80,13 +80,21 @@ export function CategoryNav({ categories, highlightSelection = true, sticky = fa
                 aria-current={active ? "true" : undefined}
                 className={
                   active
-                    ? "inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--cor-primaria)] bg-[var(--cor-primaria)] px-4 py-2 text-sm font-semibold text-[var(--cor-fundo)] shadow-sm outline-none transition-[opacity,transform,box-shadow] hover:-translate-y-px hover:opacity-95 focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
+                    ? "inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--cor-acao)] bg-[var(--cor-acao)] px-4 py-2 text-sm font-semibold text-[var(--cor-na-acao)] shadow-sm outline-none transition-[opacity,transform,box-shadow] hover:-translate-y-px hover:opacity-95 focus-visible:ring-3 focus-visible:ring-[color:var(--cor-acao)]/30"
                     : "inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-2 text-sm font-medium text-[var(--cor-texto-suave)] shadow-[0_1px_2px_color-mix(in_srgb,var(--cor-primaria)_8%,transparent)] outline-none transition-[border-color,color,background-color,transform] hover:-translate-y-px hover:border-[var(--cor-primaria)] hover:bg-[color-mix(in_srgb,var(--cor-superficie)_92%,var(--cor-acao))] hover:text-[var(--cor-texto)] focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
                 }
                 href={`#${targetId}`}
                 key={category.id}
                 onClick={(event) => {
                   setSelectedId(category.id);
+                  const scroller = scrollerRef.current;
+                  if (scroller) {
+                    const link = event.currentTarget;
+                    scroller.scrollTo({
+                      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                      left: link.offsetLeft - (scroller.clientWidth - link.clientWidth) / 2,
+                    });
+                  }
                   const target = document.getElementById(targetId);
                   if (!target) return;
 

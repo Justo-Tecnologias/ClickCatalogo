@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { StorePreview } from "@/components/loja-publica/store-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ToastProvider } from "@/components/ui/toast";
 import { getPublicStore } from "@/lib/catalog/public-catalog";
 import { getSiteUrl } from "@/lib/env/server";
 
@@ -53,9 +54,16 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
     return <StoreMessage icon={Ban} title="Loja temporariamente indisponível" description="Este catálogo não está recebendo pedidos no momento." />;
   }
 
+  const canonicalUrl = new URL(
+    `/loja/${encodeURIComponent(store.catalog.slug)}`,
+    getSiteUrl(),
+  ).toString();
+
   return (
     <div data-tema={store.catalog.tema}>
-      <StorePreview catalog={store.catalog} />
+      <ToastProvider>
+        <StorePreview canonicalUrl={canonicalUrl} catalog={store.catalog} />
+      </ToastProvider>
     </div>
   );
 }

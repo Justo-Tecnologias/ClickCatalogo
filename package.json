@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run check:contrast",
     "check:contrast": "node scripts/check-theme-contrast.mjs",
-    "test": "tsx --test tests/account-continuation.test.ts tests/asaas-client.test.ts tests/asaas-payments.test.ts tests/billing-state.test.ts tests/currency.test.ts tests/database-invariants.test.ts tests/rate-limit-policy.test.ts tests/recovery-token.test.ts tests/support-request.test.ts tests/tenant-boundaries.test.ts tests/webhook-security.test.ts",
+    "test": "tsx --test tests/account-continuation.test.ts tests/asaas-client.test.ts tests/asaas-payments.test.ts tests/billing-state.test.ts tests/currency.test.ts tests/database-invariants.test.ts tests/finalize-subscription-cancellations.test.ts tests/rate-limit-policy.test.ts tests/recovery-token.test.ts tests/storefront.test.ts tests/support-request.test.ts tests/tenant-boundaries.test.ts tests/webhook-security.test.ts",
     "verify": "npm run check && npm test && npm run build",
     "audit:live": "node --env-file-if-exists=.env.local scripts/audit-live.mjs",
     "audit:asaas": "node --env-file-if-exists=.env.local scripts/audit-asaas.mjs",

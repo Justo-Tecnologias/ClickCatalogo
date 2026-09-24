@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, Eye, ImageIcon, LoaderCircle, Save, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, ImageIcon, LoaderCircle, Maximize2, Save, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { updateStoreAction } from "@/app/painel/(app)/loja/actions";
@@ -159,7 +159,7 @@ function StorePreviewDialog({
     <dialog
       aria-describedby="store-preview-description"
       aria-labelledby="store-preview-title"
-      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-white p-0 text-[var(--app-foreground)] backdrop:bg-black/50 xl:hidden"
+      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-white p-0 text-[var(--app-foreground)] backdrop:bg-black/50"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -359,8 +359,31 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
         </Card>
 
         <div className="hidden self-start xl:sticky xl:top-6 xl:block">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Como sua loja vai aparecer</p>
-          <StorePreview catalog={previewCatalog} framed theme={theme} />
+          <div className="mb-2 flex min-h-9 items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Como sua loja vai aparecer</p>
+            <Button
+              aria-haspopup="dialog"
+              onClick={() => setPreviewOpen(true)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <Maximize2 aria-hidden="true" />
+              Expandir prévia
+            </Button>
+          </div>
+          <div
+            aria-label="Prévia rolável da loja"
+            className="max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain rounded-[var(--radius-panel)] border bg-[var(--app-background)] shadow-[var(--shadow-elevation)] [scrollbar-gutter:stable]"
+            tabIndex={0}
+          >
+            <StorePreview
+              catalog={previewCatalog}
+              className="min-h-full rounded-none border-0 shadow-none"
+              framed
+              theme={theme}
+            />
+          </div>
         </div>
       </div>
 

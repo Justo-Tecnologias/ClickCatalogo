@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { recurringCheckoutPayload, subscriptionStatusPayload } from "@/lib/asaas/contracts";
+import { classifySubscriptionUpdateResponse } from "@/lib/asaas/subscription-update-outcome";
 import {
   authoritativePaidThroughDate,
   selectFuturePendingSubscriptionPayments,
@@ -35,6 +36,10 @@ const subscriptionResponseSchema = z.object({
   nextDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 }).passthrough();
 
+const subscriptionStateSchema = subscriptionResponseSchema.extend({
+  status: z.enum(["ACTIVE", "INACTIVE", "EXPIRED"]),
+});
+
 export class AsaasSubscriptionCancellationError extends Error {
   constructor(message: string) {
     super(message);
@@ -46,6 +51,13 @@ export class AsaasSubscriptionReactivationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AsaasSubscriptionReactivationError";
+  }
+}
+
+export class AsaasSubscriptionUpdateError extends Error {
+  constructor(message: string, public readonly outcome: "rejected" | "unknown") {
+    super(message);
+    this.name = "AsaasSubscriptionUpdateError";
   }
 }
 
@@ -112,52 +124,49 @@ async function updateAsaasSubscription(
 ) {
   const env = requireAsaasEnv();
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      const response = await fetch(
-        `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
-        {
-          body: JSON.stringify(subscriptionStatusPayload(body.status, body.nextDueDate)),
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
-            access_token: env.apiKey,
-          },
-          signal: AbortSignal.timeout(15_000),
+  try {
+    const response = await fetch(
+      `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+      {
+        body: JSON.stringify(subscriptionStatusPayload(body.status, body.nextDueDate)),
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`,
+          access_token: env.apiKey,
         },
-      );
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
 
-      if (response.ok) return "updated" as const;
-      if (response.status === 404) return "deleted" as const;
-
-      if (response.status === 401) {
-        throw new AsaasSubscriptionCancellationError(
-          "O Asaas recusou a autenticação. A assinatura não foi alterada; tente novamente mais tarde.",
-        );
-      }
-
-      throw new AsaasSubscriptionCancellationError(
-        "O Asaas não confirmou a alteração da assinatura. Aguarde um instante e tente novamente.",
-      );
-    } catch (error) {
-      if (error instanceof AsaasSubscriptionCancellationError) throw error;
-      if (attempt === 1) continue;
-
-      throw new AsaasSubscriptionCancellationError(
-        "Não foi possível comunicar com o Asaas. Nenhuma alteração foi confirmada; tente novamente.",
-      );
+    const outcome = classifySubscriptionUpdateResponse(response.status);
+    if (outcome === "updated" || outcome === "deleted") return outcome;
+    if (outcome === "unknown") {
+      throw new AsaasSubscriptionUpdateError("O resultado da operação no Asaas ainda não foi confirmado.", "unknown");
     }
+    throw new AsaasSubscriptionUpdateError("O Asaas não aceitou a alteração da assinatura.", "rejected");
+  } catch (error) {
+    if (error instanceof AsaasSubscriptionUpdateError) throw error;
+    throw new AsaasSubscriptionUpdateError("A comunicação com o Asaas foi interrompida antes da confirmação.", "unknown");
   }
-
-  throw new AsaasSubscriptionCancellationError(
-    "Não foi possível confirmar a alteração da assinatura.",
-  );
 }
 
 export function inactivateAsaasSubscription(subscriptionId: string) {
   return updateAsaasSubscription(subscriptionId, { status: "INACTIVE" });
+}
+
+export async function getAsaasSubscriptionState(subscriptionId: string) {
+  const env = requireAsaasEnv();
+  const response = await fetch(`${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json", "User-Agent": `ClickCatalogo/0.1.0 (${env.environment})`, access_token: env.apiKey },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error("Não foi possível consultar o estado da assinatura no Asaas.");
+  const parsed = subscriptionStateSchema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success || parsed.data.id !== subscriptionId) throw new Error("O Asaas devolveu um estado de assinatura inválido.");
+  return parsed.data;
 }
 
 async function listSubscriptionPayments(subscriptionId: string, status?: "PENDING") {
@@ -166,9 +175,10 @@ async function listSubscriptionPayments(subscriptionId: string, status?: "PENDIN
   const limit = 100;
 
   for (let offset = 0; offset < 2_000; offset += limit) {
-    const url = new URL(
-      `${env.apiUrl}/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
-    );
+    // A listagem da assinatura pode falhar depois da exclusão no Asaas.
+    // O filtro global continua permitindo conciliar as cobranças vinculadas.
+    const url = new URL(`${env.apiUrl}/payments`);
+    url.searchParams.set("subscription", subscriptionId);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     if (status) url.searchParams.set("status", status);
@@ -208,6 +218,12 @@ async function listSubscriptionPayments(subscriptionId: string, status?: "PENDIN
     if (!parsed.success) {
       throw new AsaasPaymentReconciliationError(
         "O Asaas devolveu uma lista de cobranças inválida.",
+      );
+    }
+
+    if (parsed.data.data.some((payment) => payment.subscription !== subscriptionId)) {
+      throw new AsaasPaymentReconciliationError(
+        "O Asaas devolveu uma cobrança sem vínculo confirmado com a assinatura.",
       );
     }
 
@@ -335,6 +351,7 @@ export async function reactivateAsaasSubscription(
       );
     }
   } catch (error) {
+    if (error instanceof AsaasSubscriptionUpdateError) throw error;
     if (error instanceof AsaasSubscriptionReactivationError) throw error;
     throw new AsaasSubscriptionReactivationError(
       error instanceof Error

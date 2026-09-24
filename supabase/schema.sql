@@ -940,10 +940,7 @@ begin
     where cancel_at_period_end = true
       and cancellation_reconciliation_status = 'complete'
       and access_until <= coalesce(p_now, clock_timestamp())
-      and (
-        reactivation_requested_at is null
-        or reactivation_requested_at < coalesce(p_now, clock_timestamp()) - interval '10 minutes'
-      )
+      and reactivation_requested_at is null
       and status in ('ativo', 'atrasado')
     returning tenant_id
   ), finalized_tenants as (

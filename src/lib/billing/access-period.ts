@@ -55,3 +55,9 @@ export function brazilDateFromIso(value: string) {
   const parts = zonedParts(date);
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
+
+export function lastPaidAccessInstant(accessUntil: string) {
+  const end = new Date(accessUntil).getTime();
+  if (!Number.isFinite(end)) throw new Error("Fim do período pago inválido.");
+  return new Date(end - 1);
+}

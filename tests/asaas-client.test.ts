@@ -5,6 +5,7 @@ import {
   recurringCheckoutPayload,
   subscriptionStatusPayload,
 } from "../src/lib/asaas/contracts";
+import { classifySubscriptionUpdateResponse } from "../src/lib/asaas/subscription-update-outcome";
 
 test("checkout recorrente usa apenas cartão e o contrato mensal esperado", () => {
   const body = recurringCheckoutPayload({
@@ -32,4 +33,12 @@ test("desfazer cancelamento reativa na data final já paga", () => {
     nextDueDate: "2026-10-10",
     status: "ACTIVE",
   });
+});
+
+test("resposta inconclusiva do Asaas não é tratada como rejeição segura para repetição", () => {
+  assert.equal(classifySubscriptionUpdateResponse(200), "updated");
+  assert.equal(classifySubscriptionUpdateResponse(400), "rejected");
+  assert.equal(classifySubscriptionUpdateResponse(404), "deleted");
+  assert.equal(classifySubscriptionUpdateResponse(500), "unknown");
+  assert.equal(classifySubscriptionUpdateResponse(503), "unknown");
 });

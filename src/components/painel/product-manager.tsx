@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageIcon, LoaderCircle, Package, Pencil, Plus, Power, Search, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, ImageIcon, LoaderCircle, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
@@ -34,6 +34,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
   const [discardOpen, setDiscardOpen] = useState(false);
   const [editorDirty, setEditorDirty] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(categories.some((category) => category.id === initialCategoryFilter) ? initialCategoryFilter! : "all");
   const [statusFilter, setStatusFilter] = useState<"all" | "hidden" | "published">("all");
@@ -65,6 +66,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
     setEditorOpen(true);
     setEditorDirty(false);
     setImagePreview(product?.imagem_url ?? null);
+    setImageFileName(null);
     setError(null);
   }
 
@@ -73,6 +75,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
     setImagePreview(null);
+    setImageFileName(null);
     setEditing(null);
     setEditorOpen(false);
     setEditorDirty(false);
@@ -83,6 +86,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = file ? URL.createObjectURL(file) : null;
     setImagePreview(objectUrl.current ?? editing?.imagem_url ?? null);
+    setImageFileName(file?.name ?? null);
     setEditorDirty(true);
   }
 
@@ -180,7 +184,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
       {editorOpen ? (
         <Card className="p-5 sm:p-6">
           <form className="grid gap-5" onChange={() => setEditorDirty(true)} onSubmit={submit}>
-            <div className="flex items-center justify-between gap-4"><div><h2 className="font-semibold">{editing ? "Editar produto" : "Novo produto"}</h2><p className="text-sm text-[var(--app-foreground-muted)]">Informações exibidas no card da sua loja.</p></div><Button aria-label="Fechar formulário" disabled={isPending} onClick={() => closeEditor()} size="icon" title="Fechar formulário" variant="ghost"><X aria-hidden="true" /></Button></div>
+            <div className="flex items-center justify-between gap-4"><div><h2 className="font-semibold">{editing ? "Editar produto" : "Novo produto"}</h2><p className="text-sm text-[var(--app-foreground-muted)]">{editing ? "Informações exibidas no card da sua loja." : "Ao salvar, o produto será publicado na sua loja."}</p></div><Button aria-label="Fechar formulário" disabled={isPending} onClick={() => closeEditor()} size="icon" title="Fechar formulário" variant="ghost"><X aria-hidden="true" /></Button></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field><FieldLabel htmlFor="nome">Nome</FieldLabel><Input defaultValue={editing?.nome} id="nome" maxLength={120} name="nome" placeholder="Ex.: Kit presenteável" required /></Field>
               <Field><FieldLabel htmlFor="categoryId">Categoria</FieldLabel><Select defaultValue={editing?.category_id ?? categories[0]?.id} id="categoryId" name="categoryId" required>{categories.map((category) => <option key={category.id} value={category.id}>{category.nome}</option>)}</Select></Field>
@@ -191,7 +195,11 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
                   <div className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg border bg-[var(--app-surface-muted)]">
                     {imagePreview ? <CatalogImage alt="Prévia da imagem do produto" className="object-cover" fallback={<ImageIcon aria-hidden="true" className="size-5 text-[var(--app-foreground-muted)]" />} fill sizes="80px" src={imagePreview} /> : <ImageIcon aria-hidden="true" className="size-5 text-[var(--app-foreground-muted)]" />}
                   </div>
-                  <Input accept="image/jpeg,image/png,image/webp" className="min-w-0" id="imagem" name="imagem" onChange={(event) => selectImage(event.target.files?.[0] ?? null)} type="file" />
+                  <div className="min-w-0 flex-1 self-center">
+                    <input accept="image/jpeg,image/png,image/webp" className="peer sr-only" id="imagem" name="imagem" onChange={(event) => selectImage(event.target.files?.[0] ?? null)} type="file" />
+                    <label className={`${buttonVariants({ variant: "secondary" })} cursor-pointer peer-focus-visible:ring-3 peer-focus-visible:ring-brand-200`} htmlFor="imagem">Escolher imagem</label>
+                    <p className="mt-2 truncate text-xs text-[var(--app-foreground-muted)]" title={imageFileName ?? undefined}>{imageFileName ?? "Nenhum novo arquivo selecionado"}</p>
+                  </div>
                 </div>
                 {editing?.imagem_url ? <label className="flex min-h-11 items-center gap-2 text-sm"><input className="size-4 accent-[var(--brand-700)]" name="removeImagem" onChange={(event) => { if (event.target.checked) setImagePreview(null); else setImagePreview(objectUrl.current ?? editing.imagem_url); }} type="checkbox" value="true" />Remover a imagem atual ao salvar</label> : null}
                 <FieldDescription>JPG, PNG ou WebP. Otimizamos para WebP em até 1200 px antes do envio.</FieldDescription>
@@ -219,6 +227,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
         <EmptyState action={<Button onClick={() => openEditor()}><Plus aria-hidden="true" />Criar primeiro produto</Button>} description="Adicione seu primeiro item para começar a receber pedidos pelo WhatsApp." icon={Package} title="Nenhum produto ainda" />
       ) : products.length > 0 ? (
         <div className="grid min-w-0 gap-3">
+          <p aria-live="polite" className="text-sm text-[var(--app-foreground-muted)]">Exibindo {Math.min(filteredProducts.length, visibleLimit)} de {filteredProducts.length} {filteredProducts.length === 1 ? "produto encontrado" : "produtos encontrados"}{filteredProducts.length !== products.length ? ` (${products.length} no total)` : ""}.</p>
           {filteredProducts.length === 0 ? <EmptyState description="Revise a busca ou os filtros selecionados." icon={Search} title="Nenhum produto encontrado" /> : null}
           {filteredProducts.slice(0, visibleLimit).map((product) => (
             <Card className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 p-3 sm:flex sm:gap-4 sm:p-4" key={product.id}>
@@ -227,7 +236,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
               </div>
               <div className="min-w-0 flex-1"><div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2"><p className="max-w-full truncate font-semibold">{product.nome}</p><Badge variant={product.ativo ? "success" : "neutral"}>{product.ativo ? "Publicado" : "Oculto"}</Badge></div><p className="mt-1 truncate text-xs text-[var(--app-foreground-muted)]">{categoryNames.get(product.category_id) ?? "Categoria não encontrada"}</p><p className="mt-1 text-sm font-semibold text-brand-700">{formatCurrency(product.preco)}</p></div>
               <div className="col-start-2 flex shrink-0 gap-1 sm:col-auto">
-                <Button aria-label={product.ativo ? `Ocultar ${product.nome}` : `Publicar ${product.nome}`} disabled={isPending} onClick={() => toggle(product)} size="icon" title={product.ativo ? "Ocultar produto" : "Publicar produto"} variant="ghost">{operation?.type === "toggle" && operation.id === product.id ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Power aria-hidden="true" />}</Button>
+                <Button aria-label={product.ativo ? `Ocultar ${product.nome}` : `Publicar ${product.nome}`} disabled={isPending} onClick={() => toggle(product)} size="icon" title={product.ativo ? "Ocultar produto" : "Publicar produto"} variant="ghost">{operation?.type === "toggle" && operation.id === product.id ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : product.ativo ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</Button>
                 <Button aria-label={`Editar ${product.nome}`} disabled={isPending} onClick={() => openEditor(product)} size="icon" title="Editar produto" variant="ghost"><Pencil aria-hidden="true" /></Button>
                 <Button aria-label={`Excluir ${product.nome}`} disabled={isPending} onClick={() => remove(product)} size="icon" title="Excluir produto" variant="ghost"><Trash2 aria-hidden="true" /></Button>
               </div>
