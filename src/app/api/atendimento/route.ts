@@ -19,7 +19,9 @@ const supportRequestSchema = z.object({
   email: z.string().trim().pipe(z.email()).transform((value) => value.toLowerCase()),
   message: z.string().trim().min(10, "Explique sua dúvida em pelo menos 10 caracteres.").max(3000),
   name: z.string().trim().min(2, "Informe seu nome.").max(100),
-  topic: z.enum(["geral", "cobranca", "dados"]),
+  pageUrl: z.string().trim().max(500).optional(),
+  topic: z.enum(["geral", "cobranca", "dados", "sugestao", "problema"]),
+  userAgent: z.string().trim().max(500).optional(),
   website: z.string().max(200).optional(),
 });
 
@@ -27,6 +29,8 @@ const topicLabels = {
   cobranca: "Cobrança e assinatura",
   dados: "Privacidade e dados",
   geral: "Dúvida geral",
+  problema: "Problema no sistema",
+  sugestao: "Sugestão de melhoria",
 } as const;
 
 function escapeHtml(value: string) {
@@ -45,6 +49,12 @@ function supportRequestEmail(input: z.infer<typeof supportRequestSchema>, accoun
   const accountEmail = account.email
     ? `<p style="margin:0 0 8px"><strong>E-mail da conta:</strong> ${escapeHtml(account.email)}</p>`
     : "";
+  const pageDetails = input.pageUrl
+    ? `<p style="margin:0 0 8px"><strong>Página de origem:</strong> ${escapeHtml(input.pageUrl)}</p>`
+    : "";
+  const deviceDetails = input.userAgent
+    ? `<p style="margin:0 0 8px"><strong>Navegador/dispositivo:</strong> ${escapeHtml(input.userAgent)}</p>`
+    : "";
 
   return `<!doctype html>
 <html lang="pt-BR"><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#13251f">
@@ -55,7 +65,7 @@ function supportRequestEmail(input: z.infer<typeof supportRequestSchema>, accoun
     <p style="margin:0 0 8px"><strong>Assunto:</strong> ${topicLabels[input.topic]}</p>
     <p style="margin:0 0 8px"><strong>Nome:</strong> ${escapeHtml(input.name)}</p>
     <p style="margin:0 0 8px"><strong>E-mail para resposta:</strong> ${escapeHtml(input.email)}</p>
-    ${accountDetails}${accountEmail}
+    ${accountDetails}${accountEmail}${pageDetails}${deviceDetails}
     <div style="margin-top:20px;padding:16px;background:#f4f7f5;border-radius:10px;white-space:pre-wrap;line-height:1.6">${escapeHtml(input.message)}</div>
   </div>
 </div></body></html>`;

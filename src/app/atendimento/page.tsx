@@ -14,11 +14,13 @@ export const metadata: Metadata = {
   title: "Atendimento",
 };
 
-const topics = ["cobranca", "dados", "geral"] as const;
+const topics = ["cobranca", "dados", "geral", "problema", "sugestao"] as const;
 type SupportTopic = (typeof topics)[number];
 
 const returnRoutes = {
   assinatura: "/painel/assinatura",
+  inicio: "/",
+  painel: "/painel/loja",
   privacidade: "/painel/privacidade",
 } as const;
 

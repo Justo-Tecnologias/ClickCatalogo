@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Menu, Package, Settings2, ShieldCheck, ShoppingBag, X } from "lucide-react";
+import { CreditCard, ExternalLink, Eye, FolderTree, LogOut, Menu, MessageSquarePlus, Package, Settings2, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -21,6 +21,7 @@ const links = [
   { href: "/painel/produtos", icon: Package, label: "Produtos" },
   { href: "/painel/assinatura", icon: CreditCard, label: "Assinatura" },
   { href: "/painel/privacidade", icon: ShieldCheck, label: "Privacidade" },
+  { href: "/atendimento?assunto=sugestao&origem=painel", icon: MessageSquarePlus, label: "Sugestões e problemas" },
 ] as const;
 
 export function PanelShell({ children, demo = false, slug, status, storeName, userEmail }: { children: ReactNode; demo?: boolean; slug: string; status: TenantStatus; storeName: string; userEmail: string | null }) {

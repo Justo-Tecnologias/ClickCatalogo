@@ -9,7 +9,15 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-type SupportTopic = "cobranca" | "dados" | "geral";
+type SupportTopic = "cobranca" | "dados" | "geral" | "problema" | "sugestao";
+
+const topicContent = {
+  cobranca: { label: "Cobrança e assinatura", placeholder: "Conte sua dúvida sobre cobrança ou assinatura." },
+  dados: { label: "Privacidade e dados", placeholder: "Explique o que você precisa resolver sobre seus dados." },
+  geral: { label: "Dúvida geral", placeholder: "Conte sua dúvida ou explique o que precisa resolver." },
+  problema: { label: "Relatar problema", placeholder: "Conte o que aconteceu, o que esperava e em qual tela estava." },
+  sugestao: { label: "Sugestão de melhoria", placeholder: "Conte o que poderia ser mais simples ou o que você gostaria de encontrar." },
+} as const;
 
 export function SupportContact({
   defaultEmail = "",
@@ -48,13 +56,26 @@ export function SupportContact({
           email,
           message,
           name,
+          pageUrl: window.location.href,
           topic,
+          userAgent: window.navigator.userAgent,
           website: formData.get("website") ?? "",
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
       const data = await response.json() as { error?: string; message?: string };
+      if (response.status === 429) {
+        const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+        const retryAfterMinutes = Number.isFinite(retryAfterSeconds)
+          ? Math.max(1, Math.ceil(retryAfterSeconds / 60))
+          : null;
+        throw new Error(
+          retryAfterMinutes
+            ? `Você enviou várias mensagens em seguida. Tente novamente em cerca de ${retryAfterMinutes} ${retryAfterMinutes === 1 ? "minuto" : "minutos"}.`
+            : "Você enviou várias mensagens em seguida. Aguarde alguns minutos e tente novamente.",
+        );
+      }
       if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar sua mensagem.");
       setMessage("");
       setResult({ message: data.message ?? "Mensagem enviada com sucesso.", type: "success" });
@@ -93,12 +114,8 @@ export function SupportContact({
 
       <fieldset className="grid min-w-0 gap-2">
         <legend className="mb-1 text-sm font-semibold text-[var(--app-foreground)]">Assunto</legend>
-        <div className="grid min-w-0 gap-2 sm:grid-cols-3">
-          {([
-            ["geral", "Dúvida geral"],
-            ["cobranca", "Cobrança e assinatura"],
-            ["dados", "Privacidade e dados"],
-          ] as const).map(([value, label]) => (
+        <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+          {(Object.entries(topicContent) as [SupportTopic, (typeof topicContent)[SupportTopic]][]).map(([value, content]) => (
             <label className="min-w-0 cursor-pointer" key={value}>
               <input
                 checked={topic === value}
@@ -110,7 +127,7 @@ export function SupportContact({
                 value={value}
               />
               <span className="flex min-h-11 w-full items-center rounded-[var(--radius-control)] border bg-white px-3 py-2 text-sm font-medium leading-5 transition-colors peer-checked:border-brand-700 peer-checked:bg-brand-100 peer-checked:text-brand-900 peer-focus-visible:ring-3 peer-focus-visible:ring-brand-200 peer-disabled:cursor-not-allowed peer-disabled:opacity-60">
-                {label}
+                {content.label}
               </span>
             </label>
           ))}
@@ -119,7 +136,7 @@ export function SupportContact({
 
       <Field>
         <FieldLabel htmlFor="support-message">Como podemos ajudar?</FieldLabel>
-        <Textarea aria-invalid={message.length > 0 && missingMessageCharacters > 0} disabled={pending} id="support-message" maxLength={3000} minLength={10} onChange={(event) => setMessage(event.target.value)} placeholder="Conte sua dúvida ou explique o que precisa resolver." required rows={6} value={message} />
+        <Textarea aria-invalid={message.length > 0 && missingMessageCharacters > 0} disabled={pending} id="support-message" maxLength={3000} minLength={10} onChange={(event) => setMessage(event.target.value)} placeholder={topicContent[topic].placeholder} required rows={6} value={message} />
         <FieldDescription>
           {missingMessageCharacters > 0
             ? `Escreva pelo menos 10 caracteres — faltam ${missingMessageCharacters}.`

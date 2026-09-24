@@ -151,8 +151,11 @@ export function SubscriptionCancellation({ accessUntil, canCancel, canRevert, de
 
       {state === "cancelled_with_access" && accessUntil ? (
         <>
-          <Alert description={`Sua assinatura foi cancelada. Você pode continuar usando a loja e o painel até ${lastAccessDay(accessUntil)}.`} title="Cancelamento confirmado" />
-          {canRevert ? <Button className="w-fit" disabled={isPending} onClick={() => setDialogType("resume")}><CreditCard aria-hidden="true" />Retomar assinatura</Button> : <p className="text-sm text-[var(--app-foreground-muted)]">Esta assinatura não pode ser retomada. Depois do fim do acesso, você poderá renovar pelo painel.</p>}
+          <Alert
+            description={`Você pode continuar usando a loja e o painel até ${lastAccessDay(accessUntil)}. Depois dessa data, sua loja ficará guardada por até 30 dias e poderá ser renovada pelo painel sem cadastrar os produtos novamente.`}
+            title="Cancelamento confirmado"
+          />
+          {canRevert ? <Button className="w-fit" disabled={isPending} onClick={() => setDialogType("resume")}><CreditCard aria-hidden="true" />Retomar assinatura</Button> : <p className="text-sm text-[var(--app-foreground-muted)]">Quando o período atual terminar, a opção <strong>Renovar assinatura</strong> aparecerá nesta página.</p>}
         </>
       ) : null}
 
@@ -168,7 +171,7 @@ export function SubscriptionCancellation({ accessUntil, canCancel, canRevert, de
       {state === "ending" ? <Alert description="O período de acesso terminou. A loja não está mais disponível e a opção de assinar novamente aparecerá em instantes." title="Período de acesso concluído" /> : null}
       {state === "ended" ? (
         <>
-          <Alert description="O período pago terminou e a loja está indisponível. Para voltar a publicá-la, conclua uma nova contratação; o valor será mostrado antes do pagamento." title="Acesso encerrado" />
+          <Alert description="O período pago terminou e a loja está indisponível. Seus produtos e configurações ficam guardados por até 30 dias. Renove dentro desse prazo para publicar a mesma loja novamente; o valor será mostrado antes do pagamento." title="Acesso encerrado" />
           <Button className="w-fit" disabled={isPending} onClick={renew}><CreditCard aria-hidden="true" />{isPending ? "Abrindo renovação..." : "Renovar assinatura"}</Button>
         </>
       ) : null}
