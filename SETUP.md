@@ -292,7 +292,7 @@ A Netlify detecta Next.js e aplica automaticamente o adaptador OpenNext. Não in
 ### Conectar o repositório
 
 1. Na Netlify, abra **Add new project → Import an existing project**.
-2. Escolha GitHub e selecione `Leo-Labs-Rp/ClickCatalogo`.
+2. Escolha GitHub e selecione `Justo-Tecnologias/ClickCatalogo`.
 3. Production branch: `master`.
 4. Base directory: raiz do repositório, sem subpasta.
 5. Confirme `npm run verify` e `.next` — o `netlify.toml` já fornece os valores.
