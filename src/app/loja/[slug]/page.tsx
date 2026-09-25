@@ -17,7 +17,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const store = await getPublicStore(slug);
   if (store.kind !== "available") return { title: "Loja indisponível", robots: { index: false, follow: false } };
-  const description = store.catalog.descricao_curta ?? `Catálogo digital de ${store.catalog.nome_loja}.`;
+  const hasExternalOffers = store.catalog.categorias.some((category) =>
+    category.produtos.some((product) => Boolean(product.link_externo)));
+  const description = store.catalog.descricao_curta?.trim() || (hasExternalOffers
+    ? `Confira os produtos e ofertas selecionados por ${store.catalog.nome_loja}.`
+    : `Veja os produtos de ${store.catalog.nome_loja} e faça seu pedido pelo WhatsApp.`);
   const canonicalUrl = new URL(`/loja/${encodeURIComponent(store.catalog.slug)}`, getSiteUrl()).toString();
   return {
     alternates: {
