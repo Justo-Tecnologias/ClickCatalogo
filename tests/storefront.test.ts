@@ -88,6 +88,9 @@ test("experiência pública preserva seis temas, indisponibilidade e canonical n
   assert.match(catalog, /\{footer\}[\s\S]*?cartItemCount > 0[\s\S]*?env\(safe-area-inset-bottom\)/);
   assert.match(card, /Adicionar/);
   assert.match(card, /onAdd && onDecrement/);
+  assert.match(card, /product\.link_externo/);
+  assert.match(card, /nofollow sponsored noopener noreferrer/);
+  assert.match(card, />\s*Ver oferta\s*</);
   assert.match(header, /line-clamp-3/);
   assert.doesNotMatch(header, /<Store\b/);
   assert.doesNotMatch(catalog, />\s*Produtos\s*</);

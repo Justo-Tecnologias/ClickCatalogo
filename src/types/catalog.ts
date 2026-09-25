@@ -4,6 +4,7 @@ export type CatalogProduct = {
   descricao: string | null;
   id: string;
   imagem_url: string | null;
+  link_externo?: string | null;
   nome: string;
   ordem: number;
   preco: number;

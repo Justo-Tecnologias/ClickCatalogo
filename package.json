@@ -16,6 +16,7 @@
     "audit:asaas": "node --env-file-if-exists=.env.local scripts/audit-asaas.mjs",
     "audit:production": "node --env-file-if-exists=.env.local scripts/audit-production.mjs",
     "backup:storage": "node --env-file-if-exists=.env.local scripts/backup-storage.mjs",
+    "import:justo-shop": "node --env-file-if-exists=.env.local scripts/import-justo-shop.mjs",
     "privacy:purge": "node --env-file-if-exists=.env.local scripts/purge-retention.mjs"
   },
   "engines": {

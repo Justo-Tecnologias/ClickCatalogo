@@ -14,6 +14,7 @@ const productSchema = z.object({
   descricao: z.string().nullable(),
   id: z.uuid(),
   imagem_url: z.string().nullable(),
+  link_externo: z.url().nullable().optional().default(null),
   nome: z.string(),
   ordem: z.number(),
   preco: z.coerce.number(),

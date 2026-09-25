@@ -16,6 +16,14 @@ const productSchema = z.object({
   categoryId: z.uuid("Selecione uma categoria."),
   descricao: z.string().trim().max(1000).nullable(),
   id: z.uuid().optional(),
+  linkExterno: z.preprocess(
+    (value) => String(value ?? "").trim() || null,
+    z.string()
+      .max(2048, "O link deve ter no máximo 2.048 caracteres.")
+      .url("Digite um link completo e válido.")
+      .refine((value) => value.startsWith("https://"), "O link deve começar com https://.")
+      .nullable(),
+  ),
   nome: z.string().trim().min(1, "Digite o nome do produto.").max(120),
   preco: z.number()
     .min(0.01, "O preço deve ser maior que zero.")
@@ -29,7 +37,7 @@ const productSchema = z.object({
 
 type SavedProduct = Pick<
   Database["public"]["Tables"]["products"]["Row"],
-  "ativo" | "category_id" | "descricao" | "id" | "imagem_url" | "nome" | "preco" | "variacao_info"
+  "ativo" | "category_id" | "descricao" | "id" | "imagem_url" | "link_externo" | "nome" | "preco" | "variacao_info"
 >;
 
 function parsePrice(value: FormDataEntryValue | null) {
@@ -55,6 +63,7 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
     categoryId: formData.get("categoryId"),
     descricao: String(formData.get("descricao") ?? "").trim() || null,
     id: String(formData.get("id") ?? "") || undefined,
+    linkExterno: formData.get("linkExterno"),
     nome: formData.get("nome"),
     preco: parsePrice(formData.get("preco")),
     variacaoInfo: String(formData.get("variacaoInfo") ?? "").trim() || null,
@@ -99,6 +108,7 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
       category_id: parsed.data.categoryId,
       descricao: parsed.data.descricao,
       imagem_url: imageUrl,
+      link_externo: parsed.data.linkExterno,
       nome: parsed.data.nome,
       preco: parsed.data.preco,
       tenant_id: tenant.id,
@@ -106,7 +116,7 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
     };
 
     let savedProduct: SavedProduct;
-    const returnColumns = "ativo,category_id,descricao,id,imagem_url,nome,preco,variacao_info";
+    const returnColumns = "ativo,category_id,descricao,id,imagem_url,link_externo,nome,preco,variacao_info";
 
     if (parsed.data.id) {
       const { data, error } = await supabase

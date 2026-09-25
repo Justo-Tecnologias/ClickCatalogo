@@ -1,4 +1,4 @@
-import { ImageIcon, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
+import { ExternalLink, ImageIcon, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui";
 import { trackProductMetric } from "@/lib/analytics/client";
@@ -72,7 +72,21 @@ export function ProductCard({ analyticsSlug, cartQuantity = 0, eagerImage = fals
         ) : null}
 
         <div className="mt-auto grid gap-2 pt-4">
-          {onAdd && onDecrement ? (
+          {product.link_externo ? (
+            <>
+              <a
+                aria-label={`Ver oferta de ${product.nome}`}
+                className={buttonVariants({ className: "w-full", size: "sm", variant: "theme" })}
+                href={product.link_externo}
+                rel="nofollow sponsored noopener noreferrer"
+                target="_blank"
+              >
+                <ExternalLink aria-hidden="true" />
+                Ver oferta
+              </a>
+              <span className="text-center text-[0.6875rem] leading-4 text-[var(--cor-texto-suave)]">Link externo · preço sujeito a alteração</span>
+            </>
+          ) : onAdd && onDecrement ? (
             cartQuantity > 0 ? (
               <div className="flex h-11 items-center justify-between rounded-[var(--radius-control)] border border-[var(--cor-borda)] bg-[var(--cor-fundo)]">
                 <Button

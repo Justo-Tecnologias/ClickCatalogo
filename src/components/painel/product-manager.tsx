@@ -22,7 +22,7 @@ import { CatalogImage } from "@/components/loja-publica/catalog-image";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 
 type CategoryOption = { id: string; nome: string };
-export type ProductItem = { ativo: boolean; category_id: string; descricao: string | null; id: string; imagem_url: string | null; nome: string; preco: number; variacao_info: string | null };
+export type ProductItem = { ativo: boolean; category_id: string; descricao: string | null; id: string; imagem_url: string | null; link_externo: string | null; nome: string; preco: number; variacao_info: string | null };
 
 export function ProductManager({ categories, initialCategoryFilter, initialProducts }: { categories: CategoryOption[]; initialCategoryFilter?: string; initialProducts: ProductItem[] }) {
   const [products, setProducts] = useState(initialProducts);
@@ -207,6 +207,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
             </div>
             <Field><FieldLabel htmlFor="descricao">Descrição</FieldLabel><Textarea defaultValue={editing?.descricao ?? ""} id="descricao" maxLength={1000} name="descricao" placeholder="Conte o que torna este produto especial." rows={4} /></Field>
             <Field><FieldLabel htmlFor="variacaoInfo">Variações</FieldLabel><Input defaultValue={editing?.variacao_info ?? ""} id="variacaoInfo" maxLength={300} name="variacaoInfo" placeholder="Ex.: tamanhos P, M e G; cores sob consulta" /><FieldDescription>Campo livre para sabores, tamanhos, cores ou outras opções.</FieldDescription></Field>
+            <Field><FieldLabel htmlFor="linkExterno">Link externo (opcional)</FieldLabel><Input defaultValue={editing?.link_externo ?? ""} id="linkExterno" maxLength={2048} name="linkExterno" placeholder="https://..." type="url" /><FieldDescription>Quando preenchido, o produto mostra “Ver oferta” e abre este endereço em vez de entrar no pedido pelo WhatsApp.</FieldDescription></Field>
             <div className="flex flex-wrap gap-2"><Button disabled={isPending} type="submit">{operation?.type === "save" ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : null}{operation?.type === "save" ? "Otimizando e salvando..." : "Salvar produto"}</Button><Button disabled={isPending} onClick={() => closeEditor()} type="button" variant="ghost">Cancelar</Button></div>
           </form>
         </Card>

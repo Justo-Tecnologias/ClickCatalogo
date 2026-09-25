@@ -100,6 +100,7 @@ create table public.products (
   preco numeric(10, 2) not null,
   descricao text,
   imagem_url text,
+  link_externo text,
   variacao_info text,
   ativo boolean not null default true,
   ordem integer not null default 0,
@@ -116,6 +117,13 @@ create table public.products (
   constraint products_preco_check check (preco >= 0.01),
   constraint products_descricao_length_check check (
     descricao is null or char_length(descricao) <= 1000
+  ),
+  constraint products_link_externo_check check (
+    link_externo is null
+    or (
+      char_length(link_externo) <= 2048
+      and link_externo ~ '^https://'
+    )
   ),
   constraint products_variacao_length_check check (
     variacao_info is null or char_length(variacao_info) <= 300
@@ -635,6 +643,7 @@ as $$
                     'preco', product.preco,
                     'descricao', product.descricao,
                     'imagem_url', product.imagem_url,
+                    'link_externo', product.link_externo,
                     'variacao_info', product.variacao_info,
                     'ordem', product.ordem
                   )
