@@ -84,6 +84,14 @@ async function findAuthUserIdByEmail(
   email: string,
 ) {
   const normalizedEmail = email.toLowerCase();
+  const { data: userId, error: lookupError } = await admin.rpc("find_auth_user_id_by_email", {
+    p_email: normalizedEmail,
+  });
+  if (!lookupError) return userId ?? null;
+
+  // Plano B enquanto a migration 202609300024 não estiver aplicada: a
+  // paginação completa é lenta em bases grandes, mas preserva o provisionamento.
+  logError("asaas.webhook.auth_user_lookup", lookupError, { result: "fallback_list_users" });
   const perPage = 1000;
 
   for (let page = 1; ; page += 1) {

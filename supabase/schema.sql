@@ -505,8 +505,8 @@ revoke all on table public.account_deletion_requests from anon, authenticated;
 revoke all on table public.legal_retention_records from anon, authenticated;
 
 grant select on table public.tenants to authenticated;
+-- slug fica fora desta lista: a troca só ocorre por change_tenant_slug.
 grant update (
-  slug,
   nome_loja,
   logo_url,
   banner_url,
@@ -728,6 +728,23 @@ $$;
 
 revoke all on function public.email_has_tenant(text) from public, anon, authenticated;
 grant execute on function public.email_has_tenant(text) to service_role;
+
+create or replace function public.find_auth_user_id_by_email(p_email text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select auth_user.id
+  from auth.users as auth_user
+  where lower(auth_user.email) = lower(btrim(p_email))
+  order by auth_user.created_at
+  limit 1;
+$$;
+
+revoke all on function public.find_auth_user_id_by_email(text) from public, anon, authenticated;
+grant execute on function public.find_auth_user_id_by_email(text) to service_role;
 
 create or replace function public.consume_signup_recovery_token(p_token_hash text)
 returns table (

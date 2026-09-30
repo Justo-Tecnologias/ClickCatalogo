@@ -42,6 +42,10 @@ O arquivo `migrations/202608300009_privacy_retention_and_deletion.sql` registra 
 
 O arquivo `migrations/202609100010_prelaunch_continuity.sql` muda o cancelamento self-service para o fim do período já pago. Ele registra a data limite de acesso, protege o catálogo caso o agendador atrase e cria a RPC idempotente chamada de hora em hora pela Scheduled Function da Netlify. Execute-o depois da migration de retenção, antes do deploy desta versão.
 
+O arquivo `migrations/202609300023_restrict_tenant_slug_update.sql` retira `slug` da lista de colunas que o titular autenticado pode alterar diretamente em `tenants`. A troca de endereço continua disponível somente pela RPC `change_tenant_slug`, que preserva histórico, aliases protegidos e reservas de cadastro. Execute `audit-slug-integrity.sql` (somente leitura) antes e depois dela.
+
+O arquivo `migrations/202609300024_auth_user_lookup_by_email.sql` cria a RPC `find_auth_user_id_by_email`, restrita à `service_role`, usada pelo webhook para localizar um usuário do Auth pelo e-mail sem paginar a base inteira. Enquanto ela não estiver aplicada, o webhook usa a paginação antiga como plano B.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:
@@ -56,6 +60,7 @@ O fluxo com CLI é uma alternativa para ambientes já vinculados. Para o novo pr
 ## Decisões de segurança
 
 - O navegador não pode inserir tenants nem alterar status de tenant/assinatura.
+- O navegador não altera `tenants.slug` diretamente; a troca exige a RPC `change_tenant_slug`.
 - `signup_intents` e `asaas_webhook_events` não possuem políticas para usuários; somente a service role do backend pode acessá-las.
 - A loja pública consulta uma função que omite `owner_user_id` e campos operacionais.
 - O caminho de upload deve começar por `produtos/{tenant_id}/`; as policies conferem se o usuário autenticado é dono desse tenant.

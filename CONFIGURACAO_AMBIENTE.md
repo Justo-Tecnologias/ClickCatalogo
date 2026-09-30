@@ -30,10 +30,17 @@ Nunca grave valores reais em `.env.example`, documentação ou Git.
 | `ASAAS_API_KEY` | Asaas → Integrações → Chave da API | Para pagamento | Sim |
 | `ASAAS_WEBHOOK_TOKEN` | Segredo aleatório criado pelo administrador | Para pagamento | Sim |
 | `ASAAS_API_URL` | Compatibilidade com chave antiga | Não | Sim |
+| `RESEND_API_KEY` | Resend → API Keys; chave somente de envio, restrita ao domínio verificado | Para atendimento e "Acessar minha loja" | Sim |
+| `RESEND_FROM_EMAIL` | Remetente de um domínio verificado no Resend, ex.: `ClickCatálogo <contato@clickcatalogo.com>` | Para atendimento e "Acessar minha loja" | Não |
 
 As chaves modernas do Supabase usam `sb_publishable_...` e `sb_secret_...`. Os nomes das variáveis foram preservados por compatibilidade com o código atual.
 
-O Resend é conectado diretamente ao SMTP do Supabase Auth. `RESEND_API_KEY` não é lida pela aplicação e não deve ser cadastrada na Netlify nem no `.env.local`. Consulte a seção Resend do `SETUP.md`.
+O Resend é usado de duas formas independentes:
+
+1. **SMTP do Supabase Auth** (recuperação de senha): a chave fica somente no campo de senha SMTP do Supabase e não é lida pela aplicação.
+2. **API direta pela aplicação**: `RESEND_API_KEY` e `RESEND_FROM_EMAIL` são lidas pelo servidor para enviar o link de uso único de **Acessar minha loja** e as mensagens do formulário de **Atendimento**. Sem elas, esses dois fluxos ficam indisponíveis.
+
+Use chaves diferentes para cada forma. `npm run audit:production` confere se o canal da aplicação está pronto (`data-support-channel="ready"` em `/atendimento`). Consulte a seção Resend do `SETUP.md`.
 
 ## Modelo local
 
@@ -55,6 +62,9 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 ASAAS_API_KEY=
 ASAAS_WEBHOOK_TOKEN=
 ASAAS_API_URL=
+
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=ClickCatálogo <contato@clickcatalogo.com>
 ```
 
 ## Netlify

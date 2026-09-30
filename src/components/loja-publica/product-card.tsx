@@ -2,6 +2,7 @@ import { ExternalLink, ImageIcon, MessageCircle, Minus, Plus, ShoppingCart } fro
 
 import { Button, buttonVariants } from "@/components/ui";
 import { trackProductMetric } from "@/lib/analytics/client";
+import { allowedExternalLinkOrNull } from "@/lib/catalog/external-links";
 import { formatCurrency } from "@/lib/format/currency";
 import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 import type { CatalogProduct } from "@/types/catalog";
@@ -20,6 +21,7 @@ export type ProductCardProps = {
 };
 
 export function ProductCard({ analyticsSlug, cartQuantity = 0, eagerImage = false, onAdd, onDecrement, product, storeName, whatsapp }: ProductCardProps) {
+  const externalLink = allowedExternalLinkOrNull(product.link_externo);
   const orderUrl = createWhatsAppUrl(
     whatsapp,
     `Olá! Tenho interesse no produto “${product.nome}” da ${storeName}.`,
@@ -72,12 +74,12 @@ export function ProductCard({ analyticsSlug, cartQuantity = 0, eagerImage = fals
         ) : null}
 
         <div className="mt-auto grid gap-2 pt-4">
-          {product.link_externo ? (
+          {externalLink ? (
             <>
               <a
                 aria-label={`Ver oferta de ${product.nome}`}
                 className={buttonVariants({ className: "w-full", size: "sm", variant: "theme" })}
-                href={product.link_externo}
+                href={externalLink}
                 rel="nofollow sponsored noopener noreferrer"
                 target="_blank"
               >

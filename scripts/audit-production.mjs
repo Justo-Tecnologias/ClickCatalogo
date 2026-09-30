@@ -100,6 +100,19 @@ for (const path of ["/termos", "/privacidade"]) {
 }
 
 try {
+  // O mesmo RESEND_API_KEY/RESEND_FROM_EMAIL atende o formulário de
+  // atendimento e o envio do link de "Acessar minha loja".
+  const { body, response } = await request("/atendimento");
+  assert(
+    "resend:atendimento-e-retomada",
+    response.status === 200 && body.includes('data-support-channel="ready"'),
+    "O canal transacional não está pronto. Confira LEGAL_SUPPORT_EMAIL, RESEND_API_KEY e RESEND_FROM_EMAIL na Netlify e publique novamente.",
+  );
+} catch (error) {
+  fail("resend:atendimento-e-retomada", error instanceof Error ? error.message : "Falha desconhecida.");
+}
+
+try {
   const { response } = await request("/painel/loja", "manual");
   const location = response.headers.get("location") ?? "";
   assert(

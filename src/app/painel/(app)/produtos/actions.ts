@@ -6,6 +6,7 @@ import { z } from "zod";
 import { actionError, type ActionResult } from "@/lib/actions/result";
 import { recordProductMetric } from "@/lib/analytics/server";
 import { requireTenant } from "@/lib/auth/session";
+import { EXTERNAL_LINK_STORE_NAMES, isAllowedExternalLink } from "@/lib/catalog/external-links";
 import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
 import { parseBrazilianCurrency } from "@/lib/format/currency";
@@ -22,6 +23,10 @@ const productSchema = z.object({
       .max(2048, "O link deve ter no máximo 2.048 caracteres.")
       .url("Digite um link completo e válido.")
       .refine((value) => value.startsWith("https://"), "O link deve começar com https://.")
+      .refine(
+        isAllowedExternalLink,
+        `Por segurança, o link externo aceita apenas lojas conhecidas: ${EXTERNAL_LINK_STORE_NAMES}.`,
+      )
       .nullable(),
   ),
   nome: z.string().trim().min(1, "Digite o nome do produto.").max(120),

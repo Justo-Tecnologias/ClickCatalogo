@@ -588,6 +588,10 @@ export type Database = {
         Args: { p_email: string };
         Returns: boolean;
       };
+      find_auth_user_id_by_email: {
+        Args: { p_email: string };
+        Returns: string | null;
+      };
       expire_stale_signup_intents: {
         Args: Record<PropertyKey, never>;
         Returns: number;

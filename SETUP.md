@@ -105,6 +105,10 @@ A primeira cria a recuperação cross-device por token de uso único, a retomada
 
 Para uma base existente que já recebeu as migrations anteriores, execute **somente** `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609230021_block_finalization_during_reactivation.sql` antes de publicar a correção de cancelamento. Ela impede que uma reativação ainda sem confirmação seja finalizada como cancelamento após dez minutos; não altera dados existentes. Não reaplique `schema.sql` na base existente.
 
+Na release de segurança seguinte, execute primeiro a auditoria somente leitura `C:\Projeto-Github\ClickCatálogo\supabase\audit-slug-integrity.sql` e guarde o resultado. Em seguida, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609300023_restrict_tenant_slug_update.sql`: ela remove a permissão direta de alterar `tenants.slug` pela API, de modo que a troca de endereço passe obrigatoriamente pela RPC `change_tenant_slug` (histórico, aliases protegidos e reservas de cadastro). A consulta final da migration deve retornar `false`, `true`, `true`. Repita a auditoria; a primeira consulta deve retornar `false` e as consultas 2 a 5 não devem retornar linhas. A migration não altera dados e pode ser aplicada antes do deploy do código.
+
+Na mesma release, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609300024_auth_user_lookup_by_email.sql`. Ela cria a busca de usuário do Auth por e-mail usada pelo webhook, restrita à `service_role`; a consulta final deve retornar `true`, `false`, `false`. Não altera dados. Se o deploy acontecer antes dela, o webhook continua funcionando com a paginação antiga e registra `asaas.webhook.auth_user_lookup` nos logs.
+
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria
@@ -184,7 +188,7 @@ Antes de vender para clientes reais, configure um SMTP próprio em **Authenticat
 
 ### Resend recomendado para o lançamento
 
-O ClickCatálogo usa o Resend de duas formas: como SMTP do Supabase Auth para recuperação de senha e pela API direta para a jornada **Recuperar meu cadastro**. A API direta envia um link de uso único, com token bruto apenas no fragmento da URL; o banco recebe somente o hash.
+O ClickCatálogo usa o Resend de duas formas: como SMTP do Supabase Auth para recuperação de senha e pela API direta para a jornada **Acessar minha loja** e para o formulário de **Atendimento**. Na jornada de acesso, a API direta envia um link de uso único, com token bruto apenas no fragmento da URL; o banco recebe somente o hash.
 
 1. No Resend, abra **Domains → Add Domain**.
 2. Cadastre o subdomínio `auth.clickcatalogo.com`. O subdomínio separa a reputação dos e-mails de autenticação de futuras campanhas de marketing.
@@ -204,7 +208,7 @@ Remetente: nao-responda@auth.clickcatalogo.com
 Nome: ClickCatálogo
 ```
 
-Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Para a retomada de cadastro, crie outra chave com permissão somente de envio e domínio restrito, e salve-a como `RESEND_API_KEY` somente em `.env.local` e na Netlify. Configure `RESEND_FROM_EMAIL` com um remetente do mesmo domínio verificado.
+Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Para **Acessar minha loja** e para o **Atendimento**, crie outra chave com permissão somente de envio e domínio restrito, e salve-a como `RESEND_API_KEY` somente em `.env.local` e na Netlify. Configure `RESEND_FROM_EMAIL` com um remetente do mesmo domínio verificado. Depois do deploy, `npm run audit:production` confirma se esse canal está pronto.
 
 ### Canal público de atendimento
 

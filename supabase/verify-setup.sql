@@ -152,11 +152,17 @@ select
     'authenticated',
     'public.claim_signup_checkout_restart(uuid, integer)',
     'EXECUTE'
-  ) as usuario_nao_pode_reservar_checkout;
+  ) as usuario_nao_pode_reservar_checkout,
+  has_function_privilege('service_role', 'public.find_auth_user_id_by_email(text)', 'EXECUTE')
+    as backend_pode_buscar_usuario,
+  not has_function_privilege('authenticated', 'public.find_auth_user_id_by_email(text)', 'EXECUTE')
+    as titular_nao_pode_buscar_usuario;
 
 select
   has_function_privilege('authenticated', 'public.change_tenant_slug(text)', 'EXECUTE')
     as titular_pode_alterar_slug,
+  not has_column_privilege('authenticated', 'public.tenants', 'slug', 'UPDATE')
+    as slug_nao_alteravel_diretamente,
   has_function_privilege('anon', 'public.resolve_public_store_slug(text)', 'EXECUTE')
     as visitante_pode_resolver_redirecionamento,
   not has_table_privilege('authenticated', 'public.tenant_slug_history', 'SELECT')
