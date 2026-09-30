@@ -505,8 +505,8 @@ revoke all on table public.account_deletion_requests from anon, authenticated;
 revoke all on table public.legal_retention_records from anon, authenticated;
 
 grant select on table public.tenants to authenticated;
+-- slug fica fora desta lista: a troca só ocorre por change_tenant_slug.
 grant update (
-  slug,
   nome_loja,
   logo_url,
   banner_url,

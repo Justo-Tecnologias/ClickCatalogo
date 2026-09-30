@@ -3,6 +3,30 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const schemaPath = new URL("../supabase/schema.sql", import.meta.url);
+const slugGrantMigrationPath = new URL(
+  "../supabase/migrations/202609300023_restrict_tenant_slug_update.sql",
+  import.meta.url,
+);
+
+function tenantUpdateColumns(sql: string) {
+  const grants = [...sql.matchAll(/grant update \(([^)]*)\) on table public\.tenants to authenticated/g)];
+  return grants.map((grant) => grant[1].split(",").map((column) => column.trim()));
+}
+
+test("slug do tenant só muda pela RPC change_tenant_slug", async () => {
+  const schema = (await readFile(schemaPath, "utf8")).toLowerCase();
+  const migration = (await readFile(slugGrantMigrationPath, "utf8")).toLowerCase();
+
+  for (const sql of [schema, migration]) {
+    const grants = tenantUpdateColumns(sql);
+    assert.equal(grants.length, 1);
+    assert.ok(!grants[0].includes("slug"));
+    assert.ok(grants[0].includes("nome_loja"));
+  }
+  assert.doesNotMatch(schema, /grant update on table public\.tenants/);
+  assert.match(migration, /revoke update on table public\.tenants from authenticated/);
+  assert.match(schema, /update public\.tenants set slug = v_new_slug where id = v_tenant\.id/);
+});
 
 test("schema preserva isolamento, unicidade e idempotência financeira", async () => {
   const sql = (await readFile(schemaPath, "utf8")).toLowerCase();

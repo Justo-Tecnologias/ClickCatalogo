@@ -157,6 +157,8 @@ select
 select
   has_function_privilege('authenticated', 'public.change_tenant_slug(text)', 'EXECUTE')
     as titular_pode_alterar_slug,
+  not has_column_privilege('authenticated', 'public.tenants', 'slug', 'UPDATE')
+    as slug_nao_alteravel_diretamente,
   has_function_privilege('anon', 'public.resolve_public_store_slug(text)', 'EXECUTE')
     as visitante_pode_resolver_redirecionamento,
   not has_table_privilege('authenticated', 'public.tenant_slug_history', 'SELECT')
