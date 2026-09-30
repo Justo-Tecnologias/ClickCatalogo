@@ -1,5 +1,6 @@
 import { authoritativePaidThroughDate, brazilDateStartAsIso } from "../../src/lib/asaas/paid-period.mjs";
 import { overdueNoticeEmail } from "../../src/lib/billing/overdue-emails.mjs";
+import { brazilToday } from "../../src/lib/billing/overdue-policy.mjs";
 
 const REQUEST_TIMEOUT_MS = 3_000;
 const RECONCILIATION_LIMIT = 10;
@@ -261,6 +262,25 @@ async function inspectUnresolvedReconciliations(env) {
   };
 }
 
+// Rede de segurança: uma assinatura atrasada sem data de início (evento
+// processado por uma versão anterior ou falha ao registrar) passa a contar
+// a partir de hoje, recebendo o ciclo completo de avisos.
+async function backfillMissingOverdueSince(env) {
+  const filters = new URLSearchParams({
+    cancel_at_period_end: "eq.false",
+    overdue_since: "is.null",
+    status: "eq.atrasado",
+  });
+  const response = await supabaseRequest(env, `subscriptions?${filters}`, {
+    body: JSON.stringify({ overdue_since: brazilToday() }),
+    headers: { Prefer: "return=representation" },
+    method: "PATCH",
+  });
+  if (!response.ok) throw new Error(`Falha ao completar datas de atraso (${response.status}).`);
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
 async function setOverdueCancellationAttention(env, row) {
   const filters = new URLSearchParams({
     id: `eq.${row.id}`,
@@ -461,12 +481,14 @@ async function sendOverdueNotices(env) {
 export default async function finalizeSubscriptionCancellations() {
   const env = requireEnvironment();
   const reconciliation = await retryPendingReconciliations(env);
+  const overdueBackfilled = await backfillMissingOverdueSince(env);
   const overdueCancellations = await processOverdueCancellations(env);
   const finalized = await finalizeExpiredAccess(env);
   const overdueNotices = await sendOverdueNotices(env);
   const unresolved = await inspectUnresolvedReconciliations(env);
   console.log(JSON.stringify({
     finalized,
+    overdueBackfilled,
     overdueCancellations,
     overdueNotices,
     ranAt: new Date().toISOString(),

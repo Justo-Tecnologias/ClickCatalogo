@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import finalizeSubscriptionCancellations from "../netlify/functions/finalize-subscription-cancellations.mjs";
+import { brazilToday } from "../src/lib/billing/overdue-policy.mjs";
 
 test("assinatura já excluída é conciliada e acesso volta ao mês comprovadamente pago", async () => {
   const originalFetch = globalThis.fetch;
@@ -49,6 +50,9 @@ test("assinatura já excluída é conciliada e acesso volta ao mês comprovadame
         id: "pay_confirmed",
         status: "CONFIRMED",
       }], hasMore: false });
+    }
+    if (url.pathname.endsWith("/subscriptions") && init?.method === "PATCH" && url.searchParams.get("overdue_since") === "is.null") {
+      return response([]);
     }
     if (url.pathname.endsWith("/subscriptions") && init?.method === "PATCH") {
       updates.push(JSON.parse(String(init.body)));
@@ -104,10 +108,15 @@ async function runScheduledFunction(handler: MockHandler, extraEnv: Record<strin
   });
 
   const requests: { body: unknown; headers: Headers; method: string; url: URL }[] = [];
+  const backfills: unknown[] = [];
   const logs: string[] = [];
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
+    if (method === "PATCH" && url.searchParams.get("overdue_since") === "is.null") {
+      backfills.push({ body: JSON.parse(String(init?.body)), filters: Object.fromEntries(url.searchParams) });
+      return Response.json([{ id: "backfilled" }]);
+    }
     requests.push({ body: init?.body ? JSON.parse(String(init.body)) : null, headers: new Headers(init?.headers), method, url });
     const custom = handler(url, init);
     if (custom) return custom;
@@ -125,7 +134,7 @@ async function runScheduledFunction(handler: MockHandler, extraEnv: Record<strin
 
   try {
     await finalizeSubscriptionCancellations();
-    return { requests, summary: JSON.parse(logs.at(-1)!) };
+    return { backfills, requests, summary: JSON.parse(logs.at(-1)!) };
   } finally {
     globalThis.fetch = originalFetch;
     console.log = originalLog;
@@ -148,7 +157,7 @@ test("30º dia de atraso: inativa recorrência, remove fatura aberta e só entã
   let overdueClaims = 0;
   let paymentLists = 0;
 
-  const { requests, summary } = await runScheduledFunction((url, init) => {
+  const { backfills, requests, summary } = await runScheduledFunction((url, init) => {
     if (url.pathname.endsWith("/rpc/claim_overdue_cancellations")) {
       overdueClaims += 1;
       return Response.json(overdueClaims === 1 ? [row] : []);
@@ -185,6 +194,12 @@ test("30º dia de atraso: inativa recorrência, remove fatura aberta e só entã
   assert.ok(inactivationIndex >= 0 && inactivationIndex < finalizeIndex);
   assert.equal(summary.overdueCancellations.canceled, 1);
   assert.equal(summary.overdueNotices.skipped, "resend_not_configured");
+  // Rede de segurança: atrasadas sem data passam a contar a partir de hoje.
+  assert.deepEqual(backfills, [{
+    body: { overdue_since: brazilToday() },
+    filters: { cancel_at_period_end: "eq.false", overdue_since: "is.null", status: "eq.atrasado" },
+  }]);
+  assert.equal(summary.overdueBackfilled, 1);
 });
 
 test("30º dia de atraso: pagamento identificado impede o encerramento", async () => {
