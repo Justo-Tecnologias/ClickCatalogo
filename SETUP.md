@@ -109,6 +109,10 @@ Na release de segurança seguinte, execute primeiro a auditoria somente leitura 
 
 Na mesma release, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609300024_auth_user_lookup_by_email.sql`. Ela cria a busca de usuário do Auth por e-mail usada pelo webhook, restrita à `service_role`; a consulta final deve retornar `true`, `false`, `false`. Não altera dados. Se o deploy acontecer antes dela, o webhook continua funcionando com a paginação antiga e registra `asaas.webhook.auth_user_lookup` nos logs.
 
+Na release da política de atraso, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202609300025_overdue_suspension_policy.sql` **imediatamente antes** do deploy do código. Ela adiciona os campos de atraso em `subscriptions`, faz o catálogo sair do ar a partir do 8º dia de atraso, cria as RPCs usadas pela Scheduled Function (avisos nos dias 1, 6 e 25 e encerramento no 30º dia) e inicia a contagem das assinaturas que já estavam em atraso na data da aplicação. A consulta final deve retornar `true`, `false`, `false` e a quantidade de assinaturas em atraso. Depois, repita `verify-setup.sql`.
+
+Com o deploy publicado, avise os lojistas atuais sobre a atualização dos Termos: rode `npm run notify:terms` (simulação, lista destinatários mascarados) e, depois de revisar, `npm run notify:terms -- --execute --confirm=AVISAR-LOJISTAS-TERMOS`. A chave idempotente impede duplicidade se o comando for repetido no mesmo dia.
+
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria

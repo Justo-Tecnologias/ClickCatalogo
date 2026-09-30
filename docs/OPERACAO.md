@@ -36,7 +36,11 @@ Rotina mínima para manter o serviço estável no lançamento. Este documento n�
 - **Netlify:** conferir falhas de Functions, deploys e consumo do plano.
 - **Supabase:** conferir erros em **Logs**, usuários inesperados em **Authentication → Users** e crescimento anormal de banco/Storage.
 - **Asaas:** conferir entregas do webhook, cobranças pendentes e eventos com falha.
-- **Resend:** conferir entregas, rejeições e reclamações de spam dos e-mails de autenticação.
+- **Resend:** conferir entregas, rejeições e reclamações de spam dos e-mails de autenticação e dos avisos de atraso.
+- **Política de atraso (logs da Scheduled Function):** o resumo horário traz `overdueCancellations` e `overdueNotices`. Investigar:
+  - `overdue.cancellation.superseded`: um pagamento reativou a loja depois que a recorrência foi inativada no Asaas. Reative a assinatura no Asaas manualmente, sem nova cobrança do período pago;
+  - `overdue.cancellation.failed`: o encerramento do 30º dia ficou em `attention` e será repetido a cada 15 minutos. Se persistir, confira as cobranças abertas no Asaas;
+  - `overdue.notice.failed` ou `overdue.notice.skipped`: aviso de atraso não enviado (Resend fora do ar ou sem configuração).
 - Nunca copiar payloads completos com e-mail, telefone, token ou chave para issue, chat ou repositório público.
 
 ## Auditoria semanal do ambiente real

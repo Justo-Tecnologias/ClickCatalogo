@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { recordProductMetric } from "@/lib/analytics/server";
 import { getAsaasCheckoutPlan } from "@/lib/billing/server-plan";
+import { brazilToday, officialAsaasInvoiceUrl } from "@/lib/billing/overdue-policy.mjs";
 import { overdueEventIsOlder, scheduledAccessIsActive } from "@/lib/billing/state";
 import { requireAsaasWebhookToken } from "@/lib/env/server";
 import { isSupabaseConfigured } from "@/lib/env/public";
@@ -27,6 +28,17 @@ const eventSchema = z.object({
 
 type WebhookEvent = z.infer<typeof eventSchema>;
 type SignupIntent = Database["public"]["Tables"]["signup_intents"]["Row"];
+
+// Pagamento confirmado encerra o ciclo de atraso: prazos, avisos e qualquer
+// encerramento por atraso ainda não concluído voltam ao estado inicial.
+const OVERDUE_RESET = {
+  overdue_cancellation_checked_at: null,
+  overdue_cancellation_status: "not_required",
+  overdue_invoice_url: null,
+  overdue_last_notice_day: 0,
+  overdue_notice_claimed_at: null,
+  overdue_since: null,
+} as const satisfies Database["public"]["Tables"]["subscriptions"]["Update"];
 
 function textValue(record: Record<string, unknown> | undefined, ...keys: string[]) {
   for (const key of keys) if (typeof record?.[key] === "string") return record[key] as string;
@@ -304,6 +316,7 @@ async function activateExistingSubscription(event: WebhookEvent) {
     asaas_subscription_state: "active",
     cancellation_reconciliation_checked_at: null,
     cancellation_reconciliation_status: "not_required",
+    ...OVERDUE_RESET,
     status: "ativo",
   };
   const customerId = customerIdFrom(event);
@@ -408,6 +421,7 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
     asaas_subscription_state: "active",
     cancellation_reconciliation_checked_at: null,
     cancellation_reconciliation_status: "not_required",
+    ...OVERDUE_RESET,
     status: "ativo",
     valor: value,
   };
@@ -431,6 +445,32 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
   if (intent.status !== "pago") await recordProductMetric("payment_confirmed", tenantId);
 }
 
+// Registra o início do atraso somente uma vez (o primeiro vencimento não pago
+// define os prazos) e guarda o link oficial da fatura para painel e e-mails.
+async function markSubscriptionOverdue(
+  admin: ReturnType<typeof createAdminClient>,
+  event: WebhookEvent,
+  column: "id" | "tenant_id",
+  value: string,
+) {
+  const dueDate = textValue(event.payment, "dueDate");
+  const overdueSince = dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : brazilToday();
+  const { error: sinceError } = await admin.from("subscriptions")
+    .update({ overdue_since: overdueSince })
+    .eq(column, value)
+    .eq("status", "atrasado")
+    .is("overdue_since", null);
+  if (sinceError) throw sinceError;
+
+  const invoiceUrl = officialAsaasInvoiceUrl(textValue(event.payment, "invoiceUrl"));
+  if (!invoiceUrl) return;
+  const { error: invoiceError } = await admin.from("subscriptions")
+    .update({ overdue_invoice_url: invoiceUrl })
+    .eq(column, value)
+    .eq("status", "atrasado");
+  if (invoiceError) throw invoiceError;
+}
+
 async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus: "atrasado" | "cancelado", tenantStatus: "inadimplente" | "cancelado") {
   const admin = createAdminClient();
   const subscriptionId = subscriptionIdFrom(event);
@@ -450,6 +490,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
       ) return;
       const { error: updateError } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", subscription.id);
       if (updateError) throw updateError;
+      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", subscription.id);
     }
   }
   if (!tenantId && customerId) {
@@ -463,6 +504,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
       ) return;
       const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", existing.id);
       if (error) throw error;
+      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", existing.id);
     }
   }
   if (!tenantId) tenantId = (await findIntent(event))?.provisioned_tenant_id ?? null;
@@ -470,6 +512,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
   if (!subscriptionId && !customerId) {
     const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("tenant_id", tenantId);
     if (error) throw error;
+    if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "tenant_id", tenantId);
   }
   const tenantValues: Database["public"]["Tables"]["tenants"]["Update"] = {
     status: tenantStatus,
@@ -527,6 +570,7 @@ async function completePendingReactivation(event: WebhookEvent) {
     cancel_at_period_end: false,
     cancellation_reconciliation_checked_at: null,
     cancellation_reconciliation_status: "not_required",
+    ...OVERDUE_RESET,
     cancellation_requested_at: null,
     reactivation_requested_at: null,
     status: "ativo",
@@ -578,6 +622,7 @@ async function provisionReactivation(intent: SignupIntent, event: WebhookEvent) 
     cancel_at_period_end: false,
     cancellation_reconciliation_checked_at: null,
     cancellation_reconciliation_status: "not_required",
+    ...OVERDUE_RESET,
     cancellation_requested_at: null,
     reactivation_requested_at: null,
     status: "ativo",

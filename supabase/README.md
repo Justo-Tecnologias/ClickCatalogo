@@ -46,6 +46,8 @@ O arquivo `migrations/202609300023_restrict_tenant_slug_update.sql` retira `slug
 
 O arquivo `migrations/202609300024_auth_user_lookup_by_email.sql` cria a RPC `find_auth_user_id_by_email`, restrita à `service_role`, usada pelo webhook para localizar um usuário do Auth pelo e-mail sem paginar a base inteira. Enquanto ela não estiver aplicada, o webhook usa a paginação antiga como plano B.
 
+O arquivo `migrations/202609300025_overdue_suspension_policy.sql` implementa a política de atraso: `subscriptions.overdue_since` guarda o vencimento não pago; `get_public_catalog` deixa a loja indisponível a partir do 8º dia (`get_public_store_status` devolve `suspenso`); `claim_overdue_notices` reserva os avisos dos dias 1, 6 e 25; `claim_overdue_cancellations` e `finalize_overdue_cancellation` encerram a assinatura no 30º dia, depois que a Scheduled Function inativa a recorrência e remove as cobranças abertas no Asaas. Todas as RPCs novas são restritas à `service_role`. Os números devem permanecer alinhados com `src/lib/billing/overdue-policy.mjs`.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

@@ -65,7 +65,9 @@ const queryPublicStore = unstable_cache(async (slug: string): Promise<CachedPubl
 
   const { data: status, error: statusError } = await supabase.rpc("get_public_store_status", { p_slug: slug });
   if (statusError) throw new Error("Não foi possível verificar o status desta loja.");
-  if (status === "cancelado") return { kind: "canceled" };
+  // "suspenso" = atraso a partir do 8º dia. O visitante vê a mesma mensagem
+  // neutra de indisponibilidade, sem expor a situação financeira da loja.
+  if (status === "cancelado" || status === "suspenso") return { kind: "canceled" };
 
   return { kind: "missing" };
 }, ["public-store"], { revalidate: 60 });
