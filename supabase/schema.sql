@@ -1126,7 +1126,7 @@ returns table (
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 #variable_conflict use_column
 declare
   v_today date := (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
@@ -1184,7 +1184,7 @@ begin
   join public.tenants as tenant on tenant.id = claimed.tenant_id
   join auth.users as auth_user on auth_user.id = tenant.owner_user_id;
 end;
-$;
+$$;
 
 -- Reserva assinaturas que chegaram ao 30º dia de atraso para encerramento.
 create or replace function public.claim_overdue_cancellations(p_limit integer default 1)
@@ -1192,7 +1192,7 @@ returns setof public.subscriptions
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_today date := (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
 begin
@@ -1238,7 +1238,7 @@ begin
   where subscription.id = candidates.id
   returning subscription.*;
 end;
-$;
+$$;
 
 -- Conclui o encerramento somente se a reserva continua válida e nenhum
 -- pagamento reativou a assinatura enquanto o Asaas era conciliado.
@@ -1251,7 +1251,7 @@ returns boolean
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_tenant_id uuid;
 begin
@@ -1283,7 +1283,7 @@ begin
 
   return true;
 end;
-$;
+$$;
 
 revoke all on function public.claim_overdue_notices(integer) from public, anon, authenticated;
 revoke all on function public.claim_overdue_cancellations(integer) from public, anon, authenticated;

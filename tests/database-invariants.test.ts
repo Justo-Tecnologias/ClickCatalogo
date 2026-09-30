@@ -13,6 +13,12 @@ function tenantUpdateColumns(sql: string) {
   return grants.map((grant) => grant[1].split(",").map((column) => column.trim()));
 }
 
+test("funções SQL mantêm delimitadores $$ íntegros", async () => {
+  const schema = await readFile(schemaPath, "utf8");
+  assert.doesNotMatch(schema, /^as \$\r?$/m);
+  assert.equal((schema.match(/\$\$/g) ?? []).length % 2, 0);
+});
+
 test("slug do tenant só muda pela RPC change_tenant_slug", async () => {
   const schema = (await readFile(schemaPath, "utf8")).toLowerCase();
   const migration = (await readFile(slugGrantMigrationPath, "utf8")).toLowerCase();

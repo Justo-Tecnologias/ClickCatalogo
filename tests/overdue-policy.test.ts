@@ -110,7 +110,12 @@ test("webhook registra e limpa o atraso; rotina encerra somente após limpar cob
 
   assert.match(webhook, /if \(subscriptionStatus === "atrasado"\) await markSubscriptionOverdue/);
   assert.match(webhook, /\.is\("overdue_since", null\)/);
-  assert.equal((webhook.match(/\.\.\.OVERDUE_RESET,/g) ?? []).length, 4);
+  // Atraso que começa numa assinatura em dia sempre inicia um ciclo novo.
+  assert.match(webhook, /startsNewCycle \? \{ \.\.\.OVERDUE_RESET, overdue_since: overdueSince \}/);
+  assert.match(webhook, /markSubscriptionOverdue\(admin, event, "id", subscription\.id, subscription\.status !== "atrasado"\)/);
+  assert.match(webhook, /markSubscriptionOverdue\(admin, event, "id", existing\.id, existing\.status !== "atrasado"\)/);
+  // Os quatro caminhos de pagamento/reativação confirmados zeram o atraso.
+  assert.equal((webhook.match(/^ {4}\.\.\.OVERDUE_RESET,\r?$/gm) ?? []).length, 4);
   assert.match(catalog, /status === "cancelado" \|\| status === "suspenso"/);
 
   assert.match(cron, /rpc\/claim_overdue_cancellations/);

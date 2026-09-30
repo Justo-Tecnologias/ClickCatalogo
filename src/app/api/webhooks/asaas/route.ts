@@ -452,14 +452,18 @@ async function markSubscriptionOverdue(
   event: WebhookEvent,
   column: "id" | "tenant_id",
   value: string,
+  startsNewCycle: boolean,
 ) {
   const dueDate = textValue(event.payment, "dueDate");
   const overdueSince = dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : brazilToday();
-  const { error: sinceError } = await admin.from("subscriptions")
-    .update({ overdue_since: overdueSince })
+  // Uma assinatura que não estava atrasada inicia um ciclo novo e descarta
+  // qualquer resquício de atraso anterior (ex.: pago antes deste código).
+  // Em reentregas do mesmo ciclo, a primeira data registrada é preservada.
+  const sinceQuery = admin.from("subscriptions")
+    .update(startsNewCycle ? { ...OVERDUE_RESET, overdue_since: overdueSince } : { overdue_since: overdueSince })
     .eq(column, value)
-    .eq("status", "atrasado")
-    .is("overdue_since", null);
+    .eq("status", "atrasado");
+  const { error: sinceError } = startsNewCycle ? await sinceQuery : await sinceQuery.is("overdue_since", null);
   if (sinceError) throw sinceError;
 
   const invoiceUrl = officialAsaasInvoiceUrl(textValue(event.payment, "invoiceUrl"));
@@ -490,7 +494,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
       ) return;
       const { error: updateError } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", subscription.id);
       if (updateError) throw updateError;
-      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", subscription.id);
+      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", subscription.id, subscription.status !== "atrasado");
     }
   }
   if (!tenantId && customerId) {
@@ -504,7 +508,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
       ) return;
       const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("id", existing.id);
       if (error) throw error;
-      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", existing.id);
+      if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "id", existing.id, existing.status !== "atrasado");
     }
   }
   if (!tenantId) tenantId = (await findIntent(event))?.provisioned_tenant_id ?? null;
@@ -512,7 +516,7 @@ async function updateSubscriptionStatus(event: WebhookEvent, subscriptionStatus:
   if (!subscriptionId && !customerId) {
     const { error } = await admin.from("subscriptions").update({ status: subscriptionStatus }).eq("tenant_id", tenantId);
     if (error) throw error;
-    if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "tenant_id", tenantId);
+    if (subscriptionStatus === "atrasado") await markSubscriptionOverdue(admin, event, "tenant_id", tenantId, false);
   }
   const tenantValues: Database["public"]["Tables"]["tenants"]["Update"] = {
     status: tenantStatus,
