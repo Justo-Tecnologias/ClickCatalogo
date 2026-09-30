@@ -36,7 +36,8 @@ export async function POST(request: Request) {
       .from("tenants")
       .select("id")
       .eq("slug", parsed.data.slug)
-      .eq("status", "ativo")
+      // Mesma regra da loja pública: inadimplentes continuam no ar e contam.
+      .in("status", ["ativo", "inadimplente"])
       .maybeSingle();
     if (!data) return new NextResponse(null, { status: 204 });
     tenantId = data.id;
