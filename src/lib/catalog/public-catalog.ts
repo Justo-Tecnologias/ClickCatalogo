@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { z } from "zod";
 
+import { allowedExternalLinkOrNull } from "@/lib/catalog/external-links";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { DEMO_CATALOG, DEMO_TENANT, isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -14,7 +15,8 @@ const productSchema = z.object({
   descricao: z.string().nullable(),
   id: z.uuid(),
   imagem_url: z.string().nullable(),
-  link_externo: z.url().nullable().optional().default(null),
+  // Links gravados antes da lista de lojas permitidas deixam de ser exibidos.
+  link_externo: z.string().nullable().optional().default(null).transform(allowedExternalLinkOrNull),
   nome: z.string(),
   ordem: z.number(),
   preco: z.coerce.number(),
