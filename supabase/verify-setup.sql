@@ -152,7 +152,11 @@ select
     'authenticated',
     'public.claim_signup_checkout_restart(uuid, integer)',
     'EXECUTE'
-  ) as usuario_nao_pode_reservar_checkout;
+  ) as usuario_nao_pode_reservar_checkout,
+  has_function_privilege('service_role', 'public.find_auth_user_id_by_email(text)', 'EXECUTE')
+    as backend_pode_buscar_usuario,
+  not has_function_privilege('authenticated', 'public.find_auth_user_id_by_email(text)', 'EXECUTE')
+    as titular_nao_pode_buscar_usuario;
 
 select
   has_function_privilege('authenticated', 'public.change_tenant_slug(text)', 'EXECUTE')
