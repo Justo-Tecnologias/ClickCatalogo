@@ -186,7 +186,7 @@ Antes de vender para clientes reais, configure um SMTP próprio em **Authenticat
 
 ### Resend recomendado para o lançamento
 
-O ClickCatálogo usa o Resend de duas formas: como SMTP do Supabase Auth para recuperação de senha e pela API direta para a jornada **Recuperar meu cadastro**. A API direta envia um link de uso único, com token bruto apenas no fragmento da URL; o banco recebe somente o hash.
+O ClickCatálogo usa o Resend de duas formas: como SMTP do Supabase Auth para recuperação de senha e pela API direta para a jornada **Acessar minha loja** e para o formulário de **Atendimento**. Na jornada de acesso, a API direta envia um link de uso único, com token bruto apenas no fragmento da URL; o banco recebe somente o hash.
 
 1. No Resend, abra **Domains → Add Domain**.
 2. Cadastre o subdomínio `auth.clickcatalogo.com`. O subdomínio separa a reputação dos e-mails de autenticação de futuras campanhas de marketing.
@@ -206,7 +206,7 @@ Remetente: nao-responda@auth.clickcatalogo.com
 Nome: ClickCatálogo
 ```
 
-Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Para a retomada de cadastro, crie outra chave com permissão somente de envio e domínio restrito, e salve-a como `RESEND_API_KEY` somente em `.env.local` e na Netlify. Configure `RESEND_FROM_EMAIL` com um remetente do mesmo domínio verificado.
+Não registre essa API Key no Git. Ela fica somente no campo de senha SMTP do Supabase. Para **Acessar minha loja** e para o **Atendimento**, crie outra chave com permissão somente de envio e domínio restrito, e salve-a como `RESEND_API_KEY` somente em `.env.local` e na Netlify. Configure `RESEND_FROM_EMAIL` com um remetente do mesmo domínio verificado. Depois do deploy, `npm run audit:production` confirma se esse canal está pronto.
 
 ### Canal público de atendimento
 

@@ -40,7 +40,7 @@ Preencha `.env.local` quando as credenciais estiverem disponíveis. Nunca envie 
 1. Em um Supabase novo, execute somente `supabase/schema.sql`. Em um banco já criado, aplique as migrations posteriores na ordem documentada em `supabase/README.md`.
 2. Copie `.env.example` para `.env.local` e informe as chaves.
 3. No Supabase Auth, adicione `http://localhost:3000/auth/callback` às URLs permitidas em desenvolvimento.
-4. Para recuperação de senha em produção, verifique `auth.clickcatalogo.com` no Resend, conecte o SMTP ao Supabase Auth e aplique o modelo em `docs/supabase-email-templates/recovery.html`; nenhuma variável Resend é usada pela aplicação.
+4. Para recuperação de senha em produção, verifique `auth.clickcatalogo.com` no Resend, conecte o SMTP ao Supabase Auth e aplique o modelo em `docs/supabase-email-templates/recovery.html`. Com outra chave restrita a envio, configure `RESEND_API_KEY` e `RESEND_FROM_EMAIL`: a aplicação as usa para o link de **Acessar minha loja** e para o formulário de **Atendimento**.
 5. No Asaas Sandbox, cadastre `https://SEU-DOMINIO/api/webhooks/asaas` e use exatamente o mesmo token de `ASAAS_WEBHOOK_TOKEN`.
 6. Para testar webhooks localmente, use uma URL HTTPS pública de túnel e atualize `NEXT_PUBLIC_SITE_URL`.
 7. Para publicar, conecte o repositório à Netlify; `netlify.toml` contém as configurações de build.

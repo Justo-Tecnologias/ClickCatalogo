@@ -6,6 +6,7 @@ import { SupportContact } from "@/components/marketing/support-contact";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPanelContext } from "@/lib/auth/session";
+import { getResendEnv } from "@/lib/env/server";
 import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
@@ -41,6 +42,9 @@ export default async function SupportPage({
     : "/";
   const returnLabel = returnHref.startsWith("/painel/") ? "Voltar ao painel" : "Voltar";
   const { supportEmail } = getLegalIdentity();
+  // O formulário e a retomada de cadastro dependem da mesma API do Resend.
+  // O atributo expõe apenas se o canal está pronto, para a auditoria publicada.
+  const supportChannelReady = Boolean(supportEmail && getResendEnv());
   const panelContext = await getPanelContext();
   const defaultEmail = panelContext.authenticated && !panelContext.demo ? panelContext.userEmail ?? "" : "";
   const defaultName = panelContext.authenticated && !panelContext.demo ? panelContext.tenant?.nome_loja ?? "" : "";
@@ -66,8 +70,14 @@ export default async function SupportPage({
             <CardTitle as="h1" className="text-2xl">Como podemos ajudar?</CardTitle>
             <CardDescription>Envie sua dúvida por aqui. Para proteger sua conta, podemos pedir a confirmação do e-mail cadastrado.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {supportEmail ? <SupportContact defaultEmail={defaultEmail} defaultName={defaultName} defaultTopic={defaultTopic} supportEmail={supportEmail} /> : <Alert description="O endereço oficial precisa ser configurado antes de receber solicitações." title="Canal em configuração" variant="warning" />}
+          <CardContent data-support-channel={supportChannelReady ? "ready" : "unavailable"}>
+            {!supportEmail ? (
+              <Alert description="O endereço oficial precisa ser configurado antes de receber solicitações." title="Canal em configuração" variant="warning" />
+            ) : supportChannelReady ? (
+              <SupportContact defaultEmail={defaultEmail} defaultName={defaultName} defaultTopic={defaultTopic} supportEmail={supportEmail} />
+            ) : (
+              <Alert description={`Enquanto isso, escreva diretamente para ${supportEmail}.`} title="Formulário temporariamente indisponível" variant="warning" />
+            )}
           </CardContent>
         </Card>
       </div>
