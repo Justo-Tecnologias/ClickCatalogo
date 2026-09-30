@@ -55,4 +55,26 @@ for (const [, themeName, block] of themes) {
   }
 }
 
+const themeColorsSource = await readFile(resolve("src/lib/design-system/theme-colors.ts"), "utf8");
+const themeColorTokens = {
+  accent: "--cor-acao",
+  accentText: "--cor-na-acao",
+  background: "--cor-fundo",
+  foreground: "--cor-texto",
+};
+
+for (const [, themeName, block] of themes) {
+  const entry = themeColorsSource.match(new RegExp(`\\b${themeName}:\\s*\\{([^}]+)\\}`));
+  if (!entry) throw new Error(`${themeName}: tema ausente em theme-colors.ts.`);
+
+  for (const [key, property] of Object.entries(themeColorTokens)) {
+    const value = entry[1].match(new RegExp(`\\b${key}:\\s*"(#[0-9a-fA-F]{6})"`))?.[1];
+    const expected = readColor(block, property);
+    if (value?.toLowerCase() !== expected.toLowerCase()) {
+      throw new Error(`${themeName}: theme-colors.ts ${key}=${value ?? "ausente"} diverge de ${property}=${expected} em themes.css.`);
+    }
+  }
+}
+
 console.log("Contraste AA validado nos 6 temas.");
+console.log("Cores de theme-colors.ts sincronizadas com themes.css.");
