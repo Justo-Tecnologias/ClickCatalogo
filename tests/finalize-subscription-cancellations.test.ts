@@ -11,8 +11,14 @@ test("assinatura já excluída é conciliada e acesso volta ao mês comprovadame
     ASAAS_API_KEY: process.env.ASAAS_API_KEY,
     ASAAS_API_URL: process.env.ASAAS_API_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
+  // O ambiente de build (ex.: Netlify) pode ter Resend configurado; o teste
+  // deve se comportar igual em qualquer máquina.
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM_EMAIL;
   process.env.ASAAS_API_KEY = "$aact_hmlg_test";
   process.env.ASAAS_API_URL = "https://api-sandbox.asaas.com/v3";
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
@@ -60,6 +66,7 @@ test("assinatura já excluída é conciliada e acesso volta ao mês comprovadame
     }
     if (url.pathname.endsWith("/rpc/finalize_due_subscription_cancellations")) return response(0);
     if (url.pathname.endsWith("/rpc/claim_overdue_cancellations")) return response([]);
+    if (url.pathname.endsWith("/rpc/claim_overdue_notices")) return response([]);
     if (url.pathname.endsWith("/subscriptions") && init?.method !== "PATCH") {
       return response([], 200, { "content-range": "*/0" });
     }
