@@ -424,6 +424,12 @@ export type Database = {
           created_at: string;
           id: string;
           next_due_date: string | null;
+          overdue_cancellation_checked_at: string | null;
+          overdue_cancellation_status: "attention" | "complete" | "not_required" | "processing";
+          overdue_invoice_url: string | null;
+          overdue_last_notice_day: 0 | 1 | 6 | 25;
+          overdue_notice_claimed_at: string | null;
+          overdue_since: string | null;
           portal_url: string | null;
           reactivation_requested_at: string | null;
           status: SubscriptionStatus;
@@ -443,6 +449,12 @@ export type Database = {
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
+          overdue_cancellation_checked_at?: string | null;
+          overdue_cancellation_status?: "attention" | "complete" | "not_required" | "processing";
+          overdue_invoice_url?: string | null;
+          overdue_last_notice_day?: 0 | 1 | 6 | 25;
+          overdue_notice_claimed_at?: string | null;
+          overdue_since?: string | null;
           portal_url?: string | null;
           reactivation_requested_at?: string | null;
           status?: SubscriptionStatus;
@@ -462,6 +474,12 @@ export type Database = {
           created_at?: string;
           id?: string;
           next_due_date?: string | null;
+          overdue_cancellation_checked_at?: string | null;
+          overdue_cancellation_status?: "attention" | "complete" | "not_required" | "processing";
+          overdue_invoice_url?: string | null;
+          overdue_last_notice_day?: 0 | 1 | 6 | 25;
+          overdue_notice_claimed_at?: string | null;
+          overdue_since?: string | null;
           portal_url?: string | null;
           reactivation_requested_at?: string | null;
           status?: SubscriptionStatus;
@@ -591,6 +609,27 @@ export type Database = {
       find_auth_user_id_by_email: {
         Args: { p_email: string };
         Returns: string | null;
+      };
+      claim_overdue_notices: {
+        Args: { p_limit?: number };
+        Returns: {
+          invoice_url: string | null;
+          nome_loja: string;
+          notice_day: 1 | 6 | 25;
+          overdue_since: string;
+          owner_email: string;
+          slug: string;
+          subscription_id: string;
+          tenant_id: string;
+        }[];
+      };
+      claim_overdue_cancellations: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["subscriptions"]["Row"][];
+      };
+      finalize_overdue_cancellation: {
+        Args: { p_checked_at: string; p_remote_state: "deleted" | "inactive"; p_subscription_id: string };
+        Returns: boolean;
       };
       expire_stale_signup_intents: {
         Args: Record<PropertyKey, never>;

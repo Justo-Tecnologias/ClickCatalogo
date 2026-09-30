@@ -68,6 +68,7 @@ const frequentlyAskedQuestions = [
   ["Quantos produtos e categorias posso cadastrar?", "O plano atual não possui limite comercial de produtos ou categorias."],
   ["Posso mudar o tema?", "Sim. Você pode trocar entre os seis temas disponíveis pelo painel."],
   ["Posso cancelar? Existe fidelidade?", "Você pode cancelar pelo painel, sem fidelidade. As próximas renovações são interrompidas e o acesso continua até o fim do período já pago."],
+  ["E se o pagamento da assinatura atrasar?", "Avisamos você por e-mail e no painel. A loja continua no ar por até 7 dias após o vencimento; depois disso o catálogo fica fora do ar até o pagamento ser confirmado. Com 30 dias de atraso, a assinatura é encerrada e seus dados ficam guardados por mais 30 dias para uma possível reativação."],
   ["O que acontece depois do cancelamento?", "Ao terminar o período pago, a loja fica indisponível e os dados operacionais são preservados durante o prazo de retenção informado nos Termos."],
   ["Preciso ter e-commerce?", "Não. O ClickCatálogo foi feito justamente para quem vende de forma simples pelo WhatsApp ou Instagram."],
 ] as const;

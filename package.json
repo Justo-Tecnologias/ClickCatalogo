@@ -10,14 +10,15 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run check:contrast",
     "check:contrast": "node scripts/check-theme-contrast.mjs",
-    "test": "tsx --test tests/account-continuation.test.ts tests/asaas-client.test.ts tests/asaas-payments.test.ts tests/billing-state.test.ts tests/currency.test.ts tests/database-invariants.test.ts tests/external-links.test.ts tests/finalize-subscription-cancellations.test.ts tests/rate-limit-policy.test.ts tests/recovery-token.test.ts tests/storefront.test.ts tests/support-request.test.ts tests/tenant-boundaries.test.ts tests/webhook-security.test.ts",
+    "test": "tsx --test tests/account-continuation.test.ts tests/asaas-client.test.ts tests/asaas-payments.test.ts tests/billing-state.test.ts tests/currency.test.ts tests/database-invariants.test.ts tests/external-links.test.ts tests/finalize-subscription-cancellations.test.ts tests/overdue-policy.test.ts tests/rate-limit-policy.test.ts tests/recovery-token.test.ts tests/storefront.test.ts tests/support-request.test.ts tests/tenant-boundaries.test.ts tests/webhook-security.test.ts",
     "verify": "npm run check && npm test && npm run build",
     "audit:live": "node --env-file-if-exists=.env.local scripts/audit-live.mjs",
     "audit:asaas": "node --env-file-if-exists=.env.local scripts/audit-asaas.mjs",
     "audit:production": "node --env-file-if-exists=.env.local scripts/audit-production.mjs",
     "backup:storage": "node --env-file-if-exists=.env.local scripts/backup-storage.mjs",
     "import:justo-shop": "node --env-file-if-exists=.env.local scripts/import-justo-shop.mjs",
-    "privacy:purge": "node --env-file-if-exists=.env.local scripts/purge-retention.mjs"
+    "privacy:purge": "node --env-file-if-exists=.env.local scripts/purge-retention.mjs",
+    "notify:terms": "node --env-file-if-exists=.env.local scripts/notify-terms-update.mjs"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -32,7 +33,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.25.0",
-    "next": "16.3.3",
+    "next": "16.3.8",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -47,7 +48,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

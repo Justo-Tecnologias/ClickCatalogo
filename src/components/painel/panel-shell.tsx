@@ -24,7 +24,7 @@ const links = [
   { href: "/atendimento?assunto=sugestao&origem=painel", icon: MessageSquarePlus, label: "Sugestões e problemas" },
 ] as const;
 
-export function PanelShell({ children, demo = false, slug, status, storeName, userEmail }: { children: ReactNode; demo?: boolean; slug: string; status: TenantStatus; storeName: string; userEmail: string | null }) {
+export function PanelShell({ children, demo = false, notice = null, offline = false, slug, status, storeName, userEmail }: { children: ReactNode; demo?: boolean; notice?: ReactNode; offline?: boolean; slug: string; status: TenantStatus; storeName: string; userEmail: string | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -79,9 +79,9 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
             ClickCatálogo
           </Link>
           <div className="flex items-center gap-2">
-            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" ? "warning" : "danger"}>
-              <span className="min-[480px]:hidden">{status === "ativo" ? "Ativa" : status === "inadimplente" ? "Pendente" : "Cancelada"}</span>
-              <span className="hidden min-[480px]:inline">{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? "Pagamento pendente" : "Loja cancelada"}</span>
+            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" && !offline ? "warning" : "danger"}>
+              <span className="min-[480px]:hidden">{status === "ativo" ? "Ativa" : status === "inadimplente" ? offline ? "Fora do ar" : "Pendente" : "Cancelada"}</span>
+              <span className="hidden min-[480px]:inline">{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? offline ? "Loja fora do ar" : "Pagamento pendente" : "Loja cancelada"}</span>
             </Badge>
             <Button
               aria-controls="panel-mobile-menu"
@@ -200,7 +200,7 @@ export function PanelShell({ children, demo = false, slug, status, storeName, us
 
       <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-10 lg:py-10">
         <ToastProvider>
-          <div className="mx-auto grid min-w-0 w-full max-w-6xl gap-5 [&>*]:min-w-0">{demo ? <Alert description="Explore as telas e altere o preview. Nenhuma mudança será salva neste modo." icon={Eye} title="Modo de demonstração — somente visualização" variant="warning" /> : null}{children}</div>
+          <div className="mx-auto grid min-w-0 w-full max-w-6xl gap-5 [&>*]:min-w-0">{demo ? <Alert description="Explore as telas e altere o preview. Nenhuma mudança será salva neste modo." icon={Eye} title="Modo de demonstração — somente visualização" variant="warning" /> : null}{notice}{children}</div>
         </ToastProvider>
       </main>
     </div>

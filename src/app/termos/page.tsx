@@ -13,7 +13,7 @@ export default function TermsPage() {
     <LegalPage
       description="Regras essenciais para usar a plataforma ClickCatálogo e manter seu catálogo publicado."
       title="Termos de uso"
-      updatedAt="10 de setembro de 2026"
+      updatedAt="30 de setembro de 2026"
     >
       <section>
         <h2>1. O serviço</h2>
@@ -29,7 +29,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>4. Assinatura, renovação e cancelamento</h2>
-        <p>O plano custa R$ 27 por mês e é renovado de forma recorrente pelo Asaas. Atrasos podem limitar o serviço. O cancelamento pode ser solicitado no painel e interrompe as cobranças futuras; loja e painel permanecem disponíveis até o fim do período já pago, indicado antes da confirmação. Encerrado esse período, a loja fica offline e começa o prazo operacional de retenção de até 30 dias. O titular pode antecipar a exclusão para até 15 dias na área de privacidade. Evidências mínimas podem ser preservadas conforme a Política de Privacidade. Cancelar a renovação não gera reembolso automático; valores já pagos e pedidos de reembolso são analisados conforme a legislação aplicável e as condições da cobrança.</p>
+        <p>O plano custa R$ 27 por mês e é renovado de forma recorrente pelo Asaas. Se o pagamento de uma renovação não for confirmado, a loja continua no ar por até 7 dias a partir do vencimento; a partir do 8º dia o catálogo fica indisponível para os clientes, mantendo painel e dados. No 30º dia sem pagamento, a assinatura é encerrada, as cobranças em aberto são canceladas e começa o prazo operacional de retenção descrito abaixo; o titular é avisado por e-mail durante esse período e pode reativar a loja por uma nova contratação enquanto os dados estiverem retidos. O cancelamento pode ser solicitado no painel e interrompe as cobranças futuras; loja e painel permanecem disponíveis até o fim do período já pago, indicado antes da confirmação. Encerrado esse período, a loja fica offline e começa o prazo operacional de retenção de até 30 dias. O titular pode antecipar a exclusão para até 15 dias na área de privacidade. Evidências mínimas podem ser preservadas conforme a Política de Privacidade. Cancelar a renovação não gera reembolso automático; valores já pagos e pedidos de reembolso são analisados conforme a legislação aplicável e as condições da cobrança.</p>
       </section>
       <section>
         <h2>5. Arrependimento e suporte</h2>

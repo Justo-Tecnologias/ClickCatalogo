@@ -147,10 +147,27 @@ create table public.subscriptions (
   reactivation_requested_at timestamptz,
   cancellation_reconciliation_status text not null default 'not_required',
   cancellation_reconciliation_checked_at timestamptz,
+  -- Política de atraso: ver src/lib/billing/overdue-policy.mjs.
+  overdue_since date,
+  overdue_invoice_url text,
+  overdue_last_notice_day smallint not null default 0,
+  overdue_notice_claimed_at timestamptz,
+  overdue_cancellation_status text not null default 'not_required',
+  overdue_cancellation_checked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
   constraint subscriptions_valor_check check (valor > 0),
+  constraint subscriptions_overdue_invoice_url_check check (
+    overdue_invoice_url is null
+    or (char_length(overdue_invoice_url) <= 2048 and overdue_invoice_url ~ '^https://')
+  ),
+  constraint subscriptions_overdue_last_notice_day_check check (
+    overdue_last_notice_day in (0, 1, 6, 25)
+  ),
+  constraint subscriptions_overdue_cancellation_status_check check (
+    overdue_cancellation_status in ('not_required', 'processing', 'attention', 'complete')
+  ),
   constraint subscriptions_status_check check (
     status in ('ativo', 'atrasado', 'cancelado')
   ),
@@ -177,6 +194,10 @@ create index subscriptions_scheduled_cancellation_idx
   on public.subscriptions (access_until)
   where cancel_at_period_end = true
     and status in ('ativo', 'atrasado');
+
+create index subscriptions_overdue_since_idx
+  on public.subscriptions (overdue_since)
+  where status = 'atrasado' and overdue_since is not null;
 
 create index subscriptions_cancellation_reconciliation_attention_idx
   on public.subscriptions (
@@ -675,6 +696,15 @@ as $$
         and subscription.cancel_at_period_end = true
         and subscription.access_until <= now()
         and subscription.status in ('ativo', 'atrasado')
+    )
+    and not exists (
+      select 1
+      from public.subscriptions as subscription
+      where subscription.tenant_id = tenant.id
+        and subscription.status = 'atrasado'
+        and subscription.cancel_at_period_end = false
+        and subscription.overdue_since
+          <= (clock_timestamp() at time zone 'America/Sao_Paulo')::date - 8
     );
 $$;
 
@@ -694,6 +724,15 @@ as $$
         and subscription.access_until <= now()
         and subscription.status in ('ativo', 'atrasado')
     ) then 'cancelado'
+    when tenant.status in ('ativo', 'inadimplente') and exists (
+      select 1
+      from public.subscriptions as subscription
+      where subscription.tenant_id = tenant.id
+        and subscription.status = 'atrasado'
+        and subscription.cancel_at_period_end = false
+        and subscription.overdue_since
+          <= (clock_timestamp() at time zone 'America/Sao_Paulo')::date - 8
+    ) then 'suspenso'
     else tenant.status
   end
   from public.tenants as tenant
@@ -1069,6 +1108,190 @@ revoke all on function public.claim_subscription_cancellation_reconciliations(in
   from public, anon, authenticated;
 grant execute on function public.claim_subscription_cancellation_reconciliations(integer)
   to service_role;
+
+-- Reserva avisos de atraso pendentes. O lease de 10 minutos impede envio
+-- duplicado entre execuções concorrentes; o e-mail do titular só sai para a
+-- service_role.
+create or replace function public.claim_overdue_notices(p_limit integer default 10)
+returns table (
+  subscription_id uuid,
+  tenant_id uuid,
+  nome_loja text,
+  slug text,
+  owner_email text,
+  overdue_since date,
+  invoice_url text,
+  notice_day smallint
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  v_today date := (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
+begin
+  if p_limit < 1 or p_limit > 50 then
+    raise exception 'Limite de avisos inválido.' using errcode = '22023';
+  end if;
+
+  return query
+  with candidates as (
+    select
+      subscription.id,
+      (case
+        when v_today - subscription.overdue_since >= 25 then 25
+        when v_today - subscription.overdue_since >= 6 then 6
+        else 1
+      end)::smallint as target_day
+    from public.subscriptions as subscription
+    join public.tenants as tenant on tenant.id = subscription.tenant_id
+    where subscription.status = 'atrasado'
+      and subscription.cancel_at_period_end = false
+      and subscription.overdue_since is not null
+      and v_today - subscription.overdue_since between 1 and 29
+      and tenant.status = 'inadimplente'
+      and (
+        subscription.overdue_notice_claimed_at is null
+        or subscription.overdue_notice_claimed_at < clock_timestamp() - interval '10 minutes'
+      )
+    order by subscription.overdue_since, subscription.id
+    for update of subscription skip locked
+  ), due as (
+    select candidates.id, candidates.target_day
+    from candidates
+    join public.subscriptions as subscription on subscription.id = candidates.id
+    where candidates.target_day > subscription.overdue_last_notice_day
+    limit p_limit
+  ), claimed as (
+    update public.subscriptions as subscription
+    set overdue_notice_claimed_at = clock_timestamp()
+    from due
+    where subscription.id = due.id
+    returning subscription.id, subscription.tenant_id, subscription.overdue_since,
+      subscription.overdue_invoice_url, due.target_day
+  )
+  select
+    claimed.id,
+    claimed.tenant_id,
+    tenant.nome_loja,
+    tenant.slug,
+    auth_user.email::text,
+    claimed.overdue_since,
+    claimed.overdue_invoice_url,
+    claimed.target_day
+  from claimed
+  join public.tenants as tenant on tenant.id = claimed.tenant_id
+  join auth.users as auth_user on auth_user.id = tenant.owner_user_id;
+end;
+$$;
+
+-- Reserva assinaturas que chegaram ao 30º dia de atraso para encerramento.
+create or replace function public.claim_overdue_cancellations(p_limit integer default 1)
+returns setof public.subscriptions
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_today date := (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
+begin
+  if p_limit < 1 or p_limit > 10 then
+    raise exception 'Limite de encerramentos inválido.' using errcode = '22023';
+  end if;
+
+  return query
+  with candidates as (
+    select subscription.id
+    from public.subscriptions as subscription
+    where subscription.status = 'atrasado'
+      and subscription.cancel_at_period_end = false
+      and subscription.reactivation_requested_at is null
+      and subscription.overdue_since is not null
+      and subscription.overdue_since <= v_today - 30
+      and (
+        subscription.overdue_cancellation_status = 'not_required'
+        or (
+          subscription.overdue_cancellation_status = 'attention'
+          and (
+            subscription.overdue_cancellation_checked_at is null
+            or subscription.overdue_cancellation_checked_at < clock_timestamp() - interval '15 minutes'
+          )
+        )
+        or (
+          subscription.overdue_cancellation_status = 'processing'
+          and (
+            subscription.overdue_cancellation_checked_at is null
+            or subscription.overdue_cancellation_checked_at < clock_timestamp() - interval '5 minutes'
+          )
+        )
+      )
+    order by subscription.overdue_since, subscription.id
+    for update skip locked
+    limit p_limit
+  )
+  update public.subscriptions as subscription
+  set
+    overdue_cancellation_checked_at = clock_timestamp(),
+    overdue_cancellation_status = 'processing'
+  from candidates
+  where subscription.id = candidates.id
+  returning subscription.*;
+end;
+$$;
+
+-- Conclui o encerramento somente se a reserva continua válida e nenhum
+-- pagamento reativou a assinatura enquanto o Asaas era conciliado.
+create or replace function public.finalize_overdue_cancellation(
+  p_subscription_id uuid,
+  p_checked_at timestamptz,
+  p_remote_state text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant_id uuid;
+begin
+  if p_remote_state not in ('inactive', 'deleted') then
+    raise exception 'Estado remoto inválido.' using errcode = '22023';
+  end if;
+
+  update public.subscriptions as subscription
+  set
+    asaas_subscription_state = p_remote_state,
+    overdue_cancellation_checked_at = clock_timestamp(),
+    overdue_cancellation_status = 'complete',
+    overdue_notice_claimed_at = null,
+    status = 'cancelado'
+  where subscription.id = p_subscription_id
+    and subscription.status = 'atrasado'
+    and subscription.overdue_cancellation_status = 'processing'
+    and subscription.overdue_cancellation_checked_at = p_checked_at
+  returning subscription.tenant_id into v_tenant_id;
+
+  if v_tenant_id is null then
+    return false;
+  end if;
+
+  update public.tenants
+  set status = 'cancelado'
+  where id = v_tenant_id
+    and status in ('ativo', 'inadimplente');
+
+  return true;
+end;
+$$;
+
+revoke all on function public.claim_overdue_notices(integer) from public, anon, authenticated;
+revoke all on function public.claim_overdue_cancellations(integer) from public, anon, authenticated;
+revoke all on function public.finalize_overdue_cancellation(uuid, timestamptz, text)
+  from public, anon, authenticated;
+grant execute on function public.claim_overdue_notices(integer) to service_role;
+grant execute on function public.claim_overdue_cancellations(integer) to service_role;
+grant execute on function public.finalize_overdue_cancellation(uuid, timestamptz, text) to service_role;
 
 comment on function public.claim_subscription_cancellation_reconciliations(integer) is
   'Reserva conciliações com lease de dois minutos e impede disputa com reativação.';

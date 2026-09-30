@@ -35,7 +35,6 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ slu
         <div style={{ alignItems: "center", background: "#ffffff", border: `8px solid ${theme.accent}`, borderRadius: 42, boxShadow: "0 24px 60px rgba(15, 23, 42, 0.18)", display: "flex", height: 350, justifyContent: "center", overflow: "hidden", padding: 20, width: 350 }}>
           {logoSource ? (
             // A tag nativa é necessária porque ImageResponse não renderiza next/image.
-            // eslint-disable-next-line @next/next/no-img-element
             <img alt="" height="310" src={logoSource} style={{ height: 310, objectFit: "contain", width: 310 }} width="310" />
           ) : (
             <div style={{ alignItems: "center", background: theme.accent, borderRadius: 32, color: theme.accentText, display: "flex", fontSize: 116, fontWeight: 850, height: 290, justifyContent: "center", width: 290 }}>

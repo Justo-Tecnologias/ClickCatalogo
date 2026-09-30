@@ -158,6 +158,20 @@ select
   not has_function_privilege('authenticated', 'public.find_auth_user_id_by_email(text)', 'EXECUTE')
     as titular_nao_pode_buscar_usuario;
 
+-- Política de atraso: somente o backend reserva avisos e encerra assinaturas.
+select
+  has_function_privilege('service_role', 'public.claim_overdue_notices(integer)', 'EXECUTE')
+    as backend_reserva_avisos_atraso,
+  not has_function_privilege('authenticated', 'public.claim_overdue_notices(integer)', 'EXECUTE')
+    as titular_nao_reserva_avisos_atraso,
+  has_function_privilege('service_role', 'public.claim_overdue_cancellations(integer)', 'EXECUTE')
+    as backend_reserva_encerramentos_atraso,
+  not has_function_privilege('anon', 'public.finalize_overdue_cancellation(uuid, timestamptz, text)', 'EXECUTE')
+    as visitante_nao_encerra_assinatura,
+  (select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'subscriptions' and column_name like 'overdue_%') = 6
+    as colunas_de_atraso_presentes;
+
 select
   has_function_privilege('authenticated', 'public.change_tenant_slug(text)', 'EXECUTE')
     as titular_pode_alterar_slug,

@@ -3,12 +3,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/app/painel/actions";
+import { OverdueBanner } from "@/components/painel/overdue-banner";
 import { PanelShell } from "@/components/painel/panel-shell";
 import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPanelContext } from "@/lib/auth/session";
+import { brazilToday, overdueSituation } from "@/lib/billing/overdue-policy.mjs";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ProtectedPanelLayout({ children }: { children: React.ReactNode }) {
   const context = await getPanelContext();
@@ -31,5 +34,38 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
     );
   }
 
-  return <PanelShell demo={context.demo} slug={context.tenant.slug} status={context.tenant.status} storeName={context.tenant.nome_loja} userEmail={context.userEmail}>{children}</PanelShell>;
+  const overdue = context.demo ? null : await loadOverdueSituation(context.tenant.id);
+
+  return (
+    <PanelShell
+      demo={context.demo}
+      notice={overdue ? <OverdueBanner {...overdue} /> : null}
+      offline={overdue?.phase === "suspended" || overdue?.phase === "cancellation_due"}
+      slug={context.tenant.slug}
+      status={context.tenant.status}
+      storeName={context.tenant.nome_loja}
+      userEmail={context.userEmail}
+    >
+      {children}
+    </PanelShell>
+  );
+}
+
+async function loadOverdueSituation(tenantId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("status,cancel_at_period_end,overdue_since,overdue_invoice_url")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+
+  return overdueSituation({
+    cancelAtPeriodEnd: data.cancel_at_period_end,
+    overdueInvoiceUrl: data.overdue_invoice_url,
+    overdueSince: data.overdue_since,
+    status: data.status,
+  }, brazilToday());
 }

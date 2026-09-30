@@ -66,7 +66,8 @@ export default async function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {state === "past_due" ? <Alert description="Existe uma cobrança pendente. Consulte-a para regularizar o pagamento; o cancelamento não apaga valores já devidos." title="Pagamento precisa de atenção" variant="warning" /> : null}
+      {/* Com overdue_since registrado, o aviso detalhado vem do layout do painel. */}
+      {state === "past_due" && !subscription.overdue_since ? <Alert description="Existe uma cobrança pendente. Consulte-a para regularizar o pagamento; o cancelamento não apaga valores já devidos." title="Pagamento precisa de atenção" variant="warning" /> : null}
       <SubscriptionCancellation
         accessUntil={subscription.access_until}
         canCancel={Boolean(subscription.asaas_subscription_id)}
