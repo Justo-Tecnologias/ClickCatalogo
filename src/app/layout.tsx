@@ -23,6 +23,8 @@ export const metadata: Metadata = {
     default: "ClickCatálogo",
     template: "%s | ClickCatálogo",
   },
+  // Usa a imagem Open Graph também no cartão grande do X/Twitter e similares.
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

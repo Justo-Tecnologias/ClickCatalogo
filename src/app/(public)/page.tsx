@@ -1,14 +1,9 @@
 import {
   ArrowRight,
   Check,
-  CreditCard,
   ExternalLink,
-  LayoutTemplate,
-  MessageCircle,
   MousePointerClick,
   Paintbrush,
-  PackageCheck,
-  ShoppingBag,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -16,12 +11,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { HeroShowcase } from "@/components/marketing/hero-showcase";
+import { MobileStickyCta } from "@/components/marketing/mobile-sticky-cta";
 import { PageViewTracker } from "@/components/marketing/page-view-tracker";
-import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
+import { AnnouncementBar, SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PendingLink } from "@/components/ui/pending-link";
+import { CURRENT_ANNOUNCEMENT } from "@/lib/marketing/announcements";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -80,9 +78,10 @@ export default function HomePage() {
   return (
     <main className="overflow-hidden bg-[var(--app-background)]">
       <PageViewTracker event="landing_view" />
+      <AnnouncementBar announcement={CURRENT_ANNOUNCEMENT} />
       <SiteHeader />
 
-      <section className="relative bg-[linear-gradient(135deg,var(--brand-50),white_55%,var(--brand-100))] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
+      <section className="relative bg-[linear-gradient(135deg,var(--brand-50),white_55%,var(--brand-100))] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28" id="inicio">
         <div className="absolute -right-40 -top-40 size-[34rem] rounded-full bg-[var(--brand-accent)]/35 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
@@ -107,33 +106,11 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm font-medium text-[var(--app-foreground-muted)]">
-              R$ 27/mês · cancele quando quiser
+              R$ 27/mês · sem comissão · produtos ilimitados · cancele quando quiser
             </p>
           </div>
 
-          <div className="relative mx-auto w-full min-w-0 max-w-lg">
-            <div className="absolute -inset-8 rounded-full bg-brand-200/70 blur-3xl" />
-            <Card className="relative overflow-hidden border-brand-200 p-3 shadow-[0_30px_80px_rgb(19_50_41_/_20%)] sm:p-5">
-              <div className="rounded-xl bg-brand-900 p-5 text-white">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="grid size-11 place-items-center rounded-xl bg-white/10">
-                    <ShoppingBag aria-hidden="true" />
-                  </span>
-                  <span className="rounded-full bg-[var(--brand-accent)] px-3 py-1 text-xs font-bold text-brand-900">
-                    LOJA NO AR
-                  </span>
-                </div>
-                <h2 className="mt-7 text-2xl font-bold">Seu catálogo profissional</h2>
-                <p className="mt-2 text-sm text-white/80">Produtos organizados e pedidos sem atrito.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 p-2 pt-5">
-                <MiniBenefit icon={LayoutTemplate} label="Visual profissional" />
-                <MiniBenefit icon={PackageCheck} label="Itens ilimitados" />
-                <MiniBenefit icon={MessageCircle} label="Pedido no WhatsApp" />
-                <MiniBenefit icon={CreditCard} label="R$ 27/mês" />
-              </div>
-            </Card>
-          </div>
+          <HeroShowcase />
         </div>
       </section>
 
@@ -211,7 +188,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <section className="px-4 py-16 sm:px-6 sm:py-24 lg:px-8" id="plano">
         <div className="mx-auto max-w-4xl">
           <Card className="grid overflow-hidden border-brand-200 lg:grid-cols-[1fr_0.8fr]">
             <div className="p-7 sm:p-10">
@@ -272,7 +249,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-brand-200 bg-brand-100 px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
+      <section className="border-t border-brand-200 bg-brand-100 px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8" id="chamada-final">
         <div className="mx-auto max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
             Seu próximo pedido pode começar aqui
@@ -287,17 +264,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      <MobileStickyCta hideWhenVisible={["inicio", "plano", "chamada-final", "rodape"]} />
       <SiteFooter />
     </main>
-  );
-}
-
-function MiniBenefit({ icon: Icon, label }: { icon: typeof LayoutTemplate; label: string }) {
-  return (
-    <div className="rounded-lg border border-brand-900/5 bg-[var(--app-surface-muted)] p-3">
-      <Icon aria-hidden="true" className="size-4 text-brand-700" />
-      <p className="mt-3 text-xs font-semibold">{label}</p>
-    </div>
   );
 }
 
