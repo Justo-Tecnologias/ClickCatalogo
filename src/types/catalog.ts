@@ -20,6 +20,8 @@ export type CatalogCategory = {
 };
 
 export type PublicCatalog = StoreServiceInfo & {
+  /** Topo só com o banner (migration 028); ausente equivale a false. */
+  banner_somente?: boolean;
   banner_url: string | null;
   categorias: CatalogCategory[];
   descricao_curta: string | null;

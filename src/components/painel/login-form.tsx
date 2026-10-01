@@ -16,7 +16,7 @@ export function LoginForm() {
   return (
     <form action={action} className="grid gap-5">
       <Field>
-        <FieldLabel htmlFor="email">E-mail da assinatura</FieldLabel>
+        <FieldLabel htmlFor="email">E-mail</FieldLabel>
         <Input autoComplete="email" id="email" maxLength={254} name="email" placeholder="voce@empresa.com" required type="email" />
       </Field>
 
@@ -25,9 +25,9 @@ export function LoginForm() {
           <FieldLabel htmlFor="password">Senha</FieldLabel>
           <Link
             className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:underline"
-            href="/painel/recuperar-senha"
+            href="/painel/problemas-para-entrar"
           >
-            Esqueci minha senha
+            Problemas para entrar?
           </Link>
         </div>
         <Input autoComplete="current-password" id="password" maxLength={256} name="password" placeholder="Sua senha" required type="password" />
@@ -36,7 +36,7 @@ export function LoginForm() {
       {state.error ? <Alert title={state.error} variant="danger" /> : null}
       <SubmitButton className="w-full" pendingLabel="Entrando...">
         <KeyRound aria-hidden="true" />
-        Entrar no painel
+        Entrar
       </SubmitButton>
     </form>
   );

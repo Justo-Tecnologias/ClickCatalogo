@@ -55,8 +55,9 @@ export function CategoryNav({ categories, highlightSelection = true, sticky = fa
     <nav
       aria-label="Categorias de produtos"
       className={cn(
-        "relative [border-bottom:1px_solid_color-mix(in_srgb,var(--cor-borda)_55%,transparent)]",
-        sticky && "sticky top-0 z-30 bg-[color-mix(in_srgb,var(--cor-fundo)_94%,transparent)] shadow-[0_6px_18px_rgb(0_0_0_/_5%)] backdrop-blur",
+        "relative",
+        // A borda só separa a barra quando ela fica fixa sobre os produtos.
+        sticky && "sticky top-0 z-30 bg-[color-mix(in_srgb,var(--cor-fundo)_94%,transparent)] shadow-[0_6px_18px_rgb(0_0_0_/_5%)] backdrop-blur [border-bottom:1px_solid_color-mix(in_srgb,var(--cor-borda)_55%,transparent)]",
       )}
     >
       <div className="relative mx-auto w-full max-w-[var(--content-width)]">

@@ -2,6 +2,8 @@ import { MapPin, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 import { InstagramIcon } from "@/components/icons/instagram-icon";
+import { StoreServiceInfoList } from "@/components/loja-publica/store-service-info";
+import type { StoreServiceInfo } from "@/lib/catalog/store-info";
 import { createMapSearchUrl } from "@/lib/catalog/storefront";
 import { getInstagramProfileUrl, normalizeInstagramUsername } from "@/lib/instagram/username";
 import { createWhatsAppUrl } from "@/lib/whatsapp/url";
@@ -9,11 +11,12 @@ import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 export type StoreFooterProps = {
   address: string | null;
   instagram: string | null;
+  serviceInfo?: StoreServiceInfo;
   storeName: string;
   whatsapp: string;
 };
 
-export function StoreFooter({ address, instagram, storeName, whatsapp }: StoreFooterProps) {
+export function StoreFooter({ address, instagram, serviceInfo, storeName, whatsapp }: StoreFooterProps) {
   const instagramUsername = instagram ? normalizeInstagramUsername(instagram) : null;
   const instagramUrl = instagram ? getInstagramProfileUrl(instagram) : null;
   const mapUrl = createMapSearchUrl(address);
@@ -39,6 +42,7 @@ export function StoreFooter({ address, instagram, storeName, whatsapp }: StoreFo
                 {address}
               </a>
             ) : null}
+            {serviceInfo ? <StoreServiceInfoList className="mt-3" info={serviceInfo} /> : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">

@@ -17,6 +17,7 @@ const createdAt = "2026-07-19T12:00:00.000Z";
 const DEMO_IMAGE = (name: string) => `/demo/atelie-aurora/${name}.webp`;
 
 export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
+  banner_somente: false,
   banner_url: DEMO_IMAGE("banner"),
   canceled_at: null,
   created_at: createdAt,

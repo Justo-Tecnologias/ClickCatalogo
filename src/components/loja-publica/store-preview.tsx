@@ -2,7 +2,6 @@ import { StoreCatalog } from "@/components/loja-publica/store-catalog";
 import { CatalogViewTracker } from "@/components/loja-publica/catalog-view-tracker";
 import { StoreFooter } from "@/components/loja-publica/store-footer";
 import { StoreHeader } from "@/components/loja-publica/store-header";
-import { StoreServiceInfoBar } from "@/components/loja-publica/store-service-info";
 import { cn } from "@/lib/utils/cn";
 import type { PublicCatalog } from "@/types/catalog";
 import type { TenantTheme } from "@/types/database";
@@ -39,6 +38,7 @@ export function StorePreview({
       {!framed ? <CatalogViewTracker slug={catalog.slug} /> : null}
       <StoreHeader
         analyticsSlug={!framed ? catalog.slug : undefined}
+        bannerOnly={Boolean(catalog.banner_somente)}
         bannerUrl={catalog.banner_url}
         description={catalog.descricao_curta}
         framed={framed}
@@ -47,7 +47,6 @@ export function StorePreview({
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}
       />
-      <StoreServiceInfoBar info={catalog} />
       <StoreCatalog
         categories={categoriesWithProducts}
         enableCart={!framed}
@@ -55,6 +54,7 @@ export function StorePreview({
           <StoreFooter
             address={catalog.endereco}
             instagram={catalog.instagram}
+            serviceInfo={catalog}
             storeName={catalog.nome_loja}
             whatsapp={catalog.whatsapp}
           />

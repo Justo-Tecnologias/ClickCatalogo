@@ -181,6 +181,29 @@ Para refazer os prints, use a ferramenta de captura com Chrome headless descrita
 
 Validação: 83 testes (incluindo `tests/store-value.test.ts`) e a migration 027 em PGlite, no caminho da produção (com loja existente e reaplicação) e na instalação do zero.
 
+Publicado em 01/10 (PR #15); migration 027 aplicada antes do deploy.
+
+#### Pacote 3 — design limpo (branch `feat/design-limpo`)
+
+Pedido do titular após ver o pacote 2 no ar: a loja e o painel estavam poluídos.
+
+- [x] Loja: selos de atendimento saem do topo e vão para o rodapé; a linha abaixo das categorias só aparece quando a barra fica fixa.
+- [x] Opção "Mostrar só o banner no topo" (migration 028): banner inteiro, sem corte nem texto; botões abaixo; nome mantido para leitores de tela.
+- [x] Carrinho em duas etapas: itens → finalizar (atendimento, detalhes opcionais e envio). Na finalização só aparece o que não virou escolha.
+- [x] Painel "Minha loja": formulário em abas (Loja, Contato, Atendimento, Aparência) com um único "Salvar"; card da semana compacto no celular.
+- [x] Login: só e-mail, senha e "Problemas para entrar?" (nova tela que separa senha esquecida de acesso sem senha); "Criar minha loja" e "Ver demonstração" em cartões abaixo.
+- [ ] Aplicar a migration 028 em produção **antes** do deploy.
+
+| Data | Decisão | Motivo |
+|---|---|---|
+| 01/10 | Atendimento no rodapé e no carrinho, não no topo | O topo deve destacar produtos e categorias |
+| 01/10 | Só banner: banner limpo e botões abaixo | Respeita banners com arte própria sem perder o WhatsApp |
+| 01/10 | Carrinho em duas etapas | Detalhes não se perdem quando há muitos itens |
+| 01/10 | Configuração em abas | Página mais curta, principalmente no celular |
+| 01/10 | Login com tela "Problemas para entrar?"; cadastro e demonstração continuam no login | Menos ações concorrendo com "Entrar", sem esconder quem ainda não tem loja |
+
+Observação técnica: o `* { border-color }` de `globals.css` fica fora das camadas do Tailwind e anula classes de cor de borda (ex.: `peer-checked:border-brand-700`). As abas usam sombra para o sublinhado; corrigir a regra global fica como dívida técnica.
+
 Próximo pacote sugerido: com dados do funil, o teste de "monta grátis, paga para publicar".
 
 #### Itens da fila anterior (23/09) já resolvidos

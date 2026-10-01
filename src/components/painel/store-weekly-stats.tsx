@@ -16,18 +16,18 @@ function Delta({ current, previous }: { current: number; previous: number }) {
   const difference = current - previous;
   if (difference === 0) {
     return (
-      <span className="flex items-center gap-1 text-xs text-[var(--app-foreground-muted)]">
+      <span className="inline-flex items-center gap-1 text-xs text-[var(--app-foreground-muted)]">
         <Minus aria-hidden="true" className="size-3.5" />
-        Igual aos 7 dias anteriores
+        Igual<span className="hidden sm:inline"> aos 7 dias anteriores</span><span className="sr-only sm:hidden"> aos 7 dias anteriores</span>
       </span>
     );
   }
   const up = difference > 0;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
-    <span className={cn("flex items-center gap-1 text-xs font-medium", up ? "text-[var(--app-success)]" : "text-[var(--app-foreground-muted)]")}>
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium", up ? "text-[var(--app-success)]" : "text-[var(--app-foreground-muted)]")}>
       <Icon aria-hidden="true" className="size-3.5" />
-      {up ? "+" : "−"}{numberFormat.format(Math.abs(difference))} vs. 7 dias anteriores
+      {up ? "+" : "−"}{numberFormat.format(Math.abs(difference))}<span className="hidden sm:inline"> vs. 7 dias anteriores</span><span className="sr-only sm:hidden"> em relação aos 7 dias anteriores</span>
     </span>
   );
 }
@@ -54,13 +54,15 @@ export function StoreWeeklyStats({ demo = false, stats }: { demo?: boolean; stat
           {stats.map(({ current, event, previous }) => {
             const { icon: Icon, label } = LABELS[event];
             return (
-              <div className="rounded-[var(--radius-card)] border border-[var(--app-border)] p-4" key={event}>
-                <dt className="flex items-center gap-2 text-sm text-[var(--app-foreground-muted)]">
-                  <Icon aria-hidden="true" className="size-4 text-brand-700" />
+              // No celular, uma linha por número (rótulo à esquerda, valor à
+              // direita) para o formulário da loja não ficar longe do topo.
+              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--app-border)] px-4 py-3 sm:block sm:p-4" key={event}>
+                <dt className="flex min-w-0 items-center gap-2 text-sm text-[var(--app-foreground-muted)]">
+                  <Icon aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
                   {label}
                 </dt>
-                <dd className="mt-2">
-                  <span className="block text-3xl font-semibold tracking-tight text-[var(--app-foreground)]">{numberFormat.format(current)}</span>
+                <dd className="shrink-0 text-right sm:mt-2 sm:text-left">
+                  <span className="block text-2xl font-semibold tracking-tight text-[var(--app-foreground)] sm:text-3xl">{numberFormat.format(current)}</span>
                   <span className="mt-1 block"><Delta current={current} previous={previous} /></span>
                 </dd>
               </div>

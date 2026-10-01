@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowLeft, CheckCircle2, Eye, ImageIcon, LoaderCircle, Maximize2, Save, Trash2, Upload } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 
 import { updateStoreAction } from "@/app/painel/(app)/loja/actions";
 import { StorePreview } from "@/components/loja-publica/store-preview";
@@ -41,12 +42,65 @@ type StoreImageState = {
   savedUrl: string | null;
 };
 
-function StoreFormSection({ children, title }: { children: React.ReactNode; title: string }) {
+const STORE_FORM_TABS = [
+  { description: "Nome e descrição que aparecem no topo da loja.", id: "loja", label: "Loja" },
+  { description: "Como os clientes falam com você e encontram sua loja.", id: "contato", label: "Contato" },
+  { description: "Aparece no rodapé da loja e na finalização do pedido.", id: "atendimento", label: "Atendimento" },
+  { description: "Logo, banner e cores da loja.", id: "aparencia", label: "Aparência" },
+] as const;
+
+type StoreFormTab = (typeof STORE_FORM_TABS)[number]["id"];
+
+// Cada aba é um painel do mesmo formulário: as abas escondidas continuam no
+// DOM (atributo hidden), então "Salvar" envia todos os campos de uma vez.
+function StoreFormPanel({ activeTab, baseId, children, tab }: { activeTab: StoreFormTab; baseId: string; children: React.ReactNode; tab: StoreFormTab }) {
+  const info = STORE_FORM_TABS.find((item) => item.id === tab)!;
   return (
-    <section className="grid gap-4 border-t pt-5 first:border-t-0 first:pt-0">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">{title}</h2>
+    <section aria-labelledby={`${baseId}-tab-${tab}`} className="grid gap-4" data-tab={tab} hidden={activeTab !== tab} id={`${baseId}-panel-${tab}`} role="tabpanel">
+      <p className="text-sm leading-6 text-[var(--app-foreground-muted)]">{info.description}</p>
       {children}
     </section>
+  );
+}
+
+function StoreFormTabs({ activeTab, baseId, onChange }: { activeTab: StoreFormTab; baseId: string; onChange: (tab: StoreFormTab) => void }) {
+  function moveFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "Home" && event.key !== "End") return;
+    event.preventDefault();
+    const index = STORE_FORM_TABS.findIndex((item) => item.id === activeTab);
+    const last = STORE_FORM_TABS.length - 1;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? last : event.key === "ArrowRight" ? (index === last ? 0 : index + 1) : (index === 0 ? last : index - 1);
+    const tab = STORE_FORM_TABS[next].id;
+    onChange(tab);
+    document.getElementById(`${baseId}-tab-${tab}`)?.focus();
+  }
+
+  return (
+    <div aria-label="Seções da configuração" className="-mx-1 flex gap-1 overflow-x-auto border-b px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onKeyDown={moveFocus} role="tablist">
+      {STORE_FORM_TABS.map((item) => {
+        const selected = item.id === activeTab;
+        return (
+          <button
+            aria-controls={`${baseId}-panel-${item.id}`}
+            aria-selected={selected}
+            className={cn(
+              // Sublinhado com sombra: o `* { border-color }` global (fora das
+              // camadas do Tailwind) anula classes de cor de borda.
+              "inline-flex min-h-11 flex-1 shrink-0 items-center justify-center px-2 text-sm sm:flex-none sm:px-3 outline-none transition-[color,box-shadow] focus-visible:ring-3 focus-visible:ring-brand-200",
+              selected ? "font-semibold text-brand-900 shadow-[inset_0_-2px_0_var(--brand-700)]" : "font-medium text-[var(--app-foreground-muted)] hover:text-brand-900",
+            )}
+            id={`${baseId}-tab-${item.id}`}
+            key={item.id}
+            onClick={() => onChange(item.id)}
+            role="tab"
+            tabIndex={selected ? 0 : -1}
+            type="button"
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -213,6 +267,9 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
   const [hours, setHours] = useState(catalog.horario_atendimento ?? "");
   const [logoImage, setLogoImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.logo_url, remove: false, savedUrl: catalog.logo_url });
   const [bannerImage, setBannerImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.banner_url, remove: false, savedUrl: catalog.banner_url });
+  const [bannerOnly, setBannerOnly] = useState(Boolean(catalog.banner_somente));
+  const [activeTab, setActiveTab] = useState<StoreFormTab>("loja");
+  const tabsId = useId().replace(/:/g, "");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -264,6 +321,15 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
     event.preventDefault();
     setErrorMessage(null);
     const form = event.currentTarget;
+    // A validação nativa não alcança campos de abas escondidas: abre a aba do
+    // primeiro campo inválido e mostra a mensagem do navegador nele.
+    const invalidField = form.querySelector<HTMLInputElement>("input:invalid, textarea:invalid, select:invalid");
+    if (invalidField) {
+      const tab = invalidField.closest<HTMLElement>("[data-tab]")?.dataset.tab as StoreFormTab | undefined;
+      if (tab) flushSync(() => setActiveTab(tab));
+      invalidField.reportValidity();
+      return;
+    }
     const formData = new FormData(form);
     startTransition(async () => {
       try {
@@ -303,6 +369,7 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
 
   const previewCatalog = {
     ...catalog,
+    banner_somente: bannerOnly && Boolean(bannerImage.previewUrl),
     banner_url: bannerImage.previewUrl,
     descricao_curta: description || null,
     endereco: address || null,
@@ -321,7 +388,7 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
     <div className="grid gap-4">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(25rem,0.85fr)]">
         <Card className="border-0 bg-transparent p-0 shadow-none sm:border sm:bg-white sm:p-6 sm:shadow-[var(--shadow-elevation)]">
-          <form className="grid gap-6" id="store-settings-form" onChange={() => setDirty(true)} onSubmit={submit}>
+          <form className="grid gap-5" id="store-settings-form" noValidate onChange={() => setDirty(true)} onSubmit={submit}>
             {errorMessage ? (
               <Alert
                 description={<Button className="mt-2" disabled={isPending} size="sm" type="submit" variant="secondary">Tentar novamente</Button>}
@@ -330,14 +397,16 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
               />
             ) : null}
 
-            <StoreFormSection title="Informações">
+            <StoreFormTabs activeTab={activeTab} baseId={tabsId} onChange={setActiveTab} />
+
+            <StoreFormPanel activeTab={activeTab} baseId={tabsId} tab="loja">
               <div className="grid gap-4">
                 <Field><FieldLabel htmlFor="nomeLoja">Nome da loja</FieldLabel><Input id="nomeLoja" maxLength={100} name="nomeLoja" onChange={(event) => setName(event.target.value)} required value={name} /></Field>
                 <Field><FieldLabel htmlFor="descricaoCurta">Descrição</FieldLabel><Textarea id="descricaoCurta" maxLength={180} name="descricaoCurta" onChange={(event) => setDescription(event.target.value)} placeholder="Conte em uma frase o que sua loja oferece." rows={3} value={description} /><FieldDescription>{description.length}/180 caracteres</FieldDescription></Field>
               </div>
-            </StoreFormSection>
+            </StoreFormPanel>
 
-            <StoreFormSection title="Contato">
+            <StoreFormPanel activeTab={activeTab} baseId={tabsId} tab="contato">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field><FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel><Input autoComplete="tel" id="whatsapp" inputMode="tel" maxLength={19} name="whatsapp" onChange={(event) => setWhatsapp(normalizeBrazilWhatsAppInput(event.target.value))} placeholder="+55 (11) 99999-9999" required type="tel" value={formatBrazilWhatsApp(whatsapp)} /><FieldDescription>Número completo com 55 e DDD.</FieldDescription></Field>
                 <Field>
@@ -354,9 +423,9 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
                   <FieldDescription>Será exibido publicamente na sua loja. Deixe vazio se não quiser divulgar.</FieldDescription>
                 </Field>
               </div>
-            </StoreFormSection>
+            </StoreFormPanel>
 
-            <StoreFormSection title="Atendimento">
+            <StoreFormPanel activeTab={activeTab} baseId={tabsId} tab="atendimento">
               <div className="grid gap-4">
                 <fieldset className="grid min-w-0 gap-2">
                   <legend className="mb-1 text-sm font-semibold">Formas de pagamento <span className="font-normal text-[var(--app-foreground-muted)]">(opcional)</span></legend>
@@ -398,17 +467,34 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
                     </Field>
                   ) : null}
                 </div>
-                <FieldDescription>Essas informações aparecem no topo da loja e no carrinho, perto do botão de enviar o pedido.</FieldDescription>
               </div>
-            </StoreFormSection>
+            </StoreFormPanel>
 
-            <StoreFormSection title="Aparência">
+            <StoreFormPanel activeTab={activeTab} baseId={tabsId} tab="aparencia">
               <div className="grid gap-5">
                 <StoreImageField description="Imagem quadrada." id="logo" kind="logo" label="Logo da loja" onChange={(file) => selectImage("logo", file)} onRemove={() => removeImage("logo")} state={logoImage} />
-                <StoreImageField description="As bordas podem ser cortadas em alguns celulares." id="banner" kind="banner" label="Banner da loja" onChange={(file) => selectImage("banner", file)} onRemove={() => removeImage("banner")} state={bannerImage} />
-                <div><p className="mb-3 text-sm font-semibold">Tema da loja</p><input name="tema" type="hidden" value={theme} /><ThemePicker onValueChange={(value) => { setTheme(value); setDirty(true); }} value={theme} /></div>
+                <div className="grid gap-3 sm:col-span-2">
+                  <StoreImageField description={bannerOnly ? "Proporção 21:9, exibida inteira." : "As bordas podem ser cortadas em alguns celulares."} id="banner" kind="banner" label="Banner da loja" onChange={(file) => selectImage("banner", file)} onRemove={() => removeImage("banner")} state={bannerImage} />
+                  <label className={cn("flex items-start gap-3 rounded-[var(--radius-control)] border p-3 sm:col-span-2", bannerImage.previewUrl ? "cursor-pointer" : "cursor-not-allowed opacity-60")}>
+                    <input
+                      checked={bannerOnly && Boolean(bannerImage.previewUrl)}
+                      className="mt-0.5 size-5 shrink-0 accent-[var(--brand-700)]"
+                      disabled={!bannerImage.previewUrl}
+                      name="bannerSomente"
+                      onChange={(event) => setBannerOnly(event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="text-sm font-semibold">Mostrar só o banner no topo</span>
+                      <span className="text-xs leading-5 text-[var(--app-foreground-muted)]">
+                        {bannerImage.previewUrl ? "Para banners com arte própria: o nome e a logo saem de cima da imagem." : "Adicione um banner para usar esta opção."}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                <div className="sm:col-span-2"><p className="mb-3 text-sm font-semibold">Tema da loja</p><input name="tema" type="hidden" value={theme} /><ThemePicker onValueChange={(value) => { setTheme(value); setDirty(true); }} value={theme} /></div>
               </div>
-            </StoreFormSection>
+            </StoreFormPanel>
 
             <div className="hidden items-center justify-between gap-3 xl:flex">
               {dirty ? (

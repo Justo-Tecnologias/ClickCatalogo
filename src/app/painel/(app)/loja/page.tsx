@@ -40,6 +40,7 @@ export default async function StorePage() {
   const weeklyStats = await weeklyStatsPromise;
 
   const catalog: PublicCatalog = {
+    banner_somente: tenant.banner_somente ?? false,
     banner_url: tenant.banner_url,
     categorias: (categories ?? []).map((category) => ({ ...category, produtos: (products ?? []).filter((product) => product.category_id === category.id).map((product) => ({ descricao: product.descricao, id: product.id, imagem_url: product.imagem_url, nome: product.nome, ordem: product.ordem, preco: Number(product.preco), variacao_info: product.variacao_info })) })),
     descricao_curta: tenant.descricao_curta,

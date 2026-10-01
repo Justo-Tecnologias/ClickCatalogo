@@ -9,6 +9,8 @@ import { StoreShareButton } from "./store-share-button";
 
 export type StoreHeaderProps = {
   analyticsSlug?: string;
+  /** Mostra o banner inteiro, sem nome, logo ou degradê por cima. */
+  bannerOnly?: boolean;
   bannerUrl: string | null;
   description: string | null;
   framed?: boolean;
@@ -20,6 +22,7 @@ export type StoreHeaderProps = {
 
 export function StoreHeader({
   analyticsSlug,
+  bannerOnly = false,
   bannerUrl,
   description,
   framed = false,
@@ -39,6 +42,52 @@ export function StoreHeader({
       className="absolute inset-0 bg-[var(--cor-imagem-fundo)]"
     />
   );
+  const actions = (
+    <>
+      <a
+        className={buttonVariants({ className: "min-w-0 flex-1 px-3 @xl:flex-none @xl:px-4", size: "md", variant: "theme" })}
+        href={whatsappUrl}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <MessageCircle aria-hidden="true" />
+        Falar no WhatsApp
+      </a>
+      {shareUrl ? (
+        <StoreShareButton
+          analyticsSlug={analyticsSlug}
+          description={description}
+          storeName={storeName}
+          url={shareUrl}
+        />
+      ) : null}
+    </>
+  );
+
+  // Banner com arte própria (geralmente já traz o nome da loja): exibido
+  // inteiro, sem corte nem texto por cima. O nome continua para leitores de
+  // tela e buscadores.
+  if (bannerOnly && bannerUrl) {
+    return (
+      <header className="@container overflow-hidden bg-[var(--cor-fundo)]">
+        <Heading className="sr-only">{storeName}</Heading>
+        <div className="relative aspect-[21/9] w-full overflow-hidden bg-[var(--cor-imagem-fundo)] @2xl:max-h-80">
+          <CatalogImage
+            alt={`Banner da ${storeName}`}
+            className="object-cover object-center"
+            fallback={bannerFallback}
+            fill
+            loading={framed ? "lazy" : "eager"}
+            sizes={framed ? "(max-width: 1279px) 100vw, 40vw" : "100vw"}
+            src={bannerUrl}
+          />
+        </div>
+        <div className="mx-auto flex w-full max-w-[var(--content-width)] items-center gap-2 px-4 pb-2 pt-4 @xl:justify-end @2xl:px-6 @5xl:px-8">
+          {actions}
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="@container overflow-hidden bg-[var(--cor-fundo)]">
@@ -80,23 +129,7 @@ export function StoreHeader({
         </div>
 
         <div className="flex w-full items-center gap-2 @xl:w-auto">
-          <a
-            className={buttonVariants({ className: "min-w-0 flex-1 px-3 @xl:flex-none @xl:px-4", size: "md", variant: "theme" })}
-            href={whatsappUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <MessageCircle aria-hidden="true" />
-            Falar no WhatsApp
-          </a>
-          {shareUrl ? (
-            <StoreShareButton
-              analyticsSlug={analyticsSlug}
-              description={description}
-              storeName={storeName}
-              url={shareUrl}
-            />
-          ) : null}
+          {actions}
         </div>
       </div>
     </header>

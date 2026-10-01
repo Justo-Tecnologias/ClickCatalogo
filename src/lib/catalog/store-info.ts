@@ -50,29 +50,10 @@ export function paymentMethodLabel(method: PaymentMethod) {
   return paymentLabel.get(method)!;
 }
 
-/** Frase corrida: "Pix, cartão de crédito ou dinheiro" (Pix é nome próprio). */
-export function paymentMethodsText(methods: readonly PaymentMethod[]) {
-  const labels = normalizePaymentMethods(methods).map((id) => {
-    const label = paymentLabel.get(id)!;
-    return id === "pix" ? label : label.toLocaleLowerCase("pt-BR");
-  });
-  if (labels.length <= 1) return labels[0] ?? null;
-  return `${labels.slice(0, -1).join(", ")} ou ${labels.at(-1)}`;
-}
-
 export function deliveryModeText(mode: DeliveryMode | null) {
   return mode ? deliveryLabel.get(mode) ?? null : null;
 }
 
 export function hasStoreServiceInfo(info: StoreServiceInfo) {
   return info.formas_pagamento.length > 0 || Boolean(info.entrega_modo) || Boolean(info.horario_atendimento);
-}
-
-/** Linha curta para o carrinho, perto do botão de enviar o pedido. */
-export function storeServiceSummary(info: StoreServiceInfo) {
-  const parts = [
-    paymentMethodsText(info.formas_pagamento) ? `Pagamento: ${paymentMethodsText(info.formas_pagamento)}` : null,
-    deliveryModeText(info.entrega_modo),
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : null;
 }
