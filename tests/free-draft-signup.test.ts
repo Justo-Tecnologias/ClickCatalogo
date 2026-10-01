@@ -112,3 +112,39 @@ test("rotina de rascunhos: lembretes idempotentes e exclusão em etapas", () => 
   assert.ok(order.every((index) => index > 0));
   assert.deepEqual([...order].sort((a, b) => a - b), order);
 });
+
+test("destino após o login aceita só telas do painel", async () => {
+  const { safePanelNextPath } = await import("../src/lib/auth/next-path");
+  assert.equal(safePanelNextPath("/painel/produtos"), "/painel/produtos");
+  assert.equal(safePanelNextPath("/painel/loja"), "/painel/loja");
+  for (const unsafe of ["//evil.com", "https://evil.com/painel/loja", "/painel/../loja/x", "/loja/x", "/painel", "/painel/loja?x=1", null, 42]) {
+    assert.equal(safePanelNextPath(unsafe), null, String(unsafe));
+  }
+  // Lembrete leva direto à tela certa, passando pelo login quando preciso.
+  assert.match(draftReminderEmail({ day: 1, optOutUrl, productCount: 0, siteUrl, storeName: "A" }).html, /\/painel\?next=\/painel\/produtos/);
+  assert.match(read("src/app/painel/actions.ts"), /redirect\(safePanelNextPath\(formData\.get\("next"\)\) \?\? "\/painel\/loja"\)/);
+});
+
+test("titular exclui o rascunho na hora, nunca uma loja publicada ou com pagamento aberto", () => {
+  const action = read("src/app/painel/(app)/privacidade/draft-actions.ts");
+  assert.match(action, /tenant\.status !== "rascunho"/);
+  assert.match(action, /parsed\.data\.confirmation !== tenant\.nome_loja\.trim\(\)/);
+  assert.match(action, /intent\.status === "pendente"/);
+  assert.match(action, /\.delete\(\)\s*\.eq\("id", tenant\.id\)\s*\.eq\("status", "rascunho"\)/);
+  assert.match(action, /auth\.admin\.deleteUser\(tenant\.owner_user_id\)/);
+  // Ordem: fotos → loja → usuário.
+  const order = ["bucket.remove(", "from(\"tenants\")", "deleteUser("].map((part) => action.indexOf(part));
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  assert.match(read("src/components/painel/data-privacy-management.tsx"), /tenantStatus === "rascunho" && !demo \? <DraftStoreDeletion/);
+});
+
+test("crédito do rodapé continua igual e só mede o clique por loja", () => {
+  const footer = read("src/components/loja-publica/store-footer.tsx");
+  assert.match(footer, /<span>Criado com<\/span>\s*<BrandCredit analyticsSlug=\{analyticsSlug\} \/>/);
+  const credit = read("src/components/loja-publica/brand-credit.tsx");
+  assert.match(credit, /trackProductMetric\("store_brand_clicked", analyticsSlug\)/);
+  assert.match(credit, />\s*ClickCatálogo\s*</);
+  assert.match(read("src/app/api/analytics/route.ts"), /TENANT_EVENTS = new Set\(\[[^\]]*"store_brand_clicked"/);
+  // A prévia do painel não conta cliques.
+  assert.match(read("src/components/loja-publica/store-preview.tsx"), /analyticsSlug=\{!framed \? catalog\.slug : undefined\}\s*\n\s*instagram/);
+});

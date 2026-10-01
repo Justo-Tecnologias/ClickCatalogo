@@ -10,6 +10,7 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { lastPaidAccessInstant } from "@/lib/billing/access-period";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { DraftStoreDeletion } from "@/components/painel/draft-store-deletion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -153,6 +154,7 @@ export function DataPrivacyManagement({
         </CardContent>
       </Card>
 
+      {tenantStatus === "rascunho" && !demo ? <DraftStoreDeletion storeName={storeName} /> : (
       <section className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--app-danger)_35%,var(--app-border))] bg-white p-5 sm:p-6">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="max-w-2xl">
@@ -222,6 +224,7 @@ export function DataPrivacyManagement({
           ) : null}
         </div>
       </section>
+      )}
 
       <dialog
         aria-labelledby="delete-account-title"

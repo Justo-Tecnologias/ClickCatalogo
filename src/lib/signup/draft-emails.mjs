@@ -91,7 +91,8 @@ export function verificationEmail(input) {
 export function draftReminderEmail(input) {
   const storeName = escapeHtml(plain(input.storeName));
   const plainName = plain(input.storeName);
-  const panelUrl = `${base(input.siteUrl)}/painel/${input.productCount > 0 ? "loja" : "produtos"}`;
+  // Passa pelo login (se preciso) e abre direto a tela certa.
+  const panelUrl = `${base(input.siteUrl)}/painel?next=/painel/${input.productCount > 0 ? "loja" : "produtos"}`;
   const ready = input.productCount > 0;
   const productsText = input.productCount === 1 ? "1 produto" : `${input.productCount} produtos`;
 

@@ -8,16 +8,20 @@ import { AccessOptionLink, AccessOptionSubmit } from "@/components/painel/access
 import { LoginForm } from "@/components/painel/login-form";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { safePanelNextPath } from "@/lib/auth/next-path";
 import { getPanelContext } from "@/lib/auth/session";
 import { isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 
 export const metadata: Metadata = { title: "Acessar painel" };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ excluida?: string | string[]; next?: string | string[] }> }) {
   const context = await getPanelContext();
   const demoEnabled = isDemoAccessEnabled();
+  const params = await searchParams;
+  const next = safePanelNextPath(params.next);
+  const deleted = params.excluida === "1";
 
-  if (context.authenticated && context.tenant) redirect("/painel/loja");
+  if (context.authenticated && context.tenant) redirect(next ?? "/painel/loja");
 
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-10">
@@ -40,9 +44,10 @@ export default async function LoginPage() {
             <CardTitle as="h1" className="text-2xl">Entrar no painel</CardTitle>
             <CardDescription>Use o e-mail e a senha da sua loja.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-5">
+            {deleted ? <Alert description="A conta, a loja, os produtos e as fotos foram apagados." title="Sua loja foi excluída" variant="success" /> : null}
             {context.configured ? (
-              <LoginForm />
+              <LoginForm next={next} />
             ) : (
               <Alert
                 description="Adicione as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para habilitar o acesso."

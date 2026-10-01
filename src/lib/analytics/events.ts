@@ -14,6 +14,7 @@ export const productMetricNames = [
   "catalog_shared",
   "catalog_view",
   "whatsapp_order_clicked",
+  "store_brand_clicked",
   "cancellation_requested",
   "cancellation_reverted",
   "subscription_reactivated",
@@ -29,6 +30,7 @@ export const publicProductMetricNames = [
   "catalog_shared",
   "catalog_view",
   "whatsapp_order_clicked",
+  "store_brand_clicked",
 ] as const satisfies readonly ProductMetricName[];
 
 export type PublicProductMetricName = (typeof publicProductMetricNames)[number];

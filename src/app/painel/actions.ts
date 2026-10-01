@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { isSupabaseConfigured } from "@/lib/env/public";
+import { safePanelNextPath } from "@/lib/auth/next-path";
 import { ACTIVE_TENANT_COOKIE_NAME } from "@/lib/auth/tenant-cookie";
 import { DEMO_COOKIE_NAME, isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 import { createClient } from "@/lib/supabase/server";
@@ -47,7 +48,7 @@ export async function loginWithPasswordAction(
     return { error: "Configure o Supabase no arquivo .env.local para ativar o acesso." };
   }
 
-  redirect("/painel/loja");
+  redirect(safePanelNextPath(formData.get("next")) ?? "/painel/loja");
 }
 
 export async function startDemoAction() {

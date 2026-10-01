@@ -26,7 +26,9 @@ etapas(ordem, event_name, etapa) as (
     (6, 'email_verified', 'Confirmou o e-mail'),
     (7, 'first_product_created', 'Cadastrou o primeiro produto'),
     (8, 'checkout_created', 'Abriu o pagamento para publicar'),
-    (9, 'payment_confirmed', 'Publicou (pagamento confirmado)')
+    (9, 'payment_confirmed', 'Publicou (pagamento confirmado)'),
+    -- Interesse vindo das lojas: clique no crédito do rodapé (fonte, não etapa).
+    (10, 'store_brand_clicked', 'Clicou em "ClickCatálogo" no rodapé de uma loja')
 )
 select
   etapas.ordem,
@@ -37,7 +39,7 @@ select
       then round(100.0 * coalesce(periodo.total, 0) / (select total from periodo where event_name = 'landing_view'), 1)
   end as percentual_sobre_landing,
   case
-    when etapas.ordem > 5 and coalesce((select total from periodo where event_name = 'draft_created'), 0) > 0
+    when etapas.ordem between 6 and 9 and coalesce((select total from periodo where event_name = 'draft_created'), 0) > 0
       then round(100.0 * coalesce(periodo.total, 0) / (select total from periodo where event_name = 'draft_created'), 1)
   end as percentual_sobre_lojas_criadas
 from etapas

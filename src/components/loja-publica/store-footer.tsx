@@ -1,7 +1,7 @@
 import { MapPin, MessageCircle } from "lucide-react";
-import Link from "next/link";
 
 import { InstagramIcon } from "@/components/icons/instagram-icon";
+import { BrandCredit } from "@/components/loja-publica/brand-credit";
 import { StoreServiceInfoList } from "@/components/loja-publica/store-service-info";
 import type { StoreServiceInfo } from "@/lib/catalog/store-info";
 import { createMapSearchUrl } from "@/lib/catalog/storefront";
@@ -10,13 +10,15 @@ import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 
 export type StoreFooterProps = {
   address: string | null;
+  /** Só na loja publicada (não na prévia do painel). */
+  analyticsSlug?: string;
   instagram: string | null;
   serviceInfo?: StoreServiceInfo;
   storeName: string;
   whatsapp: string;
 };
 
-export function StoreFooter({ address, instagram, serviceInfo, storeName, whatsapp }: StoreFooterProps) {
+export function StoreFooter({ address, analyticsSlug, instagram, serviceInfo, storeName, whatsapp }: StoreFooterProps) {
   const instagramUsername = instagram ? normalizeInstagramUsername(instagram) : null;
   const instagramUrl = instagram ? getInstagramProfileUrl(instagram) : null;
   const mapUrl = createMapSearchUrl(address);
@@ -71,12 +73,7 @@ export function StoreFooter({ address, instagram, serviceInfo, storeName, whatsa
 
         <div className="mt-5 flex min-h-11 items-center gap-1 pt-5 text-xs text-[var(--cor-texto-suave)] [border-top:1px_solid_color-mix(in_srgb,var(--cor-borda)_55%,transparent)]">
           <span>Criado com</span>
-          <Link
-            className="rounded-sm font-semibold text-[var(--cor-texto)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
-            href="/"
-          >
-            ClickCatálogo
-          </Link>
+          <BrandCredit analyticsSlug={analyticsSlug} />
         </div>
       </div>
     </footer>
