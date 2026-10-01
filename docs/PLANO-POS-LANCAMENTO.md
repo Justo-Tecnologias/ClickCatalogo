@@ -97,6 +97,11 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 | 30/09 | Link externo somente para marketplaces conhecidos, validado no painel e na loja, sem migration | Reduz uso do domínio para phishing sem custo de manutenção no banco |
 | 30/09 | Correção de segurança do Next.js publicada junto com a Release B | Um único deploy |
 | 30/09 | **Não** executar cobrança e cancelamento controlados em produção | Decisão do titular; o primeiro cliente real será acompanhado de perto (ver 3.5) |
+| 01/10 | Próximo foco: **converter visitantes** (Release C) | Produto estável; o gargalo passa a ser aquisição |
+| 01/10 | Refazer a Ateliê Aurora como loja vitrine, mesmo endereço | A versão anterior tinha ilustrações genéricas, banner com texto sobreposto e um produto sem imagem |
+| 01/10 | Fotos de bancos livres (Pexels), aprovadas antes do download | Uso comercial permitido; créditos em `planejamento-justo-tecnologias/social-media/demo/atelie-aurora/CREDITOS.md` |
+| 01/10 | Modo demonstração do painel passa a espelhar a Ateliê Aurora | História coerente entre landing, prints, demonstração e loja real |
+| 01/10 | `/como-funciona` com prints reais; passo do WhatsApp como balão gerado pelo sistema | O texto vem de `createCartMessage`, sempre igual ao pedido real |
 
 ### 3.4 Lições operacionais
 
@@ -109,6 +114,8 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 - **Nunca montar SQL com `String.replace` usando texto de substituição:** `$$` vira `$`. Use fatiamento ou função de substituição; o teste `funções SQL mantêm delimitadores $$ íntegros` protege o `schema.sql`.
 - **Verificar loja no ar pelo botão "Falar no WhatsApp"**, não pela palavra "Catálogo" (ela também aparece em "ClickCatálogo" na página de loja inexistente).
 - **Variáveis do ambiente de build afetam testes.** A Netlify tem Resend configurado; testes que dependem de ambiente devem limpar as variáveis.
+- **Prints reais:** o Chrome local, em modo headless e controlado pelo DevTools Protocol, captura páginas em 1440 px e 390 px. O painel é fotografado no modo demonstração (cookie `catalogoja-demo=1`), sem login. Em `next dev`, esconda o botão de desenvolvimento (`nextjs-portal`) e espere o "Endereço disponível" antes de avançar o cadastro.
+- **Classes condicionais em botões:** `buttonVariants` não resolve conflitos de classe; combine com `cn(...)` ao esconder um botão por breakpoint.
 - **Migration antes do deploy:** quando o banco recebe uma regra antes do código, prever o intervalo (ex.: rede de segurança `overdueBackfilled`).
 
 ### 3.5 Fila imediata
@@ -130,7 +137,7 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 
 #### P2 — dívida técnica curta
 
-- [ ] `audit:production`: a checagem `loja-real` procura "Catálogo" e passa até para loja inexistente; trocar pelo marcador "Falar no WhatsApp".
+- [x] `audit:production`: a checagem `loja-real` agora usa o marcador "Falar no WhatsApp" e confere a `atelie-aurora` por padrão (Release C).
 - [ ] Atualizar `STATUS.md`, desatualizado desde 15/09.
 - [ ] Alerta "high" do `brace-expansion` (somente ferramentas de desenvolvimento) via Dependabot.
 - [ ] Teste de SQL permanente: hoje a validação com PGlite rodou fora do repositório. Avaliar adicionar `@electric-sql/pglite` como `devDependency` e um teste que carregue `schema.sql` e as migrations.
@@ -138,6 +145,18 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 - [ ] E2E de cadastro/retomada, login, CRUD essencial, carrinho e cancelamento, sem cobrança real.
 - [ ] Monitoramento de exceções sem PII e alerta para Scheduled Function atrasada ou `attention`/`superseded`.
 - [ ] Observação: o evento `overdue.cancellation.superseded` exige reativação manual da recorrência no Asaas (ver `docs/OPERACAO.md`).
+
+#### Release C — conversão (branch `feat/release-c-conversao`, em andamento)
+
+- [x] Ateliê Aurora refeita em produção com 12 produtos, logo e banner reais (`scripts/import-atelie-aurora.mjs`; backup em `backups/`).
+- [x] Página `/como-funciona` com 5 passos e prints reais (desktop e celular), balão do WhatsApp e chamadas para cadastro e loja de exemplo.
+- [x] Landing: link para o passo a passo e card "Veja uma loja no ar"; cabeçalho e rodapé compartilhados.
+- [x] Demonstração do painel espelhando a Ateliê Aurora (`/loja/atelie-aurora-demo`).
+- [ ] Medir o funil visita → cadastro → checkout (hoje só existem eventos a partir do cadastro).
+- [ ] Publicar: PR, Deploy Preview e conferência visual em produção.
+- Refinamento anotado: no desktop, categorias com 3 produtos deixam a 4ª coluna vazia na grade da loja.
+
+Para refazer os prints, use a ferramenta de captura com Chrome headless descrita na seção 3.4.
 
 #### Itens da fila anterior (23/09) já resolvidos
 
