@@ -22,6 +22,14 @@
   --brand-900: #133229;
   --brand-accent: #d9f38c;
 
+  /* Representação da conversa do WhatsApp em /como-funciona */
+  --whatsapp-chat: #efeae2;
+  --whatsapp-header: #075e54;
+  --whatsapp-bubble: #d9fdd3;
+  --whatsapp-text: #111b21;
+  --whatsapp-meta: #667781;
+  --whatsapp-check: #53bdeb;
+
   /* Escala fixa de 4px */
   --space-1: 0.25rem;
   --space-2: 0.5rem;

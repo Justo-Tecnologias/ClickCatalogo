@@ -918,6 +918,7 @@ create table public.product_metrics_daily (
   primary key (metric_date, event_name, scope_key),
   constraint product_metrics_daily_event_check check (
     event_name in (
+      'landing_view', 'how_it_works_view',
       'signup_started', 'signup_step_completed', 'checkout_created',
       'payment_confirmed', 'password_created', 'first_category_created',
       'first_product_created', 'fifth_product_created', 'catalog_shared',
@@ -947,6 +948,7 @@ declare
   v_scope_key text := coalesce(p_tenant_id::text, 'global');
 begin
   if p_event_name not in (
+    'landing_view', 'how_it_works_view',
     'signup_started', 'signup_step_completed', 'checkout_created',
     'payment_confirmed', 'password_created', 'first_category_created',
     'first_product_created', 'fifth_product_created', 'catalog_shared',

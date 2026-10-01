@@ -48,6 +48,8 @@ O arquivo `migrations/202609300024_auth_user_lookup_by_email.sql` cria a RPC `fi
 
 O arquivo `migrations/202609300025_overdue_suspension_policy.sql` implementa a política de atraso: `subscriptions.overdue_since` guarda o vencimento não pago; `get_public_catalog` deixa a loja indisponível a partir do 8º dia (`get_public_store_status` devolve `suspenso`); `claim_overdue_notices` reserva os avisos dos dias 1, 6 e 25; `claim_overdue_cancellations` e `finalize_overdue_cancellation` encerram a assinatura no 30º dia, depois que a Scheduled Function inativa a recorrência e remove as cobranças abertas no Asaas. Todas as RPCs novas são restritas à `service_role`. Os números devem permanecer alinhados com `src/lib/billing/overdue-policy.mjs`.
 
+O arquivo `migrations/202610010026_marketing_page_metrics.sql` acrescenta as visitas da landing (`landing_view`) e de `/como-funciona` (`how_it_works_view`) à lista fechada de métricas agregadas. A lista do banco precisa ser idêntica a `productMetricNames` em `src/lib/analytics/events.ts`; um teste confere isso. O relatório `funnel-report.sql` (somente leitura) mostra o funil dos últimos 30 dias.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

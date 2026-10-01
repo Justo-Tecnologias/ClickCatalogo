@@ -13,6 +13,25 @@ function tenantUpdateColumns(sql: string) {
   return grants.map((grant) => grant[1].split(",").map((column) => column.trim()));
 }
 
+test("lista de métricas do banco é igual à do código", async () => {
+  const { productMetricNames } = await import("../src/lib/analytics/events");
+  const schema = await readFile(schemaPath, "utf8");
+  const migration = await readFile(
+    new URL("../supabase/migrations/202610010026_marketing_page_metrics.sql", import.meta.url),
+    "utf8",
+  );
+  const expected = [...productMetricNames].sort();
+
+  for (const sql of [schema, migration]) {
+    const constraint = sql.match(/product_metrics_daily_event_check check \(\s*event_name in \(([^)]*)\)/);
+    const fn = sql.match(/if p_event_name not in \(([^)]*)\)/);
+    assert.ok(constraint && fn);
+    for (const list of [constraint[1], fn[1]]) {
+      assert.deepEqual([...list.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]).sort(), expected);
+    }
+  }
+});
+
 test("funções SQL mantêm delimitadores $$ íntegros", async () => {
   const schema = await readFile(schemaPath, "utf8");
   assert.doesNotMatch(schema, /^as \$\r?$/m);

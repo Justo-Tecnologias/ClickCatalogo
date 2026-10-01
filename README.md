@@ -66,3 +66,7 @@ Tokens, temas e componentes reutilizáveis estão documentados em `docs/design-s
 ## Banco de dados
 
 O banco completo para um projeto novo está em `supabase/schema.sql`. Consulte `SETUP.md` para Supabase, Netlify, Auth e Asaas, e `docs/OPERACAO.md` para a rotina de produção.
+
+## Planejamento
+
+Comece por `docs/PLANO-POS-LANCAMENTO.md`: a seção 3 traz o estado da produção, o que foi entregue, as decisões tomadas, as lições operacionais e a fila de próximos passos. A visão de produto de longo prazo está em `docs/PLANEJAMENTO_PRODUTO.md`.

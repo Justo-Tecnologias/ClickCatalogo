@@ -11,41 +11,77 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 
 const createdAt = "2026-07-19T12:00:00.000Z";
 
+// A demonstração espelha a loja vitrine Ateliê Aurora (fotos reais do Pexels,
+// licença livre). As imagens ficam em public/demo/atelie-aurora para funcionar
+// em qualquer ambiente; o endereço próprio evita sobrescrever a loja real.
+const DEMO_IMAGE = (name: string) => `/demo/atelie-aurora/${name}.webp`;
+
 export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
-  banner_url: null,
+  banner_url: DEMO_IMAGE("banner"),
   canceled_at: null,
   created_at: createdAt,
-  descricao_curta: "Cafés, presentes e pequenos momentos preparados com carinho.",
-  endereco: "Praça Central, 27 — Centro",
+  descricao_curta: "Velas, cerâmicas e presentes artesanais feitos em pequenos lotes para transformar pequenos momentos.",
+  endereco: "Rua das Flores, 120 — Centro",
   id: "00000000-0000-4000-8000-000000000010",
-  instagram: "cafedapraca",
-  logo_url: null,
-  nome_loja: "Café da Praça",
+  instagram: null,
+  logo_url: DEMO_IMAGE("logo"),
+  nome_loja: "Ateliê Aurora",
   owner_user_id: DEMO_USER_ID,
-  slug: "cafe-da-praca-demo",
+  slug: "atelie-aurora-demo",
   status: "ativo",
-  tema: "natural",
+  tema: "elegante",
   updated_at: createdAt,
   whatsapp: "5511999999999",
 };
 
 export const DEMO_CATEGORIES: Database["public"]["Tables"]["categories"]["Row"][] = [
-  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000101", nome: "Cafés", ordem: 0, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
-  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000102", nome: "Doces", ordem: 1, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
-  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000103", nome: "Presentes", ordem: 2, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
-  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000104", nome: "Combos", ordem: 3, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000101", nome: "Novidades", ordem: 0, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000102", nome: "Velas e aromas", ordem: 1, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000103", nome: "Casa e afeto", ordem: 2, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
+  { created_at: createdAt, id: "00000000-0000-4000-8000-000000000104", nome: "Para presentear", ordem: 3, tenant_id: DEMO_TENANT.id, updated_at: createdAt },
 ];
 
+const demoProduct = (
+  index: number,
+  categoryIndex: number,
+  ordem: number,
+  image: string,
+  nome: string,
+  preco: number,
+  descricao: string,
+  variacao_info: string | null,
+  ativo = true,
+): Database["public"]["Tables"]["products"]["Row"] => ({
+  ativo,
+  category_id: DEMO_CATEGORIES[categoryIndex].id,
+  created_at: createdAt,
+  descricao,
+  id: `00000000-0000-4000-8000-000000000${String(200 + index)}`,
+  imagem_url: DEMO_IMAGE(image),
+  link_externo: null,
+  nome,
+  ordem,
+  preco,
+  tenant_id: DEMO_TENANT.id,
+  updated_at: createdAt,
+  variacao_info,
+});
+
 export const DEMO_PRODUCTS: Database["public"]["Tables"]["products"]["Row"][] = [
-  { ativo: true, category_id: DEMO_CATEGORIES[0].id, created_at: createdAt, descricao: "Café coado na hora, com grãos selecionados.", id: "00000000-0000-4000-8000-000000000201", imagem_url: "/demo/caneca-orvalho.svg", link_externo: null, nome: "Café especial", ordem: 0, preco: 12, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Pequeno ou grande" },
-  { ativo: true, category_id: DEMO_CATEGORIES[0].id, created_at: createdAt, descricao: "Espresso intenso finalizado com leite cremoso.", id: "00000000-0000-4000-8000-000000000202", imagem_url: "/demo/caneca-orvalho.svg", link_externo: null, nome: "Cappuccino da casa", ordem: 1, preco: 16.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Tradicional ou canela" },
-  { ativo: true, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Brownie intenso com casquinha crocante.", id: "00000000-0000-4000-8000-000000000203", imagem_url: "/demo/vela-aurora.svg", link_externo: null, nome: "Brownie artesanal", ordem: 0, preco: 12, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
-  { ativo: true, category_id: DEMO_CATEGORIES[1].id, created_at: createdAt, descricao: "Cookie macio com gotas de chocolate.", id: "00000000-0000-4000-8000-000000000204", imagem_url: "/demo/vela-aurora.svg", link_externo: null, nome: "Cookie especial", ordem: 1, preco: 9.5, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
-  { ativo: true, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Uma seleção delicada para presentear.", id: "00000000-0000-4000-8000-000000000205", imagem_url: "/demo/kit-afeto.svg", link_externo: null, nome: "Kit carinho", ordem: 0, preco: 59.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Cartão personalizado incluso" },
-  { ativo: true, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Caneca acompanhada de café selecionado.", id: "00000000-0000-4000-8000-000000000206", imagem_url: "/demo/caneca-orvalho.svg", link_externo: null, nome: "Caneca com café", ordem: 1, preco: 49.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Embalagem para presente" },
-  { ativo: true, category_id: DEMO_CATEGORIES[3].id, created_at: createdAt, descricao: "Dois cafés e dois doces para compartilhar.", id: "00000000-0000-4000-8000-000000000207", imagem_url: "/demo/bolsa-essencial.svg", link_externo: null, nome: "Pausa para dois", ordem: 0, preco: 39.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Serve duas pessoas" },
-  { ativo: true, category_id: DEMO_CATEGORIES[3].id, created_at: createdAt, descricao: "Café, bolo e doces em uma combinação especial.", id: "00000000-0000-4000-8000-000000000208", imagem_url: "/demo/kit-afeto.svg", link_externo: null, nome: "Combo da praça", ordem: 1, preco: 79.9, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: "Serve até quatro pessoas" },
-  { ativo: false, category_id: DEMO_CATEGORIES[2].id, created_at: createdAt, descricao: "Caneca artesanal em edição limitada.", id: "00000000-0000-4000-8000-000000000209", imagem_url: "/demo/vela-aurora.svg", link_externo: null, nome: "Caneca artesanal", ordem: 2, preco: 42, tenant_id: DEMO_TENANT.id, updated_at: createdAt, variacao_info: null },
+  demoProduct(1, 0, 0, "kit-afeto", "Kit Afeto", 84.9, "Caixa kraft com duas velas artesanais e cortador de pavio dourado.", "Escolha o aroma das velas"),
+  demoProduct(2, 0, 1, "vela-aurora", "Vela Aurora", 42, "Vela de cera vegetal em pote de vidro com tampa, produzida em pequenos lotes.", "Lavanda, baunilha ou capim-limão"),
+  demoProduct(3, 0, 2, "caneca-orvalho", "Caneca Orvalho", 49.9, "Caneca de cerâmica feita à mão, com esmalte verde e acabamento rústico.", "Peças únicas, com pequenas variações de cor"),
+  demoProduct(4, 1, 0, "vela-jardim", "Vela Jardim", 38, "Aroma floral delicado em pote de vidro reutilizável.", "180 g"),
+  demoProduct(5, 1, 1, "vela-aconchego", "Vela Aconchego", 46, "Notas quentes de baunilha e madeira em pote âmbar.", "220 g"),
+  demoProduct(6, 1, 2, "difusor-brisa", "Difusor Brisa", 64.9, "Difusor de varetas em frasco âmbar que perfuma o ambiente por semanas.", "Alecrim, flor de laranjeira ou bambu"),
+  demoProduct(7, 2, 0, "xicaras-areia", "Conjunto Xícaras Areia", 89.9, "Xícaras de cerâmica artesanal em tom areia, modeladas à mão.", "Conjunto com 4 peças"),
+  demoProduct(8, 2, 1, "bolsa-essencial", "Bolsa Essencial", 69.9, "Ecobag de algodão cru, leve e resistente para a rotina.", "40 × 35 cm"),
+  demoProduct(9, 2, 2, "vasos-nuvem", "Trio de Vasos Nuvem", 79.9, "Três mini vasos de cerâmica branca para flores secas.", "Flores secas não inclusas"),
+  demoProduct(10, 3, 0, "caixa-celebracao", "Caixa Celebração", 119.9, "Velas artesanais embaladas com flores secas para aniversários e datas especiais.", "Cartão com mensagem personalizada"),
+  demoProduct(11, 3, 1, "pequenos-momentos", "Presente Pequenos Momentos", 59.9, "Vela aromática em caixa kraft com laço de cetim.", "Laço vermelho ou rosé"),
+  demoProduct(12, 3, 2, "kit-aconchegante", "Kit Casa Aconchegante", 139.9, "Caneca de cerâmica e vela aromática para pausas tranquilas em casa.", "Embalagem para presente"),
+  // Item oculto para a demonstração mostrar também o estado "Oculto" no painel.
+  demoProduct(13, 1, 3, "vela-aconchego", "Vela Edição de Inverno", 52, "Edição sazonal com notas de canela e cravo.", "Volta em junho", false),
 ];
 
 export const DEMO_SUBSCRIPTION: Database["public"]["Tables"]["subscriptions"]["Row"] = {
