@@ -13,11 +13,20 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { formatBrazilWhatsApp, normalizeBrazilWhatsAppInput } from "@/lib/whatsapp/url";
 import { compressImageForUpload } from "@/lib/images/compress-upload";
 import { normalizeInstagramUsername } from "@/lib/instagram/username";
+import {
+  DELIVERY_MODES,
+  normalizePaymentMethods,
+  PAYMENT_METHODS,
+  STORE_INFO_LIMITS,
+  type DeliveryMode,
+  type PaymentMethod,
+} from "@/lib/catalog/store-info";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { cn } from "@/lib/utils/cn";
 import type { PublicCatalog } from "@/types/catalog";
@@ -198,6 +207,10 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
   const [whatsapp, setWhatsapp] = useState(() => normalizeBrazilWhatsAppInput(catalog.whatsapp));
   const [instagram, setInstagram] = useState(() => normalizeInstagramUsername(catalog.instagram ?? ""));
   const [address, setAddress] = useState(catalog.endereco ?? "");
+  const [payments, setPayments] = useState<PaymentMethod[]>(catalog.formas_pagamento);
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode | "">(catalog.entrega_modo ?? "");
+  const [deliveryNote, setDeliveryNote] = useState(catalog.entrega_observacao ?? "");
+  const [hours, setHours] = useState(catalog.horario_atendimento ?? "");
   const [logoImage, setLogoImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.logo_url, remove: false, savedUrl: catalog.logo_url });
   const [bannerImage, setBannerImage] = useState<StoreImageState>({ fileName: null, previewUrl: catalog.banner_url, remove: false, savedUrl: catalog.banner_url });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -293,6 +306,10 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
     banner_url: bannerImage.previewUrl,
     descricao_curta: description || null,
     endereco: address || null,
+    entrega_modo: deliveryMode || null,
+    entrega_observacao: deliveryMode && deliveryNote.trim() ? deliveryNote.trim() : null,
+    formas_pagamento: payments,
+    horario_atendimento: hours.trim() || null,
     instagram: instagram || null,
     logo_url: logoImage.previewUrl,
     nome_loja: name || "Nome da sua loja",
@@ -336,6 +353,52 @@ export function StoreSettingsForm({ catalog }: { catalog: PublicCatalog }) {
                   <Input id="endereco" maxLength={240} name="endereco" onChange={(event) => setAddress(event.target.value)} placeholder="Rua, número, bairro e cidade" value={address} />
                   <FieldDescription>Será exibido publicamente na sua loja. Deixe vazio se não quiser divulgar.</FieldDescription>
                 </Field>
+              </div>
+            </StoreFormSection>
+
+            <StoreFormSection title="Atendimento">
+              <div className="grid gap-4">
+                <fieldset className="grid min-w-0 gap-2">
+                  <legend className="mb-1 text-sm font-semibold">Formas de pagamento <span className="font-normal text-[var(--app-foreground-muted)]">(opcional)</span></legend>
+                  <div className="flex flex-wrap gap-2">
+                    {PAYMENT_METHODS.map((method) => (
+                      <label className="cursor-pointer" key={method.id}>
+                        <input
+                          checked={payments.includes(method.id)}
+                          className="peer sr-only"
+                          name="formasPagamento"
+                          onChange={(event) => setPayments((current) => normalizePaymentMethods(event.target.checked ? [...current, method.id] : current.filter((id) => id !== method.id)))}
+                          type="checkbox"
+                          value={method.id}
+                        />
+                        <span className="flex min-h-11 items-center rounded-full border bg-white px-4 text-sm font-medium transition-colors peer-checked:border-brand-700 peer-checked:bg-brand-100 peer-checked:text-brand-900 peer-focus-visible:ring-3 peer-focus-visible:ring-brand-200">
+                          {method.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="entregaModo">Entrega e retirada</FieldLabel>
+                    <Select id="entregaModo" name="entregaModo" onChange={(event) => setDeliveryMode(event.target.value as DeliveryMode | "")} value={deliveryMode}>
+                      <option value="">Não informar</option>
+                      {DELIVERY_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="horarioAtendimento">Horário de atendimento <span className="font-normal text-[var(--app-foreground-muted)]">(opcional)</span></FieldLabel>
+                    <Input id="horarioAtendimento" maxLength={STORE_INFO_LIMITS.hours} name="horarioAtendimento" onChange={(event) => setHours(event.target.value)} placeholder="Seg a sex, das 9h às 18h" value={hours} />
+                  </Field>
+                  {deliveryMode ? (
+                    <Field className="sm:col-span-2">
+                      <FieldLabel htmlFor="entregaObservacao">Observação sobre entrega <span className="font-normal text-[var(--app-foreground-muted)]">(opcional)</span></FieldLabel>
+                      <Input id="entregaObservacao" maxLength={STORE_INFO_LIMITS.deliveryNote} name="entregaObservacao" onChange={(event) => setDeliveryNote(event.target.value)} placeholder="Ex.: Entregamos no centro; taxa combinada pelo WhatsApp." value={deliveryNote} />
+                      <FieldDescription>{deliveryNote.length}/{STORE_INFO_LIMITS.deliveryNote} caracteres. Evite telefone ou endereço completo aqui.</FieldDescription>
+                    </Field>
+                  ) : null}
+                </div>
+                <FieldDescription>Essas informações aparecem no topo da loja e no carrinho, perto do botão de enviar o pedido.</FieldDescription>
               </div>
             </StoreFormSection>
 

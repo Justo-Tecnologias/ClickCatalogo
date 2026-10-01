@@ -1,4 +1,5 @@
 import type { PublicCatalog } from "@/types/catalog";
+import { EMPTY_STORE_SERVICE_INFO } from "@/lib/catalog/store-info";
 
 export const SAMPLE_CATALOG: PublicCatalog = {
   banner_url: null,
@@ -61,6 +62,7 @@ export const SAMPLE_CATALOG: PublicCatalog = {
   ],
   descricao_curta: "Pequenos detalhes para presentear e deixar a casa mais bonita.",
   endereco: "Rua das Flores, 120 — Centro",
+  ...EMPTY_STORE_SERVICE_INFO,
   instagram: "atelieaurora",
   logo_url: null,
   nome_loja: "Ateliê Aurora",

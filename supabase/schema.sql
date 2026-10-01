@@ -17,6 +17,11 @@ create table public.tenants (
   instagram text,
   endereco text,
   tema text not null default 'minimal',
+  -- Atendimento (opcional): ver src/lib/catalog/store-info.ts.
+  formas_pagamento text[] not null default '{}',
+  entrega_modo text,
+  entrega_observacao text,
+  horario_atendimento text,
   owner_user_id uuid not null references auth.users(id) on delete restrict,
   status text not null default 'ativo',
   canceled_at timestamptz,
@@ -45,6 +50,18 @@ create table public.tenants (
   ),
   constraint tenants_status_check check (
     status in ('ativo', 'inadimplente', 'cancelado')
+  ),
+  constraint tenants_formas_pagamento_check check (
+    formas_pagamento <@ array['pix', 'credito', 'debito', 'dinheiro']::text[]
+  ),
+  constraint tenants_entrega_modo_check check (
+    entrega_modo is null or entrega_modo in ('entrega', 'retirada', 'ambos')
+  ),
+  constraint tenants_entrega_observacao_check check (
+    entrega_observacao is null or char_length(entrega_observacao) between 1 and 120
+  ),
+  constraint tenants_horario_atendimento_check check (
+    horario_atendimento is null or char_length(horario_atendimento) between 1 and 80
   )
 );
 
@@ -535,7 +552,11 @@ grant update (
   whatsapp,
   instagram,
   endereco,
-  tema
+  tema,
+  formas_pagamento,
+  entrega_modo,
+  entrega_observacao,
+  horario_atendimento
 ) on table public.tenants to authenticated;
 grant select, insert, update, delete on table public.categories to authenticated;
 grant select, insert, update, delete on table public.products to authenticated;
@@ -646,6 +667,10 @@ as $$
     'whatsapp', tenant.whatsapp,
     'instagram', tenant.instagram,
     'endereco', tenant.endereco,
+    'formas_pagamento', to_jsonb(tenant.formas_pagamento),
+    'entrega_modo', tenant.entrega_modo,
+    'entrega_observacao', tenant.entrega_observacao,
+    'horario_atendimento', tenant.horario_atendimento,
     'tema', tenant.tema,
     'status', tenant.status,
     'categorias', coalesce(

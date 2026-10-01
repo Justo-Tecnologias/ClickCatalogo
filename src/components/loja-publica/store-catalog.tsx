@@ -25,6 +25,7 @@ import {
   shouldShowCategoryNavigation,
   shouldUseStickyCategories,
 } from "@/lib/catalog/storefront";
+import type { StoreServiceInfo } from "@/lib/catalog/store-info";
 import { formatCurrency } from "@/lib/format/currency";
 import type { CatalogCategory, CatalogProduct } from "@/types/catalog";
 
@@ -36,6 +37,7 @@ type StoreCatalogProps = {
   enableCart?: boolean;
   footer?: ReactNode;
   framed?: boolean;
+  serviceInfo?: StoreServiceInfo;
   storeName: string;
   whatsapp: string;
 };
@@ -48,7 +50,7 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
-export function StoreCatalog({ analyticsSlug, categories, enableCart = true, footer, framed = false, storeName, whatsapp }: StoreCatalogProps) {
+export function StoreCatalog({ analyticsSlug, categories, enableCart = true, footer, framed = false, serviceInfo, storeName, whatsapp }: StoreCatalogProps) {
   const searchId = useId();
   const categoryTargetIdPrefix = `${searchId.replace(/:/g, "")}-categoria`;
   const totalProducts = useMemo(
@@ -273,6 +275,7 @@ export function StoreCatalog({ analyticsSlug, categories, enableCart = true, foo
             }}
             onRemove={removeCartItem}
             open={cartOpen}
+            serviceInfo={serviceInfo}
             storeName={storeName}
             whatsapp={whatsapp}
           />

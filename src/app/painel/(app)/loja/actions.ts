@@ -5,6 +5,14 @@ import { z } from "zod";
 
 import { actionError, type ActionResult } from "@/lib/actions/result";
 import { requireTenant } from "@/lib/auth/session";
+import {
+  DELIVERY_MODES,
+  normalizePaymentMethods,
+  PAYMENT_METHODS,
+  STORE_INFO_LIMITS,
+  type DeliveryMode,
+  type PaymentMethod,
+} from "@/lib/catalog/store-info";
 import { normalizeInstagramUsername } from "@/lib/instagram/username";
 import { validateCatalogImageUpload } from "@/lib/images/validate-upload";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +24,10 @@ const themes = ["classico", "natural", "tech", "delivery", "elegante", "minimal"
 const storeSchema = z.object({
   descricaoCurta: z.string().trim().max(180).nullable(),
   endereco: z.string().trim().max(240).nullable(),
+  entregaModo: z.enum(DELIVERY_MODES.map((mode) => mode.id) as [DeliveryMode, ...DeliveryMode[]]).nullable(),
+  entregaObservacao: z.string().trim().max(STORE_INFO_LIMITS.deliveryNote, `Use no máximo ${STORE_INFO_LIMITS.deliveryNote} caracteres na observação de entrega.`).nullable(),
+  formasPagamento: z.array(z.enum(PAYMENT_METHODS.map((method) => method.id) as [PaymentMethod, ...PaymentMethod[]])),
+  horarioAtendimento: z.string().trim().max(STORE_INFO_LIMITS.hours, `Use no máximo ${STORE_INFO_LIMITS.hours} caracteres no horário.`).nullable(),
   instagram: z.string().regex(/^[a-zA-Z0-9._]{1,30}$/, "Informe um usuário válido do Instagram.").nullable(),
   nomeLoja: z.string().trim().min(2, "Digite o nome da loja.").max(100),
   tema: z.enum(themes),
@@ -37,6 +49,10 @@ export async function updateStoreAction(formData: FormData): Promise<ActionResul
   const parsed = storeSchema.safeParse({
     descricaoCurta: String(formData.get("descricaoCurta") ?? "").trim() || null,
     endereco: String(formData.get("endereco") ?? "").trim() || null,
+    entregaModo: String(formData.get("entregaModo") ?? "") || null,
+    entregaObservacao: String(formData.get("entregaObservacao") ?? "").trim() || null,
+    formasPagamento: [...new Set(formData.getAll("formasPagamento").map(String))],
+    horarioAtendimento: String(formData.get("horarioAtendimento") ?? "").trim() || null,
     instagram: normalizeInstagramUsername(String(formData.get("instagram") ?? "")) || null,
     nomeLoja: formData.get("nomeLoja"),
     tema: formData.get("tema") as TenantTheme,
@@ -77,6 +93,11 @@ export async function updateStoreAction(formData: FormData): Promise<ActionResul
       banner_url: bannerUrl,
       descricao_curta: parsed.data.descricaoCurta,
       endereco: parsed.data.endereco,
+      entrega_modo: parsed.data.entregaModo,
+      // Observação só faz sentido com entrega/retirada informada.
+      entrega_observacao: parsed.data.entregaModo ? parsed.data.entregaObservacao : null,
+      formas_pagamento: normalizePaymentMethods(parsed.data.formasPagamento),
+      horario_atendimento: parsed.data.horarioAtendimento,
       instagram: parsed.data.instagram,
       logo_url: logoUrl,
       nome_loja: parsed.data.nomeLoja,

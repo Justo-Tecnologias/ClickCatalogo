@@ -1,3 +1,4 @@
+import type { StoreServiceInfo } from "@/lib/catalog/store-info";
 import type { TenantStatus, TenantTheme } from "@/types/database";
 
 export type CatalogProduct = {
@@ -18,7 +19,7 @@ export type CatalogCategory = {
   produtos: CatalogProduct[];
 };
 
-export type PublicCatalog = {
+export type PublicCatalog = StoreServiceInfo & {
   banner_url: string | null;
   categorias: CatalogCategory[];
   descricao_curta: string | null;

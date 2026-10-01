@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { trackProductMetric } from "@/lib/analytics/client";
 import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
 import { signupSchema } from "@/lib/signup/schema";
+import { EMPTY_STORE_SERVICE_INFO } from "@/lib/catalog/store-info";
 import { formatBrazilWhatsApp, normalizeBrazilWhatsAppInput } from "@/lib/whatsapp/url";
 import type { TenantTheme } from "@/types/database";
 
@@ -55,7 +56,7 @@ export function SignupForm() {
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [form.slug]);
 
-  const preview = useMemo(() => ({ banner_url: null, categorias: [{ id: "11111111-1111-4111-8111-111111111111", nome: "Destaques", ordem: 0, produtos: [{ descricao: "Seu produto com descrição e preço.", id: "22222222-2222-4222-8222-222222222222", imagem_url: null, nome: "Produto de exemplo", ordem: 0, preco: 27, variacao_info: "Variações sob consulta" }] }], descricao_curta: "Catálogo pronto para receber pedidos.", endereco: null, instagram: null, logo_url: null, nome_loja: form.nomeLoja || "Nome da sua loja", slug: form.slug || "sua-loja", status: "ativo" as const, tema: form.tema, whatsapp: form.whatsapp || "5511999999999" }), [form]);
+  const preview = useMemo(() => ({ banner_url: null, categorias: [{ id: "11111111-1111-4111-8111-111111111111", nome: "Destaques", ordem: 0, produtos: [{ descricao: "Seu produto com descrição e preço.", id: "22222222-2222-4222-8222-222222222222", imagem_url: null, nome: "Produto de exemplo", ordem: 0, preco: 27, variacao_info: "Variações sob consulta" }] }], descricao_curta: "Catálogo pronto para receber pedidos.", endereco: null, ...EMPTY_STORE_SERVICE_INFO, instagram: null, logo_url: null, nome_loja: form.nomeLoja || "Nome da sua loja", slug: form.slug || "sua-loja", status: "ativo" as const, tema: form.tema, whatsapp: form.whatsapp || "5511999999999" }), [form]);
   const effectiveSlugStatus = form.slug.length < 3
     ? { available: false, checking: false, message: slugTouched || form.slug.length > 0 ? "Use pelo menos 3 caracteres." : "" }
     : slugStatus;

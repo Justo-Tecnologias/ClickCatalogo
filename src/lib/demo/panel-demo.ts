@@ -22,6 +22,10 @@ export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
   created_at: createdAt,
   descricao_curta: "Velas, cerâmicas e presentes artesanais feitos em pequenos lotes para transformar pequenos momentos.",
   endereco: "Rua das Flores, 120 — Centro",
+  entrega_modo: "ambos",
+  entrega_observacao: "Entregamos no centro; taxa combinada pelo WhatsApp.",
+  formas_pagamento: ["pix", "credito", "dinheiro"],
+  horario_atendimento: "Seg a sáb, das 9h às 18h",
   id: "00000000-0000-4000-8000-000000000010",
   instagram: null,
   logo_url: DEMO_IMAGE("logo"),
@@ -110,6 +114,13 @@ export const DEMO_SUBSCRIPTION: Database["public"]["Tables"]["subscriptions"]["R
   valor: 27,
 };
 
+// Números ilustrativos do card "Sua loja esta semana" no modo demonstração.
+export const DEMO_STORE_STATS = [
+  { current: 184, event: "catalog_view", previous: 152 },
+  { current: 23, event: "whatsapp_order_clicked", previous: 17 },
+  { current: 9, event: "catalog_shared", previous: 11 },
+] as const satisfies readonly { current: number; event: "catalog_shared" | "catalog_view" | "whatsapp_order_clicked"; previous: number }[];
+
 export const DEMO_CATALOG: PublicCatalog = {
   banner_url: DEMO_TENANT.banner_url,
   categorias: DEMO_CATEGORIES.map((category) => ({
@@ -129,6 +140,10 @@ export const DEMO_CATALOG: PublicCatalog = {
   })),
   descricao_curta: DEMO_TENANT.descricao_curta,
   endereco: DEMO_TENANT.endereco,
+  entrega_modo: DEMO_TENANT.entrega_modo,
+  entrega_observacao: DEMO_TENANT.entrega_observacao,
+  formas_pagamento: DEMO_TENANT.formas_pagamento,
+  horario_atendimento: DEMO_TENANT.horario_atendimento,
   instagram: DEMO_TENANT.instagram,
   logo_url: DEMO_TENANT.logo_url,
   nome_loja: DEMO_TENANT.nome_loja,

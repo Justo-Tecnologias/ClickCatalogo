@@ -50,6 +50,8 @@ O arquivo `migrations/202609300025_overdue_suspension_policy.sql` implementa a p
 
 O arquivo `migrations/202610010026_marketing_page_metrics.sql` acrescenta as visitas da landing (`landing_view`) e de `/como-funciona` (`how_it_works_view`) à lista fechada de métricas agregadas. A lista do banco precisa ser idêntica a `productMetricNames` em `src/lib/analytics/events.ts`; um teste confere isso. O relatório `funnel-report.sql` (somente leitura) mostra o funil dos últimos 30 dias.
 
+O arquivo `migrations/202610010027_store_service_info.sql` acrescenta as informações de atendimento da loja em `tenants`: `formas_pagamento` (`pix`, `credito`, `debito`, `dinheiro`), `entrega_modo` (`entrega`, `retirada`, `ambos`), `entrega_observacao` (até 120 caracteres) e `horario_atendimento` (até 80). O titular pode editá-las diretamente; `get_public_catalog` passa a devolvê-las. Os valores precisam permanecer alinhados com `src/lib/catalog/store-info.ts`. Aplique antes do deploy do código.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:
