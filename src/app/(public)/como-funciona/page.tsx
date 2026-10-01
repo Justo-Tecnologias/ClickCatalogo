@@ -58,7 +58,7 @@ export default function HowItWorksPage() {
             number={1}
             title="Crie sua loja"
           >
-            <ResponsiveShot alt="Formulário de cadastro com nome da loja, WhatsApp, e-mail e endereço preenchidos" desktop="/como-funciona/cadastro-dados.webp" eager mobile="/como-funciona/cadastro-dados-celular.webp" url="clickcatalogo.com/cadastro" />
+            <ResponsiveShot alt="Formulário de cadastro com nome da loja, WhatsApp, e-mail, endereço e senha preenchidos" desktop="/como-funciona/cadastro-dados.webp" eager mobile="/como-funciona/cadastro-dados-celular.webp" url="clickcatalogo.com/cadastro" />
           </Step>
 
           <Step
@@ -68,7 +68,7 @@ export default function HowItWorksPage() {
             reverse
             title="Escolha o visual"
           >
-            <ResponsiveShot alt="Escolha do tema Elegante com a prévia da loja ao vivo" desktop="/como-funciona/cadastro-tema.webp" mobile="/como-funciona/cadastro-tema-celular.webp" url="clickcatalogo.com/cadastro" />
+            <ResponsiveShot alt="Escolha do tema com a prévia da loja ao vivo e o aviso Grátis para montar" desktop="/como-funciona/cadastro-tema.webp" mobile="/como-funciona/cadastro-tema-celular.webp" url="clickcatalogo.com/cadastro" />
           </Step>
 
           <Step
