@@ -13,3 +13,14 @@ export const THEME_COLORS = {
   elegante: { accent: "#d6a58d", accentText: "#1b1210", background: "#0e0e0f", foreground: "#f7f3ef" },
   minimal: { accent: "#4e5963", accentText: "#ffffff", background: "#ffffff", foreground: "#111214" },
 } as const satisfies Record<TenantTheme, { accent: string; accentText: string; background: string; foreground: string }>;
+
+// Cópia dos tokens da marca de src/styles/tokens.css (mesma regra: o
+// check:contrast falha se divergir). Usada pela imagem Open Graph da landing.
+export const BRAND_COLORS = {
+  accent: "#d9f38c",
+  brand100: "#e4f1e9",
+  brand50: "#f4f9f6",
+  brand700: "#1d4b3c",
+  brand900: "#133229",
+  muted: "#4f5d57",
+} as const;

@@ -1,10 +1,11 @@
-import { ShoppingBag } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { PendingLink } from "@/components/ui/pending-link";
 import { getLegalIdentity } from "@/lib/legal/identity";
+import type { Announcement } from "@/lib/marketing/announcements";
 import { cn } from "@/lib/utils/cn";
 
 // Cabeçalho e rodapé das páginas institucionais (landing e /como-funciona).
@@ -19,6 +20,21 @@ export function BrandLink({ inverse = false }: { inverse?: boolean }) {
         <ShoppingBag aria-hidden="true" className="size-4" />
       </span>
       ClickCatálogo
+    </Link>
+  );
+}
+
+export function AnnouncementBar({ announcement }: { announcement: Announcement | null }) {
+  if (!announcement) return null;
+
+  return (
+    <Link
+      className="group relative z-20 flex min-h-10 items-center justify-center gap-2 bg-brand-900 px-4 py-2 text-center text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+      href={announcement.href}
+    >
+      <span className="shrink-0 rounded-full bg-[var(--brand-accent)] px-2 py-0.5 text-xs font-bold text-brand-900">Novo</span>
+      <span className="min-w-0 truncate text-white/90 group-hover:text-white sm:whitespace-normal">{announcement.text}</span>
+      <ArrowRight aria-hidden="true" className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

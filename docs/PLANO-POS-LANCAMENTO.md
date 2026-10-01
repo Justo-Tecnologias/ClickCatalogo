@@ -158,6 +158,16 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 
 Para refazer os prints, use a ferramenta de captura com Chrome headless descrita na seção 3.4.
 
+#### Pacote de conversão 1 (branch `feat/pacote-conversao`)
+
+- [x] Hero com a loja real no celular e o pedido chegando no WhatsApp (texto de `createCartMessage`).
+- [x] Faixa "Novo" no topo da landing, configurada em `src/lib/marketing/announcements.ts`. **Regra: só funcionalidades já publicadas, sem datas de entregas futuras.**
+- [x] Botão fixo "Quero minha loja" no celular, que some sobre o hero, o plano, a chamada final e o rodapé.
+- [x] Imagem de compartilhamento (Open Graph) da landing e de `/como-funciona`. Ela fica no mesmo segmento de cada página, porque o `openGraph` da página substitui o herdado.
+- Limitação conhecida: o gerador de imagens só tem a fonte padrão em peso normal (a Inter do projeto está em WOFF2); vale também para a imagem das lojas.
+
+Próximos pacotes sugeridos (análise de 01/10): valor para o lojista ("Sua loja esta semana" com visitas e cliques, informações da loja, campos opcionais no pedido) e, com dados do funil, o teste de "monta grátis, paga para publicar".
+
 #### Itens da fila anterior (23/09) já resolvidos
 
 - [x] Deploy financeiro `9b44703` publicado.

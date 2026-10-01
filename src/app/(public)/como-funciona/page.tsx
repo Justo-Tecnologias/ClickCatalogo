@@ -1,17 +1,16 @@
 import { ArrowRight, ExternalLink, LayoutTemplate, MousePointerClick, PackagePlus, Send, Share2 } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { PageViewTracker } from "@/components/marketing/page-view-tracker";
+import { BrowserFrame, PhoneFrame } from "@/components/marketing/device-frames";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { WhatsAppOrderPreview } from "@/components/marketing/whatsapp-order-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { PendingLink } from "@/components/ui/pending-link";
-import { DEMO_PRODUCTS } from "@/lib/demo/panel-demo";
+import { EXAMPLE_STORE_NAME, EXAMPLE_STORE_PATH, exampleOrder } from "@/lib/marketing/example-order";
 import { cn } from "@/lib/utils/cn";
-import type { CartLine } from "@/lib/whatsapp/cart-message";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/como-funciona" },
@@ -22,31 +21,6 @@ export const metadata: Metadata = {
   },
   title: "Como funciona",
 };
-
-// Loja de exemplo publicada (mesmos produtos da demonstração do painel).
-const EXAMPLE_STORE_PATH = "/loja/atelie-aurora";
-const EXAMPLE_STORE_NAME = "Ateliê Aurora";
-
-// O mesmo pedido que aparece no print do carrinho.
-function exampleOrder(): CartLine[] {
-  const pick = (nome: string, quantity: number): CartLine => {
-    const product = DEMO_PRODUCTS.find((item) => item.nome === nome);
-    if (!product) throw new Error(`Produto de exemplo ausente: ${nome}`);
-    return {
-      product: {
-        descricao: product.descricao,
-        id: product.id,
-        imagem_url: product.imagem_url,
-        nome: product.nome,
-        ordem: product.ordem,
-        preco: Number(product.preco),
-        variacao_info: product.variacao_info,
-      },
-      quantity,
-    };
-  };
-  return [pick("Kit Afeto", 2), pick("Vela Aurora", 1), pick("Vela Jardim", 1)];
-}
 
 export default function HowItWorksPage() {
   return (
@@ -198,47 +172,5 @@ function ResponsiveShot({ alt, desktop, eager = false, mobile, url }: { alt: str
       </div>
       <PhoneFrame alt={alt} className="lg:hidden" eager={eager} src={mobile} />
     </>
-  );
-}
-
-function BrowserFrame({ alt, eager = false, src, url }: { alt: string; eager?: boolean; src: string; url: string }) {
-  return (
-    <figure className="overflow-hidden rounded-[var(--radius-card)] border border-brand-900/10 bg-white shadow-[0_24px_60px_rgb(19_50_41_/_14%)]">
-      <div aria-hidden="true" className="flex items-center gap-3 border-b border-brand-900/10 bg-[var(--app-surface-muted)] px-3 py-2">
-        <span className="flex gap-1.5">
-          <span className="size-2.5 rounded-full bg-brand-900/15" />
-          <span className="size-2.5 rounded-full bg-brand-900/15" />
-          <span className="size-2.5 rounded-full bg-brand-900/15" />
-        </span>
-        <span className="min-w-0 flex-1 truncate rounded-md bg-white px-3 py-1 text-xs text-[var(--app-foreground-muted)]">{url}</span>
-      </div>
-      <Image
-        alt={alt}
-        className="h-auto w-full"
-        fetchPriority={eager ? "high" : undefined}
-        height={900}
-        loading={eager ? "eager" : "lazy"}
-        sizes="(max-width: 1023px) 100vw, 720px"
-        src={src}
-        width={1440}
-      />
-    </figure>
-  );
-}
-
-function PhoneFrame({ alt, className, eager = false, src }: { alt: string; className?: string; eager?: boolean; src: string }) {
-  return (
-    <figure className={cn("mx-auto w-full max-w-[15rem] rounded-[2rem] border-[6px] border-brand-900 bg-brand-900 shadow-[0_24px_60px_rgb(19_50_41_/_22%)]", className)}>
-      <Image
-        alt={alt}
-        className="h-auto w-full rounded-[1.6rem]"
-        fetchPriority={eager ? "high" : undefined}
-        height={1688}
-        loading={eager ? "eager" : "lazy"}
-        sizes="240px"
-        src={src}
-        width={780}
-      />
-    </figure>
   );
 }

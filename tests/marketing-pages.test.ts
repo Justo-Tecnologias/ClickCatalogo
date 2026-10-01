@@ -14,7 +14,7 @@ test("como-funciona usa prints reais publicados e a mensagem gerada pelo carrinh
     assert.ok(existsSync(`public${image}`), `imagem ausente: ${image}`);
   }
   assert.match(preview, /createCartMessage\(storeName, items\)/);
-  assert.match(page, /EXAMPLE_STORE_PATH = "\/loja\/atelie-aurora"/);
+  assert.match(read("src/lib/marketing/example-order.ts"), /EXAMPLE_STORE_PATH = "\/loja\/atelie-aurora"/);
   assert.doesNotMatch(page, /\bpriority\b/);
 });
 
@@ -64,4 +64,29 @@ test("landing e rodapé levam a /como-funciona e o auditor confere a vitrine", (
   assert.match(audit, /\["\/como-funciona", /);
   assert.match(audit, /body\.includes\("Falar no WhatsApp"\)/);
   assert.match(audit, /\|\| "atelie-aurora"/);
+});
+
+test("pacote de conversão: hero real, novidades já publicadas, CTA fixo e imagem social", () => {
+  const landing = read("src/app/(public)/page.tsx");
+  const hero = read("src/components/marketing/hero-showcase.tsx");
+  const announcements = read("src/lib/marketing/announcements.ts");
+  const sticky = read("src/components/marketing/mobile-sticky-cta.tsx");
+
+  assert.match(landing, /<HeroShowcase \/>/);
+  assert.match(hero, /createCartMessage\(EXAMPLE_STORE_NAME, exampleOrder\(\)\)/);
+  assert.match(hero, /\beager\b/);
+  assert.match(landing, /<AnnouncementBar announcement=\{CURRENT_ANNOUNCEMENT\} \/>/);
+  const href = announcements.match(/href: "([^"]+)"/)?.[1];
+  assert.ok(href && existsSync(`src/app/(public)${href}/page.tsx`), "a novidade deve apontar para uma página já existente");
+  assert.match(landing, /<MobileStickyCta hideWhenVisible=\{\["inicio", "plano", "chamada-final", "rodape"\]\} \/>/);
+  for (const id of ["inicio", "plano", "chamada-final"]) assert.match(landing, new RegExp(`id="${id}"`));
+  assert.match(sticky, /sm:hidden/);
+  assert.match(sticky, /tabIndex=\{visible \? undefined : -1\}/);
+
+  // A imagem precisa ficar no mesmo segmento da página; senão o openGraph da página a descarta.
+  for (const route of ["src/app/(public)/opengraph-image.tsx", "src/app/(public)/como-funciona/opengraph-image.tsx"]) {
+    assert.match(read(route), /renderMarketingOgImage/);
+  }
+  assert.ok(!existsSync("src/app/opengraph-image.tsx"));
+  assert.match(read("src/app/layout.tsx"), /card: "summary_large_image"/);
 });
