@@ -7,7 +7,7 @@ export type ContinuationSnapshot = {
   checkoutUrl: string | null;
   hasIntent: boolean;
   hasTenant: boolean;
-  intentStatus: "cancelado" | "expirado" | "pago" | "pendente" | null;
+  intentStatus: "cancelado" | "expirado" | "pago" | "pendente" | "rascunho" | null;
   ownerHasPassword: boolean;
   reconciliationStatus: string | null;
   reactivationRequestedAt: string | null;

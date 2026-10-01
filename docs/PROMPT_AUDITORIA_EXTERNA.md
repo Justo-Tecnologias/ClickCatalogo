@@ -87,7 +87,7 @@ O pipeline executa ESLint, TypeScript, auditoria de contraste dos seis temas e `
 
 - `GET /api/slug-disponivel`;
 - `POST /api/cadastro/validar-conta`;
-- `POST /api/checkout/asaas`;
+- `POST /api/cadastro/criar` (cadastro gratuito; substituiu `POST /api/checkout/asaas`);
 - `GET /api/cadastro/status`;
 - `POST /api/cadastro/definir-senha`;
 - `POST /api/webhooks/asaas`.

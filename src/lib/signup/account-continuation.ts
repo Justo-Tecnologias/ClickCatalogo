@@ -25,8 +25,11 @@ export async function resolveAccountContinuationState(
   if (!intent) return { type: "TERMINAL" };
 
   const identity = { intentId: intent.id, intentType: intent.intent_type };
+  // Cadastro gratuito: a conta (com senha) e a loja em rascunho já existem,
+  // então o caminho é o mesmo de uma conta paga — entrar no painel.
+  const draftAccount = intent.status === "rascunho" && Boolean(intent.provisioned_tenant_id);
 
-  if (intent.status !== "pago") return {
+  if (intent.status !== "pago" && !draftAccount) return {
     ...identity,
     ...decideAccountContinuationState({
       checkoutCreationStartedAt: intent.checkout_creation_started_at,
@@ -84,7 +87,7 @@ export async function resolveAccountContinuationState(
       checkoutUrl: intent.asaas_checkout_url,
       hasIntent: true,
       hasTenant: true,
-      intentStatus: intent.status,
+      intentStatus: draftAccount ? "pago" : intent.status,
       ownerHasPassword: Boolean(owner.user?.app_metadata?.catalogoja_password_configured_at),
       reconciliationStatus,
       reactivationRequestedAt,

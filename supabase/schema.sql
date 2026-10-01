@@ -27,9 +27,20 @@ create table public.tenants (
   owner_user_id uuid not null references auth.users(id) on delete restrict,
   status text not null default 'ativo',
   canceled_at timestamptz,
+  -- Cadastro gratuito: ver docs/PLANO-MONTA-GRATIS.md.
+  email_confirmado_em timestamptz,
+  draft_last_seen_at timestamptz,
+  draft_reminder_last_day smallint not null default 0,
+  draft_reminder_claimed_at timestamptz,
+  draft_deletion_claimed_at timestamptz,
+  lembretes_desativados_em timestamptz,
+  lembretes_token uuid not null default extensions.gen_random_uuid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
+  constraint tenants_draft_reminder_last_day_check check (
+    draft_reminder_last_day in (0, 1, 3, 7)
+  ),
   constraint tenants_slug_format_check check (
     slug = lower(slug)
     and char_length(slug) between 3 and 60
@@ -51,7 +62,7 @@ create table public.tenants (
     tema in ('classico', 'natural', 'tech', 'delivery', 'elegante', 'minimal')
   ),
   constraint tenants_status_check check (
-    status in ('ativo', 'inadimplente', 'cancelado')
+    status in ('rascunho', 'ativo', 'inadimplente', 'cancelado')
   ),
   constraint tenants_formas_pagamento_check check (
     formas_pagamento <@ array['pix', 'credito', 'debito', 'dinheiro']::text[]
@@ -69,6 +80,11 @@ create table public.tenants (
 
 create unique index tenants_owner_user_id_unique_idx
   on public.tenants (owner_user_id);
+create unique index tenants_lembretes_token_unique_idx
+  on public.tenants (lembretes_token);
+create index tenants_draft_lifecycle_idx
+  on public.tenants (created_at)
+  where status = 'rascunho';
 
 create table public.tenant_slug_history (
   slug text primary key,
@@ -282,7 +298,7 @@ create table public.signup_intents (
     privacy_version ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
   ),
   constraint signup_intents_status_check check (
-    status in ('pendente', 'pago', 'expirado', 'cancelado')
+    status in ('rascunho', 'pendente', 'pago', 'expirado', 'cancelado')
   ),
   constraint signup_intents_intent_type_check check (
     intent_type in ('signup', 'reactivation')
@@ -948,7 +964,8 @@ create table public.product_metrics_daily (
   constraint product_metrics_daily_event_check check (
     event_name in (
       'landing_view', 'how_it_works_view',
-      'signup_started', 'signup_step_completed', 'checkout_created',
+      'signup_started', 'signup_step_completed', 'draft_created',
+      'email_verified', 'checkout_created',
       'payment_confirmed', 'password_created', 'first_category_created',
       'first_product_created', 'fifth_product_created', 'catalog_shared',
       'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
@@ -978,7 +995,8 @@ declare
 begin
   if p_event_name not in (
     'landing_view', 'how_it_works_view',
-    'signup_started', 'signup_step_completed', 'checkout_created',
+    'signup_started', 'signup_step_completed', 'draft_created',
+    'email_verified', 'checkout_created',
     'payment_confirmed', 'password_created', 'first_category_created',
     'first_product_created', 'fifth_product_created', 'catalog_shared',
     'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
@@ -2133,3 +2151,249 @@ revoke all on function public.get_own_tenant_redirect_slugs() from public, anon,
 grant execute on function public.get_own_tenant_redirect_slugs() to authenticated;
 
 commit;
+
+-- Cadastro gratuito em rascunho (migration 029).
+-- 3. Confirmação de e-mail (exigida para publicar).
+create table public.email_verification_tokens (
+  id uuid primary key default extensions.gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now(),
+
+  constraint email_verification_tokens_hash_check check (token_hash ~ '^[a-f0-9]{64}$'),
+  constraint email_verification_tokens_expiry_check check (expires_at > created_at)
+);
+
+create index email_verification_tokens_tenant_idx
+  on public.email_verification_tokens (tenant_id, created_at desc);
+
+alter table public.email_verification_tokens enable row level security;
+revoke all on table public.email_verification_tokens from anon, authenticated;
+
+create or replace function public.consume_email_verification_token(p_token_hash text)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant_id uuid;
+begin
+  if p_token_hash is null or p_token_hash !~ '^[a-f0-9]{64}$' then
+    return null;
+  end if;
+
+  update public.email_verification_tokens
+  set consumed_at = clock_timestamp()
+  where token_hash = p_token_hash
+    and consumed_at is null
+    and expires_at > clock_timestamp()
+  returning tenant_id into v_tenant_id;
+
+  if v_tenant_id is null then
+    return null;
+  end if;
+
+  update public.tenants
+  set email_confirmado_em = coalesce(email_confirmado_em, clock_timestamp())
+  where id = v_tenant_id;
+
+  return v_tenant_id;
+end;
+$$;
+
+revoke all on function public.consume_email_verification_token(text) from public, anon, authenticated;
+grant execute on function public.consume_email_verification_token(text) to service_role;
+
+-- 4. Último acesso do rascunho (base do prazo de 30 dias). Gravado no máximo
+-- uma vez por hora, pelo próprio titular autenticado.
+create or replace function public.touch_draft_last_seen()
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.tenants
+  set draft_last_seen_at = clock_timestamp()
+  where owner_user_id = auth.uid()
+    and status = 'rascunho'
+    and (
+      draft_last_seen_at is null
+      or draft_last_seen_at < clock_timestamp() - interval '1 hour'
+    );
+$$;
+
+revoke all on function public.touch_draft_last_seen() from public, anon;
+grant execute on function public.touch_draft_last_seen() to authenticated;
+
+-- 5. Lembretes dos dias 1, 3 e 7 (reserva idempotente, como claim_overdue_notices).
+create or replace function public.claim_draft_reminders(p_limit integer default 20)
+returns table (
+  tenant_id uuid,
+  nome_loja text,
+  slug text,
+  owner_email text,
+  reminder_day smallint,
+  product_count integer,
+  email_confirmed boolean,
+  lembretes_token uuid,
+  last_seen_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  v_today date := (clock_timestamp() at time zone 'America/Sao_Paulo')::date;
+begin
+  if p_limit < 1 or p_limit > 50 then
+    raise exception 'Limite de lembretes inválido.' using errcode = '22023';
+  end if;
+
+  return query
+  with candidates as (
+    select
+      tenant.id,
+      tenant.draft_reminder_last_day,
+      (case
+        when v_today - (tenant.created_at at time zone 'America/Sao_Paulo')::date >= 7 then 7
+        when v_today - (tenant.created_at at time zone 'America/Sao_Paulo')::date >= 3 then 3
+        else 1
+      end)::smallint as target_day
+    from public.tenants as tenant
+    where tenant.status = 'rascunho'
+      and tenant.lembretes_desativados_em is null
+      and v_today - (tenant.created_at at time zone 'America/Sao_Paulo')::date between 1 and 29
+      and (
+        tenant.draft_reminder_claimed_at is null
+        or tenant.draft_reminder_claimed_at < clock_timestamp() - interval '10 minutes'
+      )
+    order by tenant.created_at, tenant.id
+    for update of tenant skip locked
+  ), due as (
+    select candidates.id, candidates.target_day
+    from candidates
+    where candidates.target_day > candidates.draft_reminder_last_day
+    limit p_limit
+  ), claimed as (
+    update public.tenants as tenant
+    set draft_reminder_claimed_at = clock_timestamp()
+    from due
+    where tenant.id = due.id
+    returning tenant.id, due.target_day
+  )
+  select
+    claimed.id,
+    tenant.nome_loja,
+    tenant.slug,
+    auth_user.email::text,
+    claimed.target_day,
+    (
+      select count(*)::integer
+      from public.products as product
+      where product.tenant_id = claimed.id
+        and product.ativo = true
+    ),
+    tenant.email_confirmado_em is not null,
+    tenant.lembretes_token,
+    coalesce(tenant.draft_last_seen_at, tenant.created_at)
+  from claimed
+  join public.tenants as tenant on tenant.id = claimed.id
+  join auth.users as auth_user on auth_user.id = tenant.owner_user_id;
+end;
+$$;
+
+revoke all on function public.claim_draft_reminders(integer) from public, anon, authenticated;
+grant execute on function public.claim_draft_reminders(integer) to service_role;
+
+-- 6. Exclusão de rascunhos sem acesso há 30 dias. A rotina reserva, remove as
+-- fotos do Storage, apaga a loja por delete_stale_draft e por fim o usuário do Auth.
+create or replace function public.claim_stale_drafts(p_limit integer default 5)
+returns table (tenant_id uuid, owner_user_id uuid)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+begin
+  if p_limit < 1 or p_limit > 20 then
+    raise exception 'Limite de exclusões inválido.' using errcode = '22023';
+  end if;
+
+  return query
+  with stale as (
+    select tenant.id
+    from public.tenants as tenant
+    where tenant.status = 'rascunho'
+      and coalesce(tenant.draft_last_seen_at, tenant.created_at) < clock_timestamp() - interval '30 days'
+      and (
+        tenant.draft_deletion_claimed_at is null
+        or tenant.draft_deletion_claimed_at < clock_timestamp() - interval '15 minutes'
+      )
+    order by coalesce(tenant.draft_last_seen_at, tenant.created_at), tenant.id
+    limit p_limit
+    for update of tenant skip locked
+  )
+  update public.tenants as tenant
+  set draft_deletion_claimed_at = clock_timestamp()
+  from stale
+  where tenant.id = stale.id
+  returning tenant.id, tenant.owner_user_id;
+end;
+$$;
+
+revoke all on function public.claim_stale_drafts(integer) from public, anon, authenticated;
+grant execute on function public.claim_stale_drafts(integer) to service_role;
+
+create or replace function public.delete_stale_draft(p_tenant_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_owner_user_id uuid;
+begin
+  select tenant.owner_user_id into v_owner_user_id
+  from public.tenants as tenant
+  where tenant.id = p_tenant_id
+    and tenant.status = 'rascunho'
+    and coalesce(tenant.draft_last_seen_at, tenant.created_at) < clock_timestamp() - interval '30 days'
+  for update;
+
+  if not found then
+    return null;
+  end if;
+
+  -- Rascunho nunca pagou: não há registro fiscal a preservar.
+  delete from public.signup_intents
+  where provisioned_tenant_id = p_tenant_id
+     or target_tenant_id = p_tenant_id;
+  delete from public.tenants where id = p_tenant_id;
+
+  return v_owner_user_id;
+end;
+$$;
+
+revoke all on function public.delete_stale_draft(uuid) from public, anon, authenticated;
+grant execute on function public.delete_stale_draft(uuid) to service_role;
+
+-- 7. Página pública "Loja em preparação": só o nome, e só de rascunhos.
+create or replace function public.get_public_draft_store_name(p_slug text)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select tenant.nome_loja
+  from public.tenants as tenant
+  where tenant.slug = lower(btrim(p_slug))
+    and tenant.status = 'rascunho';
+$$;
+
+revoke all on function public.get_public_draft_store_name(text) from public;
+grant execute on function public.get_public_draft_store_name(text) to anon, authenticated;

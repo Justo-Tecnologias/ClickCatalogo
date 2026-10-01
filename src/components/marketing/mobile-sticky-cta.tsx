@@ -45,7 +45,7 @@ export function MobileStickyCta({ hideWhenVisible }: { hideWhenVisible: string[]
         pendingLabel="Abrindo cadastro..."
         tabIndex={visible ? undefined : -1}
       >
-        Quero minha loja · R$ 27/mês
+        Criar minha loja grátis
         <ArrowRight aria-hidden="true" />
       </PendingLink>
     </div>

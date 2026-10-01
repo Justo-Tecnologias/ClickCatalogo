@@ -3,6 +3,8 @@ export const productMetricNames = [
   "how_it_works_view",
   "signup_started",
   "signup_step_completed",
+  "draft_created",
+  "email_verified",
   "checkout_created",
   "payment_confirmed",
   "password_created",

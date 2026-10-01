@@ -79,9 +79,9 @@ export function PanelShell({ children, demo = false, notice = null, offline = fa
             ClickCatálogo
           </Link>
           <div className="flex items-center gap-2">
-            <Badge variant={status === "ativo" ? "success" : status === "inadimplente" && !offline ? "warning" : "danger"}>
-              <span className="min-[480px]:hidden">{status === "ativo" ? "Ativa" : status === "inadimplente" ? offline ? "Fora do ar" : "Pendente" : "Cancelada"}</span>
-              <span className="hidden min-[480px]:inline">{status === "ativo" ? "Loja ativa" : status === "inadimplente" ? offline ? "Loja fora do ar" : "Pagamento pendente" : "Loja cancelada"}</span>
+            <Badge variant={status === "ativo" ? "success" : status === "rascunho" ? "neutral" : status === "inadimplente" && !offline ? "warning" : "danger"}>
+              <span className="min-[480px]:hidden">{status === "ativo" ? "Ativa" : status === "rascunho" ? "Rascunho" : status === "inadimplente" ? offline ? "Fora do ar" : "Pendente" : "Cancelada"}</span>
+              <span className="hidden min-[480px]:inline">{status === "ativo" ? "Loja ativa" : status === "rascunho" ? "Loja em rascunho" : status === "inadimplente" ? offline ? "Loja fora do ar" : "Pagamento pendente" : "Loja cancelada"}</span>
             </Badge>
             <Button
               aria-controls="panel-mobile-menu"

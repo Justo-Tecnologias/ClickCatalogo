@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/app/painel/actions";
+import { DraftBanner } from "@/components/painel/draft-banner";
 import { OverdueBanner } from "@/components/painel/overdue-banner";
 import { PanelShell } from "@/components/painel/panel-shell";
 import { Alert } from "@/components/ui/alert";
@@ -34,12 +35,17 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
     );
   }
 
-  const overdue = context.demo ? null : await loadOverdueSituation(context.tenant.id);
+  const draft = !context.demo && context.tenant.status === "rascunho"
+    ? await loadDraftState(context.tenant.id)
+    : null;
+  const overdue = context.demo || draft ? null : await loadOverdueSituation(context.tenant.id);
 
   return (
     <PanelShell
       demo={context.demo}
-      notice={overdue ? <OverdueBanner {...overdue} /> : null}
+      notice={draft
+        ? <DraftBanner email={context.userEmail} emailConfirmed={Boolean(context.tenant.email_confirmado_em)} productCount={draft.productCount} />
+        : overdue ? <OverdueBanner {...overdue} /> : null}
       offline={overdue?.phase === "suspended" || overdue?.phase === "cancellation_due"}
       slug={context.tenant.slug}
       status={context.tenant.status}
@@ -49,6 +55,17 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
       {children}
     </PanelShell>
   );
+}
+
+// Rascunho: registra o acesso (base do prazo de exclusão de 30 dias, no
+// máximo 1 vez por hora) e conta os produtos exigidos para publicar.
+async function loadDraftState(tenantId: string) {
+  const supabase = await createClient();
+  const [, { count }] = await Promise.all([
+    supabase.rpc("touch_draft_last_seen"),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("ativo", true),
+  ]);
+  return { productCount: count ?? 0 };
 }
 
 async function loadOverdueSituation(tenantId: string) {

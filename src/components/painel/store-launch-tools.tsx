@@ -181,7 +181,7 @@ export function StoreOnboardingChecklist(props: StoreLaunchToolsProps) {
   );
 }
 
-export function StoreShareActions({ children, storeName, storeUrl }: Pick<StoreLaunchToolsProps, "storeName" | "storeUrl"> & { children?: ReactNode }) {
+export function StoreShareActions({ children, locked = false, storeName, storeUrl }: Pick<StoreLaunchToolsProps, "storeName" | "storeUrl"> & { children?: ReactNode; locked?: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const notify = useToast();
@@ -210,11 +210,16 @@ export function StoreShareActions({ children, storeName, storeUrl }: Pick<StoreL
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">Divulgação</p>
       <h2 className="mt-1 text-lg font-bold">Link da loja</h2>
       <p className="mt-2 truncate rounded-[var(--radius-control)] bg-[var(--app-surface-muted)] px-3 py-2.5 text-sm" title={storeUrl}>{storeUrl}</p>
+      {/* Rascunho: o link ainda mostra "Loja em preparação"; divulgar só depois de publicar. */}
+      {locked ? (
+        <p className="mt-3 text-sm leading-6 text-[var(--app-foreground-muted)]">Copiar, enviar pelo WhatsApp e QR Code ficam disponíveis assim que a loja for publicada.</p>
+      ) : (
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Button className="w-full px-2" onClick={copyLink} variant="secondary"><Copy aria-hidden="true" /><span className="hidden min-[360px]:inline">Copiar</span></Button>
         <a className={buttonVariants({ className: "w-full px-2", variant: "secondary" })} href={`https://wa.me/?text=${encodeURIComponent(`Conheça o catálogo da ${storeName}: ${storeUrl}`)}`} onClick={() => markStoreShared(storeUrl)} rel="noreferrer" target="_blank"><MessageCircle aria-hidden="true" /><span className="hidden min-[390px]:inline">WhatsApp</span></a>
         <Button className="w-full whitespace-nowrap px-2 text-xs" onClick={showQrCode} variant="secondary"><QrCode aria-hidden="true" /><span className="hidden whitespace-nowrap min-[360px]:inline">QR Code</span></Button>
       </div>
+      )}
       {children ? <div className="mt-5 border-t pt-5">{children}</div> : null}
 
       <dialog aria-describedby="store-qr-description" aria-labelledby="store-qr-title" className="m-auto w-[calc(100%-2rem)] max-w-md rounded-[var(--radius-card)] border-0 bg-white p-0 shadow-2xl backdrop:bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) dialogRef.current?.close(); }} ref={dialogRef}>
