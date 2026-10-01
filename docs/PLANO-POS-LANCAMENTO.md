@@ -220,8 +220,19 @@ Plano e decisões em `docs/PLANO-MONTA-GRATIS.md`. Por decisão do titular em 01
 - [x] R2: Scheduled Function `draft-lifecycle` (lembretes dos dias 1, 3 e 7, opção de parar e exclusão após 30 dias sem acesso).
 - [x] R3: chamadas "Criar minha loja grátis", FAQ, `/como-funciona` e faixa "Novo".
 - [x] Rota antiga de cadastro pago (`/api/checkout/asaas`) removida. O webhook continua aceitando intenções `signup` pendentes do fluxo antigo.
-- [ ] Aplicar a migration 029 em produção antes do deploy.
-- [ ] Teste ponta a ponta no Deploy Preview: cadastro → confirmação de e-mail → produto → publicar (Asaas Sandbox) → loja no ar.
+- [x] Migration 029 aplicada em produção antes do deploy; publicado em 01/10 (PR #18).
+- [x] Teste em produção pelo titular (loja `justo-store`, 01/10). Funcionaram:
+  - cadastro grátis em rascunho, com aceites `2026-10-01`;
+  - e-mail de boas-vindas e confirmação, 36 s depois;
+  - produto e checkout criado;
+  - "Loja em preparação" no link público;
+  - métricas.
+- [ ] Pagamento real de publicação (rascunho → ativo): adiado pelo titular; será confirmado pela primeira cliente.
+- [ ] Conferir na Netlify a função `draft-lifecycle` (minuto 45) e o lembrete do dia 1 da `justo-store` em 02/10.
+- [x] `funnel-report.sql` atualizado. Ele lia só o escopo global e ignorava os eventos gravados por loja (`payment_confirmed`, `first_product_created`…). Agora soma todos os escopos e segue as etapas do cadastro grátis.
+- Melhorias anotadas na revisão de 01/10:
+  - o titular de um rascunho não consegue excluir a conta pelo painel (Privacidade só permite após cancelamento); hoje depende do prazo de 30 dias ou do atendimento;
+  - o link "Adicionar produtos" do lembrete passa pelo login e cai em "Minha loja", não em "Produtos".
 - [ ] Refazer os prints de `/como-funciona` (o cadastro agora tem senha e o passo 4 é "Publique e compartilhe").
 - Aviso aos titulares atuais sobre os Termos `2026-10-01`: não enviado, porque só havia lojas de teste.
 
