@@ -13,7 +13,12 @@ export function logInfo(operation: string, context: LogContext = {}) {
 }
 
 export function logError(operation: string, error: unknown, context: LogContext = {}) {
-  const message = error instanceof Error ? error.message : "erro desconhecido";
+  // Erros do Supabase chegam como objetos simples com "message", não como Error.
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+      ? error.message
+      : "erro desconhecido";
   console.error(JSON.stringify({
     error: message.slice(0, 500),
     level: "error",

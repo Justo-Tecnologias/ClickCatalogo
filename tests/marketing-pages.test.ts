@@ -41,6 +41,15 @@ test("demonstração espelha a vitrine sem sobrescrever a loja real", () => {
   }
 });
 
+test("landing e /como-funciona contam visitas no funil sem dados pessoais", () => {
+  assert.match(read("src/app/(public)/page.tsx"), /<PageViewTracker event="landing_view" \/>/);
+  assert.match(read("src/app/(public)/como-funciona/page.tsx"), /<PageViewTracker event="how_it_works_view" \/>/);
+  const tracker = read("src/components/marketing/page-view-tracker.tsx");
+  assert.match(tracker, /trackProductMetric\(event\)/);
+  assert.doesNotMatch(tracker, /document\.cookie|localStorage|sessionStorage|navigator\.userAgent/);
+  assert.match(read("src/lib/analytics/events.ts"), /publicProductMetricNames = \[\s*"landing_view",\s*"how_it_works_view",/);
+});
+
 test("landing e rodapé levam a /como-funciona e o auditor confere a vitrine", () => {
   const landing = read("src/app/(public)/page.tsx");
   const chrome = read("src/components/marketing/site-chrome.tsx");

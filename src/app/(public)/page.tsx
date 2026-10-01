@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { PageViewTracker } from "@/components/marketing/page-view-tracker";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
@@ -78,6 +79,7 @@ const frequentlyAskedQuestions = [
 export default function HomePage() {
   return (
     <main className="overflow-hidden bg-[var(--app-background)]">
+      <PageViewTracker event="landing_view" />
       <SiteHeader />
 
       <section className="relative bg-[linear-gradient(135deg,var(--brand-50),white_55%,var(--brand-100))] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">

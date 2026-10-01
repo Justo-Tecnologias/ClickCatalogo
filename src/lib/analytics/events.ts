@@ -1,4 +1,6 @@
 export const productMetricNames = [
+  "landing_view",
+  "how_it_works_view",
   "signup_started",
   "signup_step_completed",
   "checkout_created",
@@ -18,6 +20,8 @@ export const productMetricNames = [
 export type ProductMetricName = (typeof productMetricNames)[number];
 
 export const publicProductMetricNames = [
+  "landing_view",
+  "how_it_works_view",
   "signup_started",
   "signup_step_completed",
   "catalog_shared",

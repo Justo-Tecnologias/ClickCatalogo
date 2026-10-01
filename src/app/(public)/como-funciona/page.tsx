@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { PageViewTracker } from "@/components/marketing/page-view-tracker";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { WhatsAppOrderPreview } from "@/components/marketing/whatsapp-order-preview";
 import { buttonVariants } from "@/components/ui/button";
@@ -50,6 +51,7 @@ function exampleOrder(): CartLine[] {
 export default function HowItWorksPage() {
   return (
     <main className="overflow-hidden bg-[var(--app-background)]">
+      <PageViewTracker event="how_it_works_view" />
       <SiteHeader />
 
       <section className="bg-[linear-gradient(135deg,var(--brand-50),white_55%,var(--brand-100))] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">

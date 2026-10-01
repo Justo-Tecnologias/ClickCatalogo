@@ -113,6 +113,8 @@ Na release da política de atraso, execute `C:\Projeto-Github\ClickCatálogo\sup
 
 Com o deploy publicado, avise os lojistas atuais sobre a atualização dos Termos: rode `npm run notify:terms` (simulação, lista destinatários mascarados) e, depois de revisar, `npm run notify:terms -- --execute --confirm=AVISAR-LOJISTAS-TERMOS`. A chave idempotente impede duplicidade se o comando for repetido no mesmo dia.
 
+Na release de conversão, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202610010026_marketing_page_metrics.sql`. Ela acrescenta `landing_view` e `how_it_works_view` à lista fechada de métricas agregadas; as consultas finais devem retornar `true` e `false`. Não altera dados e pode ser aplicada antes ou depois do deploy: sem ela, as visitas são apenas descartadas e registradas como `unsupported metric` no log. Para acompanhar o funil (visitas → cadastro → checkout → pagamento → primeiro produto), rode `C:\Projeto-Github\ClickCatálogo\supabase\funnel-report.sql`, que é somente leitura.
+
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria

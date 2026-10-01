@@ -152,7 +152,7 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 - [x] Página `/como-funciona` com 5 passos e prints reais (desktop e celular), balão do WhatsApp e chamadas para cadastro e loja de exemplo.
 - [x] Landing: link para o passo a passo e card "Veja uma loja no ar"; cabeçalho e rodapé compartilhados.
 - [x] Demonstração do painel espelhando a Ateliê Aurora (`/loja/atelie-aurora-demo`).
-- [ ] Medir o funil visita → cadastro → checkout (hoje só existem eventos a partir do cadastro).
+- [x] Funil medido: `landing_view` e `how_it_works_view` (migration 026), lido com `supabase/funnel-report.sql`. Atenção: em 01/10 houve cerca de 10 eventos artificiais vindos da captura dos prints.
 - [ ] Publicar: PR, Deploy Preview e conferência visual em produção.
 - Refinamento anotado: no desktop, categorias com 3 produtos deixam a 4ª coluna vazia na grade da loja.
 
