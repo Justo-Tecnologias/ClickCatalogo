@@ -1,6 +1,6 @@
 # ClickCatálogo — Plano pós-lançamento e evolução do produto
 
-Última revisão: **23 de setembro de 2026**.
+Última revisão: **30 de setembro de 2026**.
 
 Este documento organiza o trabalho após a primeira publicação comercial do ClickCatálogo. Ele deve ser usado como fonte principal para decidir a ordem das próximas entregas, registrar validações e impedir que novas funcionalidades sejam misturadas com correções urgentes de produção.
 
@@ -32,105 +32,120 @@ O objetivo imediato é lançar com segurança, observar o comportamento real do 
 
 ## 3. Estado atual deste planejamento
 
-A release publicada de refinamento do painel, loja pública e ciclo de assinatura está no commit:
+Revisado em **30 de setembro de 2026**, após a auditoria completa do projeto e duas releases publicadas no mesmo dia.
 
-```text
-8384939 feat: refine storefront and subscription lifecycle
-```
+### 3.1 Produção agora
 
-Existe uma correção local pronta para o próximo deploy:
+| Item | Estado |
+|---|---|
+| Commit publicado | `ba64198` — merge do PR #11 (Release B) sobre o PR #9 (Release A) |
+| Next.js | **16.3.8** (corrige GHSA-vcvr-r3jv-pc5j, RCE em `next/og`) |
+| Migrations aplicadas em produção | até `202609300025_overdue_suspension_policy.sql` |
+| Asaas | conta de **produção**; webhook "ClickCatalogo Produção" ativo, fila sem interrupção, 10 eventos (auditado com `audit-asaas` em 30/09) |
+| Webhook do Sandbox | desativado e com fila interrompida — inofensivo; só reativar se voltar a testar no Sandbox |
+| Lojas públicas indexadas | `justo-shop` e `atelie-aurora` (ambas `ativo`) |
+| Auditorias | `audit:production` sem falhas; `audit-slug-integrity.sql` sem conflitos |
+| Scheduled Function | executando de hora em hora sem erro (~3 s; log de 30/09 22:15 com todos os contadores em zero) |
+| Termos | versão `2026-09-30` publicada; aviso enviado aos 2 titulares ativos |
+| Qualidade | 69 testes, lint, TypeScript, contraste AA e build aprovados |
 
-```text
-9b44703 fix: reconcile deleted Asaas subscriptions
-```
+### 3.2 O que foi entregue em 30/09/2026
 
-Ela trata assinaturas que já foram excluídas no Asaas, aceita a ausência do
-campo `subscription` quando a cobrança veio da consulta oficial filtrada pela
-assinatura e registra o motivo de falhas futuras nos logs da Scheduled Function.
+#### Release A — segurança e ajustes (PR #9)
 
-Validações conhecidas da candidata atual:
+| Commit | Entrega |
+|---|---|
+| `7601421` | `slug` saiu da permissão de UPDATE do titular em `tenants` (migration 023). Antes, o lojista podia trocar o endereço pela API sem passar por `change_tenant_slug`, contornando histórico, aliases protegidos e reservas de cadastro — inclusive tomando um slug reservado por um checkout pago, o que impediria o provisionamento. Inclui `supabase/audit-slug-integrity.sql`. |
+| `492a47a` | Documentação do Resend corrigida (a API direta é usada em **Acessar minha loja** e no **Atendimento**). `/atendimento` expõe `data-support-channel` e mostra o e-mail direto quando o canal não está pronto; `audit:production` confere o indicador. |
+| `06ef1f7` | Link externo ("Ver oferta") aceita somente Mercado Livre, Shopee, Amazon, Magalu, AliExpress e Shein. Links antigos fora da lista somem da loja e recebem o selo "Link não exibido" no painel. Lista em `src/lib/catalog/external-links.ts`. |
+| `b725264` | Imagem Open Graph usa os tokens dos temas (`src/lib/design-system/theme-colors.ts`); `check:contrast` falha se divergir de `themes.css`. |
+| `c30ea7a` | Webhook localiza usuário do Auth por e-mail via RPC `find_auth_user_id_by_email` (migration 024), com a paginação antiga como plano B. |
+| `a79a0b0` | Métricas da vitrine também contam lojas inadimplentes que continuam no ar. |
 
-- lint e TypeScript aprovados;
-- contraste AA aprovado nos seis temas;
-- 52 testes automatizados aprovados;
-- build de produção aprovado;
-- `npm audit --omit=dev` sem vulnerabilidades;
-- migrations de continuidade, reconciliação, checkout concorrente e aliases aplicadas;
-- permissões de troca, resolução e listagem privada de aliases validadas;
-- landing, cadastro, login, retomada, painel e loja pública revisados localmente;
-- painel e catálogo inspecionados em contexto mobile;
-- rotas públicas, identidade legal, headers de segurança, Open Graph, robots e sitemap conferidos em produção.
+#### Release B — política de pagamento em atraso (PR #11)
 
-### 3.1 Fila imediata de execução
+Fonte única da regra: `src/lib/billing/overdue-policy.mjs`, refletida no banco pela migration 025.
 
-Esta é a ordem operacional a seguir. Não iniciar funcionalidade nova enquanto
-os itens P0 e P1 não estiverem concluídos.
+| Dia do atraso | Comportamento |
+|---|---|
+| 0 a 7 | Loja no ar; faixa no painel com data limite, "Pagar fatura" e "Ver assinatura" |
+| 1, 6 e 25 | E-mail de aviso, uma vez por marco, com chave idempotente; botão leva à fatura oficial do Asaas (somente `*.asaas.com`) |
+| 8 em diante | Catálogo indisponível com mensagem neutra (`get_public_store_status = 'suspenso'`); selo "Loja fora do ar" no painel |
+| 30 | Scheduled Function inativa a recorrência, remove cobranças abertas e só então encerra a loja; começa a retenção de 30 dias |
 
-#### P0 — concluir o deploy financeiro atual
+| Commit | Entrega |
+|---|---|
+| `e03e438` | Política completa: migration 025, webhook (`PAYMENT_OVERDUE` grava `overdue_since` e fatura; pagamento zera o ciclo), rotina horária, `OverdueBanner`, e-mails (`overdue-emails.mjs`), Termos `2026-09-30`, FAQ e `scripts/notify-terms-update.mjs`. |
+| `3a51278` | Restaura delimitadores `$$` no `schema.sql` (a migration não foi afetada) e faz um atraso em assinatura que estava em dia abrir sempre um ciclo novo. |
+| `dd2fb60` | Rotina horária completa `overdue_since` de assinaturas atrasadas sem data (rede de segurança). |
+| `ebcd034` | **Segurança:** Next.js 16.3.3 → 16.3.8. |
+| `5ed2971` | Teste da rotina isolado das variáveis do Resend (o build da Netlify falhava por isso). |
 
-- [ ] Enviar o commit `9b44703` para `master`.
-- [ ] Confirmar que a Netlify publicou exatamente esse commit.
-- [ ] Aguardar ou executar a Scheduled Function de cancelamentos uma vez.
-- [ ] Confirmar que a assinatura de teste saiu de `attention` para `complete`.
-- [ ] Confirmar `asaas_subscription_state = deleted` para a assinatura já removida.
-- [ ] Confirmar que `access_until` representa somente o período realmente pago.
-- [ ] Abrir novamente a tela Assinatura e conferir a data final exibida ao cliente.
+O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior + 025 (caminho da produção) e instalação do zero, cobrindo dias 7/8/30, avisos, leases, a corrida pagamento × encerramento e `verify-setup.sql`.
 
-Critério de aceite: nenhuma assinatura cancelada fica indefinidamente como
-`attention`, nenhuma cobrança futura é criada e o acesso não ultrapassa o período
-comprovadamente pago.
+### 3.3 Decisões registradas
 
-#### P1 — limpar a apresentação pública de teste
+| Data | Decisão | Motivo |
+|---|---|---|
+| 30/09 | Corrigir slug revogando a permissão e auditando produção | Menor mudança que fecha o contorno; auditoria confirmou que não houve abuso |
+| 30/09 | Atraso: 7 dias no ar, fora do ar a partir do 8º, encerramento no 30º | Equilíbrio entre recuperar o cliente e não manter loja de graça |
+| 30/09 | Avisos: faixa no painel + e-mails nos dias 1, 6 e 25 | Recuperação sem excesso de mensagens |
+| 30/09 | Botão do e-mail leva direto à fatura do Asaas | Menor atrito para pagar; domínio validado contra golpe |
+| 30/09 | No 30º dia, remover cobranças abertas; retorno pelo checkout de reativação | Impede pagamento de loja já encerrada sem reativação |
+| 30/09 | Lojas já inadimplentes começam a contar na aplicação da migration | Ninguém sai do ar sem receber o ciclo de avisos |
+| 30/09 | Termos `2026-09-30` + aviso único aos titulares, sem novo aceite | Transparência sem atrito |
+| 30/09 | Link externo somente para marketplaces conhecidos, validado no painel e na loja, sem migration | Reduz uso do domínio para phishing sem custo de manutenção no banco |
+| 30/09 | Correção de segurança do Next.js publicada junto com a Release B | Um único deploy |
+| 30/09 | **Não** executar cobrança e cancelamento controlados em produção | Decisão do titular; o primeiro cliente real será acompanhado de perto (ver 3.5) |
 
-O sitemap atual publica `sabor-da-vila4` e `loja-teste-netlify`. A primeira usa
-nome ScannerTec, URL de restaurante e produtos de segmentos diferentes. Isso
-não é vazamento entre tenants, mas prejudica credibilidade, compartilhamento e SEO.
+### 3.4 Lições operacionais
 
-- [ ] Escolher somente uma loja como demonstração pública coerente.
-- [ ] Alinhar nome, slug, descrição, logo, banner, categorias e produtos dessa demo.
-- [ ] Remover a duplicidade `Destaque`/`Destaques`.
-- [ ] Retirar do índice qualquer loja exclusivamente técnica ou de pagamento.
-- [ ] Conferir novamente sitemap, metadata e imagem Open Graph.
+- **Chaves do Asaas começam com `$`.** No PowerShell, use aspas **simples**: `$env:ASAAS_API_KEY = '$aact_prod_...'`. Com aspas duplas o valor fica vazio e os scripts usam silenciosamente a chave de Sandbox do `.env.local`.
+- **Esta máquina usa Node 20.** Scripts que exigem Node 22 rodam com:
+  `npx -y -p node@22 node --env-file-if-exists=.env.local scripts/<script>.mjs`
+  executado dentro de `C:\Projeto-Github\ClickCatálogo`.
+- **`.env.local` não contém Resend nem chave de produção do Asaas.** Defina-as somente na sessão do PowerShell quando necessário e feche a janela depois.
+- **O SQL Editor do Supabase mostra apenas o resultado da última consulta.** Para auditorias com várias consultas, execute uma de cada vez.
+- **Nunca montar SQL com `String.replace` usando texto de substituição:** `$$` vira `$`. Use fatiamento ou função de substituição; o teste `funções SQL mantêm delimitadores $$ íntegros` protege o `schema.sql`.
+- **Verificar loja no ar pelo botão "Falar no WhatsApp"**, não pela palavra "Catálogo" (ela também aparece em "ClickCatálogo" na página de loja inexistente).
+- **Variáveis do ambiente de build afetam testes.** A Netlify tem Resend configurado; testes que dependem de ambiente devem limpar as variáveis.
+- **Migration antes do deploy:** quando o banco recebe uma regra antes do código, prever o intervalo (ex.: rede de segurança `overdueBackfilled`).
 
-Critério de aceite: todo endereço de loja enviado ao Google ou compartilhado
-publicamente parece uma loja real e possui identidade visual e catálogo coerentes.
+### 3.5 Fila imediata
 
-#### P1 — validar o primeiro ciclo comercial completo
+#### P0 — acompanhar o primeiro cliente real (substitui o teste controlado)
 
-- [ ] Abrir um novo checkout e confirmar o valor oficial de R$ 27.
-- [ ] Fazer uma contratação controlada com outro e-mail.
-- [ ] Confirmar webhook, criação da senha, login e provisionamento sem duplicidade.
-- [ ] Criar categoria e produto, compartilhar a loja e montar pedido no WhatsApp.
-- [ ] Solicitar cancelamento e confirmar que a recorrência deixa de existir no Asaas.
-- [ ] Confirmar que a loja permanece acessível somente até o fim do período pago.
+- [ ] Netlify: confirmar que `ASAAS_API_KEY` começa com `$aact_prod_`.
+- [ ] No primeiro pagamento: `CHECKOUT_PAID` e `PAYMENT_CONFIRMED` com resposta 200 em **Asaas → Integrações → Logs de Webhooks**.
+- [ ] Cliente cria a senha na tela de sucesso e entra no painel da loja correta.
+- [ ] Rodar `audit-asaas` e `audit:live` após o primeiro pagamento.
+- [ ] No primeiro cancelamento: `reconciliation.completed` sobe e `attention` permanece 0 no log da rotina.
+- [ ] No primeiro atraso: e-mail do dia 1 aparece como `overdueNotices.sent` no log.
 
-Critério de aceite: um cliente consegue sair da landing, pagar, criar acesso,
-publicar e cancelar sem intervenção manual do operador.
+#### P1 — decisões pendentes do titular
 
-#### P1 — operação da primeira semana
+- [ ] **Higgsfield:** em 30/09 surgiram alterações locais não commitadas no `master` — `scripts/higgsfield/index.ts` (exemplo de vídeo com IA, modelo Seedance 2.5), `@higgsfield/client` como dependência **de produção**, script `higgsfield:example` e `HF_CREDENTIALS` no `.env.example`. Decidir se fica neste repositório (como `devDependency` ou fora do bundle) ou num projeto separado de marketing.
+- [ ] **Pasta `marketing/`:** continua fora do Git; decidir se é versionada, ignorada ou movida.
+- [ ] **Próximo foco de produto** (ver seção 18).
 
-- [ ] Revisar diariamente Functions da Netlify, logs do Supabase, Asaas e Resend.
-- [ ] Rodar diariamente a simulação `npm run privacy:purge`.
-- [ ] Executar o expurgo confirmado somente quando existirem registros elegíveis.
-- [ ] Fazer backup semanal do banco e do bucket `produtos`.
-- [ ] Definir limites/alertas de consumo dos fornecedores.
-- [ ] Registrar incidentes com horário, rota, impacto e request ID, sem PII.
+#### P2 — dívida técnica curta
 
-Critério de aceite: existe uma rotina que pode ser executada por outra pessoa
-seguindo `docs/OPERACAO.md`, sem depender da memória de quem desenvolveu.
+- [ ] `audit:production`: a checagem `loja-real` procura "Catálogo" e passa até para loja inexistente; trocar pelo marcador "Falar no WhatsApp".
+- [ ] Atualizar `STATUS.md`, desatualizado desde 15/09.
+- [ ] Alerta "high" do `brace-expansion` (somente ferramentas de desenvolvimento) via Dependabot.
+- [ ] Teste de SQL permanente: hoje a validação com PGlite rodou fora do repositório. Avaliar adicionar `@electric-sql/pglite` como `devDependency` e um teste que carregue `schema.sql` e as migrations.
+- [ ] Lint no Windows reporta `no-img-element` em `opengraph-image.tsx` (no Linux a regra ignora o arquivo); inofensivo.
+- [ ] E2E de cadastro/retomada, login, CRUD essencial, carrinho e cancelamento, sem cobrança real.
+- [ ] Monitoramento de exceções sem PII e alerta para Scheduled Function atrasada ou `attention`/`superseded`.
+- [ ] Observação: o evento `overdue.cancellation.superseded` exige reativação manual da recorrência no Asaas (ver `docs/OPERACAO.md`).
 
-#### P2 — dívida técnica curta da próxima release
+#### Itens da fila anterior (23/09) já resolvidos
 
-- [ ] Atualizar `audit:production`: a loja usa o título `Catálogo`, mas o auditor
-  ainda procura `Produtos em destaque` e produz falha falsa.
-- [ ] Criar E2E somente para cadastro/retomada, login, CRUD essencial, carrinho e
-  cancelamento; não tentar automatizar todas as combinações visuais.
-- [ ] Adicionar monitoramento de exceções sem dados pessoais.
-- [ ] Automatizar alerta para Scheduled Function atrasada ou reconciliação em
-  `attention`, sem automatizar imediatamente a exclusão destrutiva.
-
-Critério de aceite: falhas críticas são detectadas pelo operador antes de virarem
-uma sequência de chamados de clientes.
+- [x] Deploy financeiro `9b44703` publicado.
+- [x] Sitemap sem lojas técnicas: agora lista somente `justo-shop` e `atelie-aurora`.
+- [x] `audit:production` deixou de procurar "Produtos em destaque".
+- [x] Webhook de produção com os 10 eventos, inclusive `PAYMENT_DELETED` e `SUBSCRIPTION_UPDATED`.
+- [ ] ~~Contratação e cancelamento controlados~~ — substituído pelo acompanhamento do primeiro cliente (decisão de 30/09).
 
 ## 4. Fase 0 — estabilização do deploy publicado
 
@@ -651,7 +666,16 @@ Uma entrega somente está pronta quando:
 
 ## 18. Ordem consolidada recomendada
 
-1. Concluir smoke test e pagamento real controlado da release atual.
+Revisada em 30/09/2026. O item 1 original (pagamento real controlado) foi substituído pelo acompanhamento do primeiro cliente (seção 3.5). Com segurança, cobrança e atraso resolvidos, o gargalo passa a ser **aquisição de clientes**; o próximo foco ainda será escolhido pelo titular entre:
+
+- **Converter visitantes** *(recomendado)*: `/como-funciona`, exemplos de lojas reais e ajustes na landing para o tráfego da campanha de lançamento;
+- **Página individual de produto** (Fase 2, seção 6);
+- **Visão interna das lojas**: tela administrativa com lojas, status de pagamento, atrasos e métricas — hoje só consultável no Supabase;
+- **Organizar a casa**: itens P2 da seção 3.5.
+
+Ordem de referência depois dessa escolha:
+
+1. Acompanhar o primeiro cliente real (seção 3.5, P0).
 2. Monitoramento de erros e alertas.
 3. Backup e teste de restauração.
 4. Observar e ajustar rate limiting.
@@ -667,7 +691,7 @@ Uma entrega somente está pronta quando:
 
 ## 19. Registro de decisões futuras
 
-Ao iniciar uma fase, registrar aqui ou em um documento específico:
+As decisões já tomadas estão na tabela da seção 3.3; acrescente novas linhas ali. Ao iniciar uma fase, registrar também:
 
 - data;
 - problema observado;
