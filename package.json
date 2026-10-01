@@ -17,6 +17,7 @@
     "audit:production": "node --env-file-if-exists=.env.local scripts/audit-production.mjs",
     "backup:storage": "node --env-file-if-exists=.env.local scripts/backup-storage.mjs",
     "import:justo-shop": "node --env-file-if-exists=.env.local scripts/import-justo-shop.mjs",
+    "import:atelie-aurora": "node --env-file-if-exists=.env.local scripts/import-atelie-aurora.mjs",
     "privacy:purge": "node --env-file-if-exists=.env.local scripts/purge-retention.mjs",
     "notify:terms": "node --env-file-if-exists=.env.local scripts/notify-terms-update.mjs"
   },
