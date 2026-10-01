@@ -2,6 +2,7 @@ import {
   ArrowRight,
   Check,
   CreditCard,
+  ExternalLink,
   LayoutTemplate,
   MessageCircle,
   MousePointerClick,
@@ -12,13 +13,14 @@ import {
   Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
+import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PendingLink } from "@/components/ui/pending-link";
-import { getLegalIdentity } from "@/lib/legal/identity";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -74,23 +76,9 @@ const frequentlyAskedQuestions = [
 ] as const;
 
 export default function HomePage() {
-  const legalIdentity = getLegalIdentity();
-
   return (
     <main className="overflow-hidden bg-[var(--app-background)]">
-      <nav className="relative z-10 border-b border-brand-900/10 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <BrandLink />
-          <div className="flex items-center gap-2">
-            <PendingLink className={buttonVariants({ size: "sm", variant: "ghost" })} href="/painel" pendingLabel="Abrindo...">
-              Entrar
-            </PendingLink>
-            <PendingLink className={buttonVariants({ size: "sm" })} href="/cadastro" pendingLabel="Abrindo...">
-              Quero minha loja
-            </PendingLink>
-          </div>
-        </div>
-      </nav>
+      <SiteHeader />
 
       <section className="relative bg-[linear-gradient(135deg,var(--brand-50),white_55%,var(--brand-100))] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
         <div className="absolute -right-40 -top-40 size-[34rem] rounded-full bg-[var(--brand-accent)]/35 blur-3xl" />
@@ -168,7 +156,44 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
+          <Link className={buttonVariants({ className: "mt-6", variant: "secondary" })} href="/como-funciona">
+            Ver o passo a passo com telas reais
+            <ArrowRight aria-hidden="true" />
+          </Link>
         </div>
+      </section>
+
+      <section className="px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
+        <Card className="mx-auto grid max-w-5xl items-center gap-8 overflow-hidden border-brand-200 p-6 sm:p-10 md:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Veja uma loja no ar</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-900">Ateliê Aurora</h2>
+            <p className="mt-4 max-w-xl leading-7 text-[var(--app-foreground-muted)]">
+              Nossa loja de demonstração: velas, cerâmicas e presentes organizados em categorias, com carrinho e pedido
+              pelo WhatsApp. Abra no celular, monte um pedido e veja a experiência do seu cliente.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link className={buttonVariants()} href="/loja/atelie-aurora" rel="noopener" target="_blank">
+                Abrir a loja
+                <ExternalLink aria-hidden="true" />
+              </Link>
+              <Link className={buttonVariants({ variant: "secondary" })} href="/como-funciona">
+                Como funciona
+              </Link>
+            </div>
+          </div>
+          <figure className="mx-auto w-full max-w-[13rem] rounded-[2rem] border-[6px] border-brand-900 bg-brand-900 shadow-[0_24px_60px_rgb(19_50_41_/_22%)]">
+            <Image
+              alt="Loja Ateliê Aurora aberta no celular"
+              className="h-auto w-full rounded-[1.6rem]"
+              height={1688}
+              loading="lazy"
+              sizes="208px"
+              src="/como-funciona/loja-celular.webp"
+              width={780}
+            />
+          </figure>
+        </Card>
       </section>
 
       <section className="border-y border-brand-900/5 bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-8" id="temas">
@@ -260,60 +285,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer
-        className="border-t border-white/10 bg-brand-900 px-4 text-white sm:px-6 lg:px-8"
-        id="rodape"
-      >
-        <div className="mx-auto grid max-w-7xl gap-8 py-10 sm:grid-cols-[1fr_auto] sm:items-center">
-          <div className="max-w-md">
-            <BrandLink inverse />
-            <p className="mt-4 text-sm leading-6 text-white/75">
-              Catálogo digital simples para organizar produtos e receber pedidos direto no WhatsApp.
-            </p>
-          </div>
-          <nav aria-label="Links institucionais" className="flex flex-col items-start gap-1 sm:items-end">
-            <FooterLink href="/termos">Termos de uso</FooterLink>
-            <FooterLink href="/privacidade">Política de privacidade</FooterLink>
-            {legalIdentity.supportEmail ? (
-              <>
-                <FooterLink href="/atendimento">Atendimento</FooterLink>
-                <FooterLink href="/atendimento?assunto=sugestao&origem=inicio">Enviar sugestão</FooterLink>
-              </>
-            ) : null}
-            <FooterLink href="/painel">Entrar no painel</FooterLink>
-          </nav>
-        </div>
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 border-t border-white/10 py-5 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} ClickCatálogo</p>
-          <p>Um produto da Justo Tecnologias.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
-  );
-}
-
-function BrandLink({ inverse = false }: { inverse?: boolean }) {
-  return (
-    <Link
-      className={`flex min-h-11 items-center gap-2 font-bold tracking-tight ${inverse ? "text-white" : "text-brand-900"}`}
-      href="/"
-    >
-      <span className={`grid size-8 place-items-center rounded-lg ${inverse ? "bg-white/10" : "bg-brand-900 text-white"}`}>
-        <ShoppingBag aria-hidden="true" className="size-4" />
-      </span>
-      ClickCatálogo
-    </Link>
-  );
-}
-
-function FooterLink({ children, href }: { children: React.ReactNode; href: string }) {
-  return (
-    <Link
-      className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-      href={href}
-    >
-      {children}
-    </Link>
   );
 }
 

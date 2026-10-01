@@ -1,5 +1,7 @@
 const siteUrlValue = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-const storeSlug = process.argv[2]?.trim();
+// A loja vitrine é linkada na landing e em /como-funciona; por isso é
+// conferida sempre, salvo quando outro endereço é informado.
+const storeSlug = process.argv[2]?.trim() || "atelie-aurora";
 const failures = [];
 const results = [];
 
@@ -42,6 +44,7 @@ if (siteUrl.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(siteUrl
 
 const publicPages = [
   ["/", "Sua loja no WhatsApp em minutos"],
+  ["/como-funciona", "Do cadastro ao primeiro pedido no WhatsApp"],
   ["/cadastro", "Vamos criar sua loja"],
   ["/painel", "Seu catálogo, num clique"],
   ["/auth/confirmar-recuperacao", "Confirme a recuperação"],
@@ -146,7 +149,9 @@ if (storeSlug) {
     const { body, response } = await request(`/loja/${encodeURIComponent(storeSlug)}`);
     assert(
       "loja-real",
-      response.status === 200 && body.includes("Catálogo"),
+      // "Catálogo" também aparece em "ClickCatálogo" na página de loja
+      // inexistente; o botão do WhatsApp só existe numa loja publicada.
+      response.status === 200 && body.includes("Falar no WhatsApp"),
       `HTTP ${response.status}; catálogo não confirmado.`,
     );
     results.push({ check: "loja-real", slug: storeSlug, status: response.status });
