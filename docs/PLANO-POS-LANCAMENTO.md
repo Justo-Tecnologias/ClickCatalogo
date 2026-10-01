@@ -166,7 +166,22 @@ Para refazer os prints, use a ferramenta de captura com Chrome headless descrita
 - [x] Imagem de compartilhamento (Open Graph) da landing e de `/como-funciona`. Ela fica no mesmo segmento de cada página, porque o `openGraph` da página substitui o herdado.
 - Limitação conhecida: o gerador de imagens só tem a fonte padrão em peso normal (a Inter do projeto está em WOFF2); vale também para a imagem das lojas.
 
-Próximos pacotes sugeridos (análise de 01/10): valor para o lojista ("Sua loja esta semana" com visitas e cliques, informações da loja, campos opcionais no pedido) e, com dados do funil, o teste de "monta grátis, paga para publicar".
+#### Pacote 2 — valor para o lojista (branch `feat/valor-lojista`)
+
+- [x] Card "Sua loja esta semana" em **Minha loja**: visitas, cliques para pedir no WhatsApp e compartilhamentos dos últimos 7 dias comparados aos 7 anteriores (`src/lib/analytics/store-stats.ts`, lido das métricas agregadas já existentes, sem migration). Some se a leitura falhar.
+- [x] Informações de atendimento (migration 027, `src/lib/catalog/store-info.ts`): formas de pagamento, entrega/retirada com observação e horário. Editadas na seção **Atendimento** do formulário; exibidas abaixo do cabeçalho da loja e em resumo no rodapé do carrinho.
+- [x] Detalhes opcionais no carrinho: nome, entrega ou retirada (só quando a loja oferece as duas), forma de pagamento (só com mais de uma aceita) e observação. Vão apenas na mensagem do WhatsApp, cada um em uma linha; nada é gravado nem medido.
+- [ ] Aplicar a migration 027 em produção **antes** do deploy; publicar e preencher o atendimento da Ateliê Aurora.
+
+| Data | Decisão | Motivo |
+|---|---|---|
+| 01/10 | Estatísticas em card na página **Minha loja**, não em página nova | O lojista vê sem procurar; reaproveita métricas existentes |
+| 01/10 | Atendimento: pagamento, entrega/retirada e horário; pedido mínimo fica para depois | Respostas às dúvidas mais comuns antes do pedido, sem regra no carrinho |
+| 01/10 | Detalhes do pedido opcionais e só na mensagem | Menos idas e vindas no WhatsApp sem coletar dados pessoais |
+
+Validação: 83 testes (incluindo `tests/store-value.test.ts`) e a migration 027 em PGlite, no caminho da produção (com loja existente e reaplicação) e na instalação do zero.
+
+Próximo pacote sugerido: com dados do funil, o teste de "monta grátis, paga para publicar".
 
 #### Itens da fila anterior (23/09) já resolvidos
 

@@ -5,6 +5,7 @@ import { cache } from "react";
 import { z } from "zod";
 
 import { allowedExternalLinkOrNull } from "@/lib/catalog/external-links";
+import { normalizePaymentMethods } from "@/lib/catalog/store-info";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { DEMO_CATALOG, DEMO_TENANT, isDemoAccessEnabled } from "@/lib/demo/panel-demo";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -28,6 +29,12 @@ const publicCatalogSchema = z.object({
   categorias: z.array(z.object({ id: z.uuid(), nome: z.string(), ordem: z.number(), produtos: z.array(productSchema) })),
   descricao_curta: z.string().nullable(),
   endereco: z.string().nullable(),
+  // Informações de atendimento (migration 027); padrões mantêm a loja funcionando
+  // se o banco ainda não tiver as colunas.
+  entrega_modo: z.enum(["entrega", "retirada", "ambos"]).nullable().optional().default(null),
+  entrega_observacao: z.string().nullable().optional().default(null),
+  formas_pagamento: z.array(z.string()).nullable().optional().default([]).transform((values) => normalizePaymentMethods(values ?? [])),
+  horario_atendimento: z.string().nullable().optional().default(null),
   instagram: z.string().nullable(),
   logo_url: z.string().nullable(),
   nome_loja: z.string(),

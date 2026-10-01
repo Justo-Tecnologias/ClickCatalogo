@@ -496,6 +496,10 @@ export type Database = {
           created_at: string;
           descricao_curta: string | null;
           endereco: string | null;
+          entrega_modo: "ambos" | "entrega" | "retirada" | null;
+          entrega_observacao: string | null;
+          formas_pagamento: ("credito" | "debito" | "dinheiro" | "pix")[];
+          horario_atendimento: string | null;
           id: string;
           instagram: string | null;
           logo_url: string | null;
@@ -513,6 +517,10 @@ export type Database = {
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
+          entrega_modo?: "ambos" | "entrega" | "retirada" | null;
+          entrega_observacao?: string | null;
+          formas_pagamento?: ("credito" | "debito" | "dinheiro" | "pix")[];
+          horario_atendimento?: string | null;
           id?: string;
           instagram?: string | null;
           logo_url?: string | null;
@@ -530,6 +538,10 @@ export type Database = {
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
+          entrega_modo?: "ambos" | "entrega" | "retirada" | null;
+          entrega_observacao?: string | null;
+          formas_pagamento?: ("credito" | "debito" | "dinheiro" | "pix")[];
+          horario_atendimento?: string | null;
           id?: string;
           instagram?: string | null;
           logo_url?: string | null;
