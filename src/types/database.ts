@@ -491,6 +491,7 @@ export type Database = {
       };
       tenants: {
         Row: {
+          banner_somente: boolean;
           banner_url: string | null;
           canceled_at: string | null;
           created_at: string;
@@ -512,6 +513,7 @@ export type Database = {
           whatsapp: string;
         };
         Insert: {
+          banner_somente?: boolean;
           banner_url?: string | null;
           canceled_at?: string | null;
           created_at?: string;
@@ -533,6 +535,7 @@ export type Database = {
           whatsapp: string;
         };
         Update: {
+          banner_somente?: boolean;
           banner_url?: string | null;
           canceled_at?: string | null;
           created_at?: string;

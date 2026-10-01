@@ -19,17 +19,17 @@ function Chip({ children, icon: Icon, label }: { children: ReactNode; icon: type
   );
 }
 
-// Selos de atendimento abaixo do cabeçalho: respondem antes do pedido como a
-// loja recebe, entrega e quando atende.
-export function StoreServiceInfoBar({ info }: { info: StoreServiceInfo }) {
+// Selos de atendimento (pagamento, entrega e horário). Aparecem no rodapé da
+// loja e na finalização do carrinho, sem disputar atenção com os produtos.
+export function StoreServiceInfoList({ className, info }: { className?: string; info: StoreServiceInfo }) {
   if (!hasStoreServiceInfo(info)) return null;
 
   const payments = normalizePaymentMethods(info.formas_pagamento).map(paymentMethodLabel);
   const delivery = deliveryModeText(info.entrega_modo);
 
   return (
-    <section aria-label="Atendimento da loja" className="mx-auto w-full max-w-[var(--content-width)] px-4 pb-2 @2xl/store:px-6 @5xl/store:px-8">
-      <ul className="flex flex-wrap gap-2">
+    <div className={className}>
+      <ul aria-label="Atendimento da loja" className="flex flex-wrap gap-2">
         {payments.length > 0 ? <Chip icon={CreditCard} label="Formas de pagamento">{payments.join(" · ")}</Chip> : null}
         {delivery ? <Chip icon={Truck} label="Entrega">{delivery}</Chip> : null}
         {info.horario_atendimento ? <Chip icon={Clock3} label="Horário de atendimento">{info.horario_atendimento}</Chip> : null}
@@ -37,6 +37,6 @@ export function StoreServiceInfoBar({ info }: { info: StoreServiceInfo }) {
       {delivery && info.entrega_observacao ? (
         <p className="mt-2 text-sm leading-5 text-[var(--cor-texto-suave)]">{info.entrega_observacao}</p>
       ) : null}
-    </section>
+    </div>
   );
 }

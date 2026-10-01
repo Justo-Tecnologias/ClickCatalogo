@@ -52,6 +52,8 @@ O arquivo `migrations/202610010026_marketing_page_metrics.sql` acrescenta as vis
 
 O arquivo `migrations/202610010027_store_service_info.sql` acrescenta as informações de atendimento da loja em `tenants`: `formas_pagamento` (`pix`, `credito`, `debito`, `dinheiro`), `entrega_modo` (`entrega`, `retirada`, `ambos`), `entrega_observacao` (até 120 caracteres) e `horario_atendimento` (até 80). O titular pode editá-las diretamente; `get_public_catalog` passa a devolvê-las. Os valores precisam permanecer alinhados com `src/lib/catalog/store-info.ts`. Aplique antes do deploy do código.
 
+O arquivo `migrations/202610010028_banner_only_header.sql` acrescenta `tenants.banner_somente` (padrão `false`): com ele marcado, a loja mostra o banner inteiro, sem nome, logo e degradê por cima. O site só aplica a opção quando há banner. O titular pode editá-la; `get_public_catalog` passa a devolvê-la. Aplique antes do deploy do código.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

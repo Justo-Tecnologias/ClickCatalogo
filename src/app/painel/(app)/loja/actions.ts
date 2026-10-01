@@ -90,6 +90,8 @@ export async function updateStoreAction(formData: FormData): Promise<ActionResul
     }
 
     const { error } = await supabase.from("tenants").update({
+      // Só faz sentido com banner: sem imagem, a loja volta ao topo completo.
+      banner_somente: formData.get("bannerSomente") === "on" && Boolean(bannerUrl),
       banner_url: bannerUrl,
       descricao_curta: parsed.data.descricaoCurta,
       endereco: parsed.data.endereco,

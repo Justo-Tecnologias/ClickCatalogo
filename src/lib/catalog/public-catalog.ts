@@ -25,6 +25,8 @@ const productSchema = z.object({
 });
 
 const publicCatalogSchema = z.object({
+  // Topo só com o banner (migration 028); o padrão mantém o topo completo.
+  banner_somente: z.boolean().nullable().optional().default(false).transform(Boolean),
   banner_url: z.string().nullable(),
   categorias: z.array(z.object({ id: z.uuid(), nome: z.string(), ordem: z.number(), produtos: z.array(productSchema) })),
   descricao_curta: z.string().nullable(),

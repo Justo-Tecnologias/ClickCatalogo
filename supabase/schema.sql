@@ -12,6 +12,8 @@ create table public.tenants (
   nome_loja text not null,
   logo_url text,
   banner_url text,
+  -- Topo da loja só com o banner, sem nome e logo por cima.
+  banner_somente boolean not null default false,
   descricao_curta text,
   whatsapp text not null,
   instagram text,
@@ -556,7 +558,8 @@ grant update (
   formas_pagamento,
   entrega_modo,
   entrega_observacao,
-  horario_atendimento
+  horario_atendimento,
+  banner_somente
 ) on table public.tenants to authenticated;
 grant select, insert, update, delete on table public.categories to authenticated;
 grant select, insert, update, delete on table public.products to authenticated;
@@ -663,6 +666,7 @@ as $$
     'nome_loja', tenant.nome_loja,
     'logo_url', tenant.logo_url,
     'banner_url', tenant.banner_url,
+    'banner_somente', tenant.banner_somente,
     'descricao_curta', tenant.descricao_curta,
     'whatsapp', tenant.whatsapp,
     'instagram', tenant.instagram,

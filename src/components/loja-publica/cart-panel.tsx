@@ -1,14 +1,15 @@
 "use client";
 
-import { MessageCircle, Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock3, CreditCard, MessageCircle, Minus, Plus, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import {
+  deliveryModeText,
   normalizePaymentMethods,
   paymentMethodLabel,
-  storeServiceSummary,
   type PaymentMethod,
   type StoreServiceInfo,
 } from "@/lib/catalog/store-info";
@@ -30,6 +31,10 @@ type CartPanelProps = {
   whatsapp: string;
 };
 
+// Duas etapas: "itens" (revisar quantidades) e "finalizar" (atendimento da
+// loja, detalhes opcionais e envio). Cada tela fica curta mesmo com muitos itens.
+type CartStep = "finalizar" | "itens";
+
 export function CartPanel({
   analyticsSlug,
   items,
@@ -43,7 +48,10 @@ export function CartPanel({
   whatsapp,
 }: CartPanelProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const continueButtonRef = useRef<HTMLButtonElement>(null);
   const fieldId = useId();
+  const [step, setStep] = useState<CartStep>("itens");
   // Detalhes opcionais: ficam só na memória, como o carrinho, e vão apenas
   // na mensagem do WhatsApp. Nada é salvo ou enviado ao ClickCatálogo.
   const [customerName, setCustomerName] = useState("");
@@ -52,7 +60,21 @@ export function CartPanel({
   const [note, setNote] = useState("");
   const acceptedPayments = normalizePaymentMethods(serviceInfo?.formas_pagamento ?? []);
   const offersReceivingChoice = serviceInfo?.entrega_modo === "ambos";
-  const serviceSummary = serviceInfo ? storeServiceSummary(serviceInfo) : null;
+  // Na finalização, o atendimento aparece só no que não virou escolha: com
+  // mais de uma forma de pagamento ou "entrega e retirada", as próprias opções
+  // já informam o cliente.
+  const serviceRows = [
+    acceptedPayments.length === 1
+      ? { icon: CreditCard, label: "Pagamento", note: null, text: `Pagamento: ${paymentMethodLabel(acceptedPayments[0])}` }
+      : null,
+    serviceInfo?.entrega_modo && !offersReceivingChoice
+      ? { icon: Truck, label: "Entrega", note: serviceInfo.entrega_observacao, text: deliveryModeText(serviceInfo.entrega_modo) }
+      : null,
+    serviceInfo?.horario_atendimento
+      ? { icon: Clock3, label: "Horário de atendimento", note: null, text: serviceInfo.horario_atendimento }
+      : null,
+  ].filter((row) => row !== null);
+  const checkout = step === "finalizar" && items.length > 0;
   const total = useMemo(
     () => items.reduce((sum, item) => sum + item.product.preco * item.quantity, 0),
     [items],
@@ -61,6 +83,7 @@ export function CartPanel({
     () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items],
   );
+  const itemCountLabel = itemCount === 1 ? "1 item" : `${itemCount} itens`;
   const orderUrl = items.length
     ? createWhatsAppUrl(whatsapp, createCartMessage(storeName, items, {
       customerName,
@@ -88,29 +111,49 @@ export function CartPanel({
     };
   }, [open]);
 
+  // Ao reabrir, o carrinho começa sempre pela revisão dos itens.
+  function close() {
+    setStep("itens");
+    onClose();
+  }
+
+  function goTo(next: CartStep) {
+    flushSync(() => setStep(next));
+    (next === "finalizar" ? backButtonRef : continueButtonRef).current?.focus();
+  }
+
   return (
     <dialog
       aria-labelledby="cart-panel-title"
       className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-md overflow-hidden border-0 bg-transparent p-0 text-[var(--cor-texto)] shadow-2xl backdrop:bg-black/45"
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        close();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) close();
       }}
-      onClose={onClose}
+      onClose={close}
       ref={dialogRef}
     >
       <section className="flex h-full flex-col border-l border-[var(--cor-borda)] bg-[var(--cor-fundo)]">
-        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-[var(--cor-borda)] px-4 sm:px-5">
-          <div>
-            <h2 className="font-bold" id="cart-panel-title">Seu pedido</h2>
-            <p className="text-xs text-[var(--cor-texto-suave)]">
-              {itemCount === 1 ? "1 item selecionado" : `${itemCount} itens selecionados`}
-            </p>
+        <header className="flex min-h-16 items-center justify-between gap-3 border-b border-[var(--cor-borda)] px-4 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            {checkout ? (
+              <Button aria-label="Voltar aos itens" className="-ml-2 shrink-0" onClick={() => goTo("itens")} ref={backButtonRef} size="icon" variant="ghost">
+                <ArrowLeft aria-hidden="true" />
+              </Button>
+            ) : null}
+            <div className="min-w-0">
+              <h2 className="font-bold" id="cart-panel-title">{checkout ? "Finalizar pedido" : "Seu pedido"}</h2>
+              <p className="text-xs text-[var(--cor-texto-suave)]">
+                {checkout
+                  ? `${itemCountLabel} · ${formatCurrency(total)}`
+                  : itemCount === 1 ? "1 item selecionado" : `${itemCount} itens selecionados`}
+              </p>
+            </div>
           </div>
-          <Button aria-label="Fechar carrinho" autoFocus onClick={onClose} size="icon" variant="themeSecondary">
+          <Button aria-label="Fechar carrinho" autoFocus onClick={close} size="icon" variant="themeSecondary">
             <X aria-hidden="true" />
           </Button>
         </header>
@@ -125,9 +168,114 @@ export function CartPanel({
               <p className="mt-1 text-sm leading-6 text-[var(--cor-texto-suave)]">
                 Adicione produtos para montar um pedido completo.
               </p>
-              <Button className="mt-5" onClick={onClose} variant="themeSecondary">Continuar escolhendo</Button>
+              <Button className="mt-5" onClick={close} variant="themeSecondary">Continuar escolhendo</Button>
             </div>
           </div>
+        ) : checkout ? (
+          <>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5">
+              {serviceRows.length > 0 ? (
+                <section aria-labelledby={`${fieldId}-atendimento`} className="mb-6 rounded-[var(--radius-card)] border border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4">
+                  <h3 className="mb-2 text-sm font-semibold" id={`${fieldId}-atendimento`}>Como a loja atende</h3>
+                  <ul className="grid gap-2 text-sm">
+                    {serviceRows.map(({ icon: Icon, label, note: rowNote, text }) => (
+                      <li className="flex items-start gap-2" key={label}>
+                        <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[var(--cor-acao)]" />
+                        <span>
+                          <span className="sr-only">{label}: </span>
+                          {text}
+                          {rowNote ? <span className="mt-0.5 block text-xs leading-5 text-[var(--cor-texto-suave)]">{rowNote}</span> : null}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              <section aria-labelledby={`${fieldId}-detalhes`}>
+                <h3 className="text-sm font-semibold" id={`${fieldId}-detalhes`}>Detalhes do pedido <span className="font-normal text-[var(--cor-texto-suave)]">(opcional)</span></h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--cor-texto-suave)]">Vão junto na mensagem do WhatsApp. Nada fica salvo.</p>
+
+                <div className="mt-4 grid gap-5">
+                  <div className="grid gap-1.5">
+                    <label className="text-sm font-medium" htmlFor={`${fieldId}-nome`}>Seu nome</label>
+                    <input
+                      autoComplete="name"
+                      className={CART_INPUT_CLASS}
+                      id={`${fieldId}-nome`}
+                      maxLength={CART_DETAIL_LIMITS.customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      value={customerName}
+                    />
+                  </div>
+
+                  {offersReceivingChoice ? (
+                    <ChoiceGroup
+                      hint={serviceInfo?.entrega_observacao}
+                      label="Como prefere receber?"
+                      onChange={(value) => setReceiving(value as "entrega" | "retirada")}
+                      options={[{ id: "entrega", label: "Entrega" }, { id: "retirada", label: "Retirada no local" }]}
+                      value={receiving}
+                    />
+                  ) : null}
+
+                  {acceptedPayments.length > 1 ? (
+                    <ChoiceGroup
+                      label="Como prefere pagar?"
+                      onChange={(value) => setPayment(value as PaymentMethod)}
+                      options={acceptedPayments.map((id) => ({ id, label: paymentMethodLabel(id) }))}
+                      value={payment}
+                    />
+                  ) : null}
+
+                  <div className="grid gap-1.5">
+                    <label className="text-sm font-medium" htmlFor={`${fieldId}-obs`}>Observação</label>
+                    <textarea
+                      className={`${CART_INPUT_CLASS} h-auto py-2.5`}
+                      id={`${fieldId}-obs`}
+                      maxLength={CART_DETAIL_LIMITS.note}
+                      onChange={(event) => setNote(event.target.value)}
+                      placeholder="Ex.: para presente, sem cebola, entregar depois das 18h"
+                      rows={2}
+                      value={note}
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <footer className="border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <span className="text-sm text-[var(--cor-texto-suave)]">Total do pedido</span>
+                <strong className="text-xl text-[var(--cor-primaria)]">{formatCurrency(total)}</strong>
+              </div>
+              <p className="mb-4 text-xs leading-5 text-[var(--cor-texto-suave)]">
+                O pagamento e a confirmação são combinados diretamente com a loja.
+              </p>
+              {messageTooLong ? (
+                <Alert
+                  className="mb-4"
+                  description="Remova alguns produtos e envie mais de um pedido para garantir que o WhatsApp abra corretamente."
+                  title="Este pedido ficou muito grande"
+                  variant="warning"
+                />
+              ) : null}
+              {orderUrl && !messageTooLong ? (
+                <a
+                  className={buttonVariants({ className: "w-full text-sm sm:text-base", size: "lg", variant: "theme" })}
+                  href={orderUrl}
+                  onClick={() => {
+                    if (analyticsSlug) trackProductMetric("whatsapp_order_clicked", analyticsSlug);
+                  }}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <MessageCircle aria-hidden="true" />
+                  Enviar pedido pelo WhatsApp
+                </a>
+              ) : null}
+            </footer>
+          </>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5">
@@ -181,56 +329,6 @@ export function CartPanel({
                   </li>
                 ))}
               </ul>
-
-              <section aria-labelledby={`${fieldId}-detalhes`} className="mt-5 rounded-[var(--radius-card)] border border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4">
-                <h3 className="text-sm font-semibold" id={`${fieldId}-detalhes`}>Detalhes do pedido <span className="font-normal text-[var(--cor-texto-suave)]">(opcional)</span></h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--cor-texto-suave)]">Vão junto na mensagem do WhatsApp. Nada fica salvo.</p>
-
-                <div className="mt-4 grid gap-4">
-                  <div className="grid gap-1.5">
-                    <label className="text-sm font-medium" htmlFor={`${fieldId}-nome`}>Seu nome</label>
-                    <input
-                      autoComplete="name"
-                      className={CART_INPUT_CLASS}
-                      id={`${fieldId}-nome`}
-                      maxLength={CART_DETAIL_LIMITS.customerName}
-                      onChange={(event) => setCustomerName(event.target.value)}
-                      value={customerName}
-                    />
-                  </div>
-
-                  {offersReceivingChoice ? (
-                    <ChoiceGroup
-                      label="Como prefere receber?"
-                      onChange={(value) => setReceiving(value as "entrega" | "retirada")}
-                      options={[{ id: "entrega", label: "Entrega" }, { id: "retirada", label: "Retirada no local" }]}
-                      value={receiving}
-                    />
-                  ) : null}
-
-                  {acceptedPayments.length > 1 ? (
-                    <ChoiceGroup
-                      label="Como prefere pagar?"
-                      onChange={(value) => setPayment(value as PaymentMethod)}
-                      options={acceptedPayments.map((id) => ({ id, label: paymentMethodLabel(id) }))}
-                      value={payment}
-                    />
-                  ) : null}
-
-                  <div className="grid gap-1.5">
-                    <label className="text-sm font-medium" htmlFor={`${fieldId}-obs`}>Observação</label>
-                    <textarea
-                      className={`${CART_INPUT_CLASS} h-auto py-2.5`}
-                      id={`${fieldId}-obs`}
-                      maxLength={CART_DETAIL_LIMITS.note}
-                      onChange={(event) => setNote(event.target.value)}
-                      placeholder="Ex.: para presente, sem cebola, entregar depois das 18h"
-                      rows={2}
-                      value={note}
-                    />
-                  </div>
-                </div>
-              </section>
             </div>
 
             <footer className="border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
@@ -238,34 +336,10 @@ export function CartPanel({
                 <span className="text-sm text-[var(--cor-texto-suave)]">Total do pedido</span>
                 <strong className="text-xl text-[var(--cor-primaria)]">{formatCurrency(total)}</strong>
               </div>
-              {serviceSummary ? (
-                <p className="mb-2 text-sm font-medium leading-5 text-[var(--cor-texto)]">{serviceSummary}</p>
-              ) : null}
-              <p className="mb-4 text-xs leading-5 text-[var(--cor-texto-suave)]">
-                O pagamento e a confirmação são combinados diretamente com a loja.
-              </p>
-              {messageTooLong ? (
-                <Alert
-                  className="mb-4"
-                  description="Remova alguns produtos e envie mais de um pedido para garantir que o WhatsApp abra corretamente."
-                  title="Este pedido ficou muito grande"
-                  variant="warning"
-                />
-              ) : null}
-              {orderUrl && !messageTooLong ? (
-                <a
-                  className={buttonVariants({ className: "w-full text-sm sm:text-base", size: "lg", variant: "theme" })}
-                  href={orderUrl}
-                  onClick={() => {
-                    if (analyticsSlug) trackProductMetric("whatsapp_order_clicked", analyticsSlug);
-                  }}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <MessageCircle aria-hidden="true" />
-                  Enviar pedido pelo WhatsApp
-                </a>
-              ) : null}
+              <Button className="w-full text-sm sm:text-base" onClick={() => goTo("finalizar")} ref={continueButtonRef} size="lg" variant="theme">
+                Continuar
+                <ArrowRight aria-hidden="true" />
+              </Button>
             </footer>
           </>
         )}
@@ -279,11 +353,13 @@ const CART_INPUT_CLASS = "h-11 w-full rounded-[var(--radius-control)] border bor
 // Escolha única em "pílulas", com rádio nativo para teclado e leitor de tela.
 // Tocar de novo na opção marcada não desmarca; o campo continua opcional.
 function ChoiceGroup({
+  hint,
   label,
   onChange,
   options,
   value,
 }: {
+  hint?: string | null;
   label: string;
   onChange: (value: string) => void;
   options: { id: string; label: string }[];
@@ -293,6 +369,7 @@ function ChoiceGroup({
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-1 text-sm font-medium">{label}</legend>
+      {hint ? <p className="-mt-1 text-xs leading-5 text-[var(--cor-texto-suave)]">{hint}</p> : null}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <label className="cursor-pointer" key={option.id}>
