@@ -230,9 +230,14 @@ Plano e decisões em `docs/PLANO-MONTA-GRATIS.md`. Por decisão do titular em 01
 - [ ] Pagamento real de publicação (rascunho → ativo): adiado pelo titular; será confirmado pela primeira cliente.
 - [ ] Conferir na Netlify a função `draft-lifecycle` (minuto 45) e o lembrete do dia 1 da `justo-store` em 02/10.
 - [x] `funnel-report.sql` atualizado. Ele lia só o escopo global e ignorava os eventos gravados por loja (`payment_confirmed`, `first_product_created`…). Agora soma todos os escopos e segue as etapas do cadastro grátis.
-- Melhorias anotadas na revisão de 01/10:
-  - o titular de um rascunho não consegue excluir a conta pelo painel (Privacidade só permite após cancelamento); hoje depende do prazo de 30 dias ou do atendimento;
-  - o link "Adicionar produtos" do lembrete passa pelo login e cai em "Minha loja", não em "Produtos".
+- [x] Ajustes da revisão de 01/10 (branch `feat/rascunho-ajustes`):
+  - "Excluir minha loja" em Privacidade para rascunhos: apaga na hora; bloqueado com pagamento de publicação aberto;
+  - links dos lembretes abrem a tela certa depois do login (`/painel?next=...`, só telas do painel);
+  - clique em "Criado com ClickCatálogo" medido por loja (migration 030), sem mudar o texto do rodapé.
+
+| Data | Decisão | Motivo |
+|---|---|---|
+| 01/10 | Não transformar o rodapé das lojas em convite de venda; só medir os cliques no crédito | A loja é do lojista; primeiro validar quantos visitantes têm interesse |
 - [ ] Refazer os prints de `/como-funciona` (o cadastro agora tem senha e o passo 4 é "Publique e compartilhe").
 - Aviso aos titulares atuais sobre os Termos `2026-10-01`: não enviado, porque só havia lojas de teste.
 

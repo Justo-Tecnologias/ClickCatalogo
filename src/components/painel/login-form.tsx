@@ -10,11 +10,12 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 
-export function LoginForm() {
+export function LoginForm({ next = null }: { next?: string | null }) {
   const [state, action] = useActionState(loginWithPasswordAction, {});
 
   return (
     <form action={action} className="grid gap-5">
+      {next ? <input name="next" type="hidden" value={next} /> : null}
       <Field>
         <FieldLabel htmlFor="email">E-mail</FieldLabel>
         <Input autoComplete="email" id="email" maxLength={254} name="email" placeholder="voce@empresa.com" required type="email" />

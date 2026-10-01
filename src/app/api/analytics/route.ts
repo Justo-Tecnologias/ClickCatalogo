@@ -14,7 +14,7 @@ const inputSchema = z.object({
   slug: tenantSlugSchema.optional(),
 });
 
-const TENANT_EVENTS = new Set(["catalog_shared", "catalog_view", "whatsapp_order_clicked"]);
+const TENANT_EVENTS = new Set(["catalog_shared", "catalog_view", "store_brand_clicked", "whatsapp_order_clicked"]);
 
 export async function POST(request: Request) {
   const originResponse = enforceSameOrigin(request);

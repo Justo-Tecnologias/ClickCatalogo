@@ -968,7 +968,8 @@ create table public.product_metrics_daily (
       'email_verified', 'checkout_created',
       'payment_confirmed', 'password_created', 'first_category_created',
       'first_product_created', 'fifth_product_created', 'catalog_shared',
-      'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
+      'catalog_view', 'whatsapp_order_clicked', 'store_brand_clicked',
+      'cancellation_requested',
       'cancellation_reverted', 'subscription_reactivated'
     )
   ),
@@ -999,7 +1000,8 @@ begin
     'email_verified', 'checkout_created',
     'payment_confirmed', 'password_created', 'first_category_created',
     'first_product_created', 'fifth_product_created', 'catalog_shared',
-    'catalog_view', 'whatsapp_order_clicked', 'cancellation_requested',
+    'catalog_view', 'whatsapp_order_clicked', 'store_brand_clicked',
+      'cancellation_requested',
     'cancellation_reverted', 'subscription_reactivated'
   ) then
     raise exception 'unsupported metric';

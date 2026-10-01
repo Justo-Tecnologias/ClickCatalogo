@@ -49,7 +49,7 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>8. Direitos do titular</h2>
-        <p>O titular pode solicitar confirmação do tratamento, acesso, correção, informação sobre compartilhamento, portabilidade, oposição, revogação de consentimento ou eliminação quando aplicável. A antecipação da exclusão operacional pode ser solicitada no próprio painel após o cancelamento. Os demais pedidos devem ser enviados ao canal indicado nesta política e podem exigir confirmação pelo e-mail cadastrado para proteger a conta.</p>
+        <p>O titular pode solicitar confirmação do tratamento, acesso, correção, informação sobre compartilhamento, portabilidade, oposição, revogação de consentimento ou eliminação quando aplicável. A antecipação da exclusão operacional pode ser solicitada no próprio painel após o cancelamento; lojas ainda não publicadas podem ser excluídas pelo painel a qualquer momento, com efeito imediato. Os demais pedidos devem ser enviados ao canal indicado nesta política e podem exigir confirmação pelo e-mail cadastrado para proteger a conta.</p>
       </section>
       <section>
         <h2>9. Atualizações</h2>

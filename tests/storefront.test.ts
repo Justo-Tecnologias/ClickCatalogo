@@ -79,7 +79,7 @@ test("experiência pública preserva seis temas, indisponibilidade e canonical n
   const catalog = readFileSync("src/components/loja-publica/store-catalog.tsx", "utf8");
   const card = readFileSync("src/components/loja-publica/product-card.tsx", "utf8");
   const grid = readFileSync("src/components/loja-publica/product-grid.tsx", "utf8");
-  const footer = readFileSync("src/components/loja-publica/store-footer.tsx", "utf8");
+  const footer = readFileSync("src/components/loja-publica/store-footer.tsx", "utf8") + readFileSync("src/components/loja-publica/brand-credit.tsx", "utf8");
 
   assert.match(page, /store\.kind === "canceled"/);
   assert.match(page, /canonicalUrl=\{canonicalUrl\}/);

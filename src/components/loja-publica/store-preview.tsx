@@ -53,6 +53,7 @@ export function StorePreview({
         footer={(
           <StoreFooter
             address={catalog.endereco}
+            analyticsSlug={!framed ? catalog.slug : undefined}
             instagram={catalog.instagram}
             serviceInfo={catalog}
             storeName={catalog.nome_loja}

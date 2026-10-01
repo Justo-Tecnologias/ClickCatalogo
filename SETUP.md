@@ -128,6 +128,8 @@ Na release do cadastro gratuito ("monte grátis, pague para publicar"), execute 
 
 O código atual continua funcionando com ela aplicada. O deploy publica também a Scheduled Function `draft-lifecycle` (minuto 45 de cada hora), que usa as mesmas variáveis do Supabase e do Resend da rotina de cobrança. Sem Resend, os lembretes são pulados e registrados no log.
 
+Execute também `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202610020030_store_brand_click_metric.sql`. Ela acrescenta `store_brand_clicked` (clique em "Criado com ClickCatálogo" no rodapé das lojas, contado por loja) à lista fechada de métricas. A consulta final deve retornar `true`. Se o código subir antes dela, os cliques só deixam de ser contados (`unsupported metric` no log); nada quebra.
+
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria
