@@ -205,7 +205,7 @@ Pedido do titular após ver o pacote 2 no ar: a loja e o painel estavam poluído
 
 Observação técnica: o `* { border-color }` de `globals.css` fica fora das camadas do Tailwind e anula classes de cor de borda (ex.: `peer-checked:border-brand-700`). As abas usam sombra para o sublinhado; corrigir a regra global fica como dívida técnica.
 
-Próximo pacote sugerido: com dados do funil, o teste de "monta grátis, paga para publicar".
+Próximo pacote (decidido em 01/10): **"monte grátis, pague para publicar"**, com lembretes por e-mail para quem não publica. Plano completo em `docs/PLANO-MONTA-GRATIS.md`; a implementação começa depois da semana de manutenção.
 
 #### Itens da fila anterior (23/09) já resolvidos
 
