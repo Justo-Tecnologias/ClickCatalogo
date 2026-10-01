@@ -1,4 +1,4 @@
-import { Ban, Settings, Store } from "lucide-react";
+import { Ban, Hammer, Settings, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -53,6 +53,9 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
   if (store.kind === "missing") notFound();
   if (store.kind === "unconfigured") {
     return <StoreMessage icon={Settings} title="Catálogo aguardando configuração" description="A tela pública está pronta. Configure as chaves do Supabase para carregar os dados reais desta loja." />;
+  }
+  if (store.kind === "draft") {
+    return <StoreMessage icon={Hammer} title="Loja em preparação" description={store.storeName ? `${store.storeName} está montando o catálogo. Volte em breve!` : "Este catálogo está sendo montado. Volte em breve!"} />;
   }
   if (store.kind === "canceled") {
     return <StoreMessage icon={Ban} title="Loja temporariamente indisponível" description="Este catálogo não está recebendo pedidos no momento." />;

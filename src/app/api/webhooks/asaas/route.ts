@@ -13,7 +13,7 @@ import { logError, logInfo } from "@/lib/observability/logger";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { secretsMatch } from "@/lib/security/secret";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Database, Json } from "@/types/database";
+import type { Database, Json, TenantStatus } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -357,7 +357,9 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
   tenantId ??= existingSubscription?.tenant_id ?? null;
 
   let ownerUserId: string | null = null;
-  let currentTenantStatus: "ativo" | "inadimplente" | "cancelado" | null = null;
+  // "rascunho" = cadastro gratuito publicando agora: a loja e o titular já
+  // existem e o pagamento só a coloca no ar.
+  let currentTenantStatus: TenantStatus | null = null;
   if (tenantId) {
     const { data: tenant, error } = await admin.from("tenants").select("owner_user_id,status").eq("id", tenantId).single();
     if (error) throw error;
@@ -387,7 +389,8 @@ async function provisionTenant(intent: SignupIntent, event: WebhookEvent) {
     if (existingTenant && existingTenant.owner_user_id !== ownerUserId) throw new Error("Slug já pertence a outro usuário.");
     if (existingTenant) tenantId = existingTenant.id;
     else {
-      const { data: tenant, error } = await admin.from("tenants").insert({ nome_loja: intent.nome_loja, owner_user_id: ownerUserId, slug: intent.slug, status: "ativo", tema: intent.tema, whatsapp: intent.whatsapp }).select("id").single();
+      // Fluxo antigo (pagar antes): o pagamento já comprova o e-mail.
+      const { data: tenant, error } = await admin.from("tenants").insert({ email_confirmado_em: new Date().toISOString(), nome_loja: intent.nome_loja, owner_user_id: ownerUserId, slug: intent.slug, status: "ativo", tema: intent.tema, whatsapp: intent.whatsapp }).select("id").single();
       if (error || !tenant) throw error ?? new Error("Tenant não foi criado.");
       tenantId = tenant.id;
     }

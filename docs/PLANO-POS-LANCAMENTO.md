@@ -205,7 +205,25 @@ Pedido do titular após ver o pacote 2 no ar: a loja e o painel estavam poluído
 
 Observação técnica: o `* { border-color }` de `globals.css` fica fora das camadas do Tailwind e anula classes de cor de borda (ex.: `peer-checked:border-brand-700`). As abas usam sombra para o sublinhado; corrigir a regra global fica como dívida técnica.
 
-Próximo pacote (decidido em 01/10): **"monte grátis, pague para publicar"**, com lembretes por e-mail para quem não publica. Plano completo em `docs/PLANO-MONTA-GRATIS.md`; a implementação começa depois da semana de manutenção.
+#### Pacote 4 — "monte grátis, pague para publicar" (branch `feat/monta-gratis`)
+
+Plano e decisões em `docs/PLANO-MONTA-GRATIS.md`. Por decisão do titular em 01/10, foi implementado no mesmo dia, antecipando a semana de manutenção (só havia lojas de teste).
+
+- [x] R1:
+  - migration 029;
+  - cadastro gratuito com senha (`/api/cadastro/criar`);
+  - painel em rascunho com faixa de publicação;
+  - confirmação de e-mail;
+  - publicação pelo checkout Asaas, reaproveitando o caminho do webhook;
+  - página "Loja em preparação";
+  - Termos e Privacidade `2026-10-01`.
+- [x] R2: Scheduled Function `draft-lifecycle` (lembretes dos dias 1, 3 e 7, opção de parar e exclusão após 30 dias sem acesso).
+- [x] R3: chamadas "Criar minha loja grátis", FAQ, `/como-funciona` e faixa "Novo".
+- [x] Rota antiga de cadastro pago (`/api/checkout/asaas`) removida. O webhook continua aceitando intenções `signup` pendentes do fluxo antigo.
+- [ ] Aplicar a migration 029 em produção antes do deploy.
+- [ ] Teste ponta a ponta no Deploy Preview: cadastro → confirmação de e-mail → produto → publicar (Asaas Sandbox) → loja no ar.
+- [ ] Refazer os prints de `/como-funciona` (o cadastro agora tem senha e o passo 4 é "Publique e compartilhe").
+- Aviso aos titulares atuais sobre os Termos `2026-10-01`: não enviado, porque só havia lojas de teste.
 
 #### Itens da fila anterior (23/09) já resolvidos
 

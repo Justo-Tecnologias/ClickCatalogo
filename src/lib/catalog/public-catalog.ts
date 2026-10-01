@@ -49,6 +49,7 @@ const publicCatalogSchema = z.object({
 export type PublicStoreResult =
   | { catalog: PublicCatalog; kind: "available" }
   | { kind: "canceled" }
+  | { kind: "draft"; storeName: string }
   | { kind: "missing" }
   | { kind: "redirect"; slug: string }
   | { kind: "unconfigured" };
@@ -77,6 +78,12 @@ const queryPublicStore = unstable_cache(async (slug: string): Promise<CachedPubl
   // "suspenso" = atraso a partir do 8º dia. O visitante vê a mesma mensagem
   // neutra de indisponibilidade, sem expor a situação financeira da loja.
   if (status === "cancelado" || status === "suspenso") return { kind: "canceled" };
+  // Cadastro gratuito ainda não publicado: página "Loja em preparação".
+  if (status === "rascunho") {
+    const { data: storeName, error: nameError } = await supabase.rpc("get_public_draft_store_name", { p_slug: slug });
+    if (nameError) throw new Error("Não foi possível verificar o status desta loja.");
+    return { kind: "draft", storeName: storeName ?? "" };
+  }
 
   return { kind: "missing" };
 }, ["public-store"], { revalidate: 60 });

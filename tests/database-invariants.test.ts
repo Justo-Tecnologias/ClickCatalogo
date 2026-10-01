@@ -17,7 +17,7 @@ test("lista de métricas do banco é igual à do código", async () => {
   const { productMetricNames } = await import("../src/lib/analytics/events");
   const schema = await readFile(schemaPath, "utf8");
   const migration = await readFile(
-    new URL("../supabase/migrations/202610010026_marketing_page_metrics.sql", import.meta.url),
+    new URL("../supabase/migrations/202610020029_free_draft_signup.sql", import.meta.url),
     "utf8",
   );
   const expected = [...productMetricNames].sort();

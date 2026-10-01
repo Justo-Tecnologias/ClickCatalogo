@@ -53,7 +53,7 @@ export function SiteHeader() {
             Entrar
           </PendingLink>
           <PendingLink className={buttonVariants({ size: "sm" })} href="/cadastro" pendingLabel="Abrindo...">
-            Quero minha loja
+            Criar loja grátis
           </PendingLink>
         </div>
       </div>

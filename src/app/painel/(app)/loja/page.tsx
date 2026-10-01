@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PublicationReturn } from "@/components/painel/publication-return";
 import { StoreSettingsForm } from "@/components/painel/store-settings-form";
 import { StoreOnboardingChecklist, StoreShareActions, StoreTopActions } from "@/components/painel/store-launch-tools";
 import { StoreSlugForm } from "@/components/painel/store-slug-form";
@@ -15,8 +16,9 @@ import { getSiteUrl } from "@/lib/env/server";
 export const metadata: Metadata = { title: "Minha loja" };
 export const dynamic = "force-dynamic";
 
-export default async function StorePage() {
+export default async function StorePage({ searchParams }: { searchParams: Promise<{ publicacao?: string | string[] }> }) {
   const { demo, tenant } = await requireTenant();
+  const returningFromCheckout = (await searchParams).publicacao === "retorno";
   if (demo) {
     const siteUrl = getSiteUrl();
     const storeUrl = `${siteUrl}/loja/${encodeURIComponent(DEMO_CATALOG.slug)}`;
@@ -31,7 +33,8 @@ export default async function StorePage() {
   }
   const supabase = await createClient();
   // Começa em paralelo com as consultas do catálogo.
-  const weeklyStatsPromise = getStoreWeeklyStats(tenant.id);
+  const draft = tenant.status === "rascunho";
+  const weeklyStatsPromise = draft ? Promise.resolve(null) : getStoreWeeklyStats(tenant.id);
   const [{ data: categories }, { data: products }, { data: redirectSlugs }] = await Promise.all([
     supabase.from("categories").select("id,nome,ordem").eq("tenant_id", tenant.id).order("ordem").order("created_at"),
     supabase.from("products").select("id,nome,preco,descricao,imagem_url,variacao_info,ordem,category_id").eq("tenant_id", tenant.id).eq("ativo", true).order("ordem").order("created_at"),
@@ -63,11 +66,12 @@ export default async function StorePage() {
   const storeUrl = `${siteUrl}/loja/${encodeURIComponent(catalog.slug)}`;
   return (
     <div className="grid min-w-0 gap-5 pb-28 xl:gap-6 xl:pb-0 [&>*]:min-w-0">
-      <PageHeader actions={<StoreTopActions storeHref={`/loja/${catalog.slug}`} storeName={catalog.nome_loja} storeUrl={storeUrl} />} description="Personalize o que seus clientes veem." eyebrow="Configuração" title="Minha loja" />
+      <PageHeader actions={draft ? undefined : <StoreTopActions storeHref={`/loja/${catalog.slug}`} storeName={catalog.nome_loja} storeUrl={storeUrl} />} description={draft ? "Monte sua loja com calma. Use a prévia para ver como os clientes vão encontrá-la." : "Personalize o que seus clientes veem."} eyebrow="Configuração" title="Minha loja" />
+      {returningFromCheckout ? <div className="order-1"><PublicationReturn published={!draft} storeUrl={storeUrl} /></div> : null}
       {weeklyStats ? <div className="order-2"><StoreWeeklyStats stats={weeklyStats} /></div> : null}
       <div className="order-2"><StoreOnboardingChecklist bannerReady={Boolean(catalog.banner_url)} categoryCount={catalog.categorias.length} logoReady={Boolean(catalog.logo_url)} productCount={activeProducts} storeName={catalog.nome_loja} storeUrl={storeUrl} whatsappReady={Boolean(catalog.whatsapp)} /></div>
       <div className="order-3 xl:order-5"><StoreSettingsForm catalog={catalog} /></div>
-      <div className="order-4 xl:order-3"><StoreShareActions storeName={catalog.nome_loja} storeUrl={storeUrl}><StoreSlugForm currentSlug={catalog.slug} embedded hasActiveRedirects={Boolean(redirectSlugs?.length)} siteUrl={siteUrl} /></StoreShareActions></div>
+      <div className="order-4 xl:order-3"><StoreShareActions locked={draft} storeName={catalog.nome_loja} storeUrl={storeUrl}><StoreSlugForm currentSlug={catalog.slug} embedded hasActiveRedirects={Boolean(redirectSlugs?.length)} siteUrl={siteUrl} /></StoreShareActions></div>
     </div>
   );
 }

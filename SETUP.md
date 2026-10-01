@@ -119,6 +119,15 @@ Na release de valor para o lojista, execute `C:\Projeto-Github\ClickCatálogo\su
 
 Na release de design limpo, execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202610010028_banner_only_header.sql` **antes** do deploy do código. Ela cria `tenants.banner_somente` (padrão `false`), libera a edição pelo titular e inclui o campo em `get_public_catalog`. A consulta final deve retornar `true` e `false`. Não altera dados existentes: todas as lojas continuam com o topo completo até o lojista marcar "Mostrar só o banner no topo". Se o código subir antes dela, salvar em "Minha loja" falha.
 
+Na release do cadastro gratuito ("monte grátis, pague para publicar"), execute `C:\Projeto-Github\ClickCatálogo\supabase\migrations\202610020029_free_draft_signup.sql` **antes** do deploy do código. A consulta final deve retornar uma linha com `true`, `false` e `false`. A migration:
+
+- aceita o status `rascunho` em lojas e cadastros;
+- cria a confirmação de e-mail e as RPCs de lembretes e de exclusão de rascunhos (todas restritas à `service_role`);
+- acrescenta `draft_created` e `email_verified` às métricas;
+- marca como confirmado o e-mail das lojas já pagas.
+
+O código atual continua funcionando com ela aplicada. O deploy publica também a Scheduled Function `draft-lifecycle` (minuto 45 de cada hora), que usa as mesmas variáveis do Supabase e do Resend da rotina de cobrança. Sem Resend, os lembretes são pulados e registrados no log.
+
 Depois das migrations, execute `C:\Projeto-Github\ClickCatálogo\supabase\test-launch-critical.sql`. Com pelo menos um tenant existente, o teste simula claim concorrente do webhook e do reinício de checkout, reserva exclusiva da conciliação, dez reentregas do mesmo evento e consumo de rate limit dentro de uma transação revertida; não cria cobrança nem deixa dados de teste. Quando houver duas lojas de usuários diferentes na base, execute também `C:\Projeto-Github\ClickCatálogo\supabase\test-multitenant-isolation.sql`; ele tenta acessar e alterar a segunda loja como o primeiro usuário e reverte tudo ao final.
 
 ### O que o schema cria

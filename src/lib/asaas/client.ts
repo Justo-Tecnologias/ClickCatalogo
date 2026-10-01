@@ -69,6 +69,8 @@ export class AsaasPaymentReconciliationError extends Error {
 }
 
 export type CreateCheckoutInput = {
+  /** Volta do "Cancelar" no Asaas; padrão: a página de cadastro. */
+  cancelUrl?: string;
   externalReference: string;
   nextDueDate: string;
   successUrl: string;
@@ -90,7 +92,7 @@ export async function createRecurringCheckout(input: CreateCheckoutInput) {
   const plan = getAsaasCheckoutPlan();
   const response = await fetch(`${env.apiUrl}/checkouts`, {
     body: JSON.stringify(recurringCheckoutPayload({
-      cancelUrl: input.successUrl.replace("/sucesso", ""),
+      cancelUrl: input.cancelUrl ?? input.successUrl.replace("/sucesso", ""),
       description: plan.description,
       externalReference: input.externalReference,
       name: plan.name,

@@ -11,6 +11,6 @@ export type Announcement = {
 // incluir datas de entregas planejadas. Use null para esconder a faixa.
 export const CURRENT_ANNOUNCEMENT: Announcement | null = {
   href: "/como-funciona",
-  since: "2026-10-01",
-  text: "Veja o passo a passo com telas reais, do cadastro ao pedido no WhatsApp",
+  since: "2026-10-02",
+  text: "Monte sua loja grátis e pague só quando publicar",
 };

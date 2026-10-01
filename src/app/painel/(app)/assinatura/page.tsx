@@ -12,11 +12,35 @@ import { requireTenant } from "@/lib/auth/session";
 import { lastPaidAccessInstant } from "@/lib/billing/access-period";
 import { subscriptionSituation, subscriptionViewState } from "@/lib/billing/subscription-view";
 import { DEMO_SUBSCRIPTION } from "@/lib/demo/panel-demo";
+import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
 import { formatCurrency } from "@/lib/format/currency";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Assinatura" };
 export const dynamic = "force-dynamic";
+
+// Loja em rascunho: ainda não há assinatura. O botão de publicar fica na
+// faixa do topo do painel (DraftBanner).
+function DraftSubscription() {
+  return (
+    <div className="grid gap-6">
+      <PageHeader description="Monte grátis e pague só quando publicar." eyebrow="Financeiro" title="Assinatura" />
+      <Card>
+        <CardContent className="grid gap-5 p-5 sm:p-6">
+          <div>
+            <p className="text-sm text-[var(--app-foreground-muted)]">Situação</p>
+            <Badge className="mt-2" variant="neutral">Rascunho — sem cobrança</Badge>
+          </div>
+          <div className="grid gap-3 text-sm leading-6">
+            <p><strong>Enquanto a loja está em rascunho, nada é cobrado.</strong> Você pode cadastrar produtos, trocar o tema e ver tudo pela prévia.</p>
+            <p>Ao publicar, você assina o plano de <strong>{formatCurrency(CLICKCATALOGO_MONTHLY_PLAN.value)} por mês</strong> no cartão de crédito, processado pelo Asaas. A loja vai ao ar assim que o pagamento é confirmado, e você pode cancelar quando quiser.</p>
+            <p className="text-[var(--app-foreground-muted)]">Para publicar é preciso confirmar o e-mail e ter pelo menos 1 produto. Rascunhos sem acesso ao painel por 30 dias são excluídos.</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function formatDate(value: Date | string) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: "America/Sao_Paulo" }).format(new Date(value));
@@ -28,6 +52,7 @@ function formatBillingDate(value: string) {
 
 export default async function SubscriptionPage() {
   const { demo, tenant } = await requireTenant();
+  if (tenant.status === "rascunho") return <DraftSubscription />;
   let subscription = demo ? DEMO_SUBSCRIPTION : null;
   if (!demo) {
     const supabase = await createClient();

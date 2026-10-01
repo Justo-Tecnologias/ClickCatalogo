@@ -39,7 +39,7 @@ export default function HowItWorksPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <PendingLink className={buttonVariants({ size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
-              Quero minha loja
+              Criar minha loja grátis
               <ArrowRight aria-hidden="true" />
             </PendingLink>
             <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href={EXAMPLE_STORE_PATH} rel="noopener" target="_blank">
@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
       <div className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <ol className="mx-auto grid max-w-6xl gap-16 sm:gap-24">
           <Step
-            description="Informe o nome da loja, o WhatsApp que vai receber os pedidos e o seu e-mail. Depois escolha o endereço da loja: o sistema confere na hora se ele está livre."
+            description="Informe o nome da loja, o WhatsApp que vai receber os pedidos, o seu e-mail e uma senha. Depois escolha o endereço da loja: o sistema confere na hora se ele está livre. Criar a conta e montar a loja é grátis."
             icon={MousePointerClick}
             number={1}
             title="Crie sua loja"
@@ -62,7 +62,7 @@ export default function HowItWorksPage() {
           </Step>
 
           <Step
-            description="São seis temas prontos. A prévia mostra a sua loja ao vivo enquanto você escolhe, e o tema pode ser trocado depois pelo painel. A assinatura custa R$ 27 por mês, no cartão, sem comissão sobre as vendas."
+            description="São seis temas prontos. A prévia mostra a sua loja ao vivo enquanto você escolhe, e o tema pode ser trocado depois pelo painel. Tudo isso de graça: você só paga quando decidir publicar."
             icon={LayoutTemplate}
             number={2}
             reverse
@@ -81,11 +81,11 @@ export default function HowItWorksPage() {
           </Step>
 
           <Step
-            description="Sua loja ganha um endereço próprio, botão de compartilhar e QR Code. Quando o link é enviado no WhatsApp ou no Instagram, aparece uma imagem com o nome e a identidade da loja."
+            description="Quando a loja estiver pronta, toque em Publicar: o plano custa R$ 27 por mês, no cartão, sem comissão sobre as vendas. No ar, a loja ganha endereço próprio, botão de compartilhar e QR Code. Quando o link é enviado no WhatsApp ou no Instagram, aparece uma imagem com o nome e a identidade da loja."
             icon={Share2}
             number={4}
             reverse
-            title="Compartilhe o link"
+            title="Publique e compartilhe"
           >
             {/* Desktop: painel em destaque com a loja no celular sobreposta. Celular: só a loja. */}
             <div className="relative hidden lg:block lg:pr-16 lg:pb-10">
@@ -113,11 +113,11 @@ export default function HowItWorksPage() {
         <div className="mx-auto max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">Pronto para colocar sua loja no ar?</h2>
           <p className="mt-4 text-[var(--app-foreground-muted)]">
-            R$ 27 por mês, sem comissão sobre as vendas e sem fidelidade. Você pode cancelar pelo painel quando quiser.
+            Monte grátis e publique por R$ 27 por mês, sem comissão sobre as vendas e sem fidelidade. Você pode cancelar pelo painel quando quiser.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <PendingLink className={buttonVariants({ size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
-              Quero minha loja
+              Criar minha loja grátis
               <ArrowRight aria-hidden="true" />
             </PendingLink>
             <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="/#temas">

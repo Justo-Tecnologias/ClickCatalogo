@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <LegalPage
       description="Como o ClickCatálogo trata os dados necessários à criação, cobrança e operação da sua loja."
       title="Política de privacidade"
-      updatedAt="12 de setembro de 2026"
+      updatedAt="1 de outubro de 2026"
     >
       <section>
         <h2>1. Controlador e contato</h2>
@@ -29,11 +29,11 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>4. Finalidades e bases</h2>
-        <p>Usamos os dados para executar o serviço contratado, publicar a loja, processar a assinatura, autenticar e recuperar o acesso, atender solicitações, prevenir abuso, proteger direitos e cumprir obrigações legais ou regulatórias. Quando necessário, outro fundamento previsto na legislação ou o consentimento do titular será utilizado.</p>
+        <p>Usamos os dados para executar o serviço contratado, manter o rascunho gratuito da loja, confirmar o e-mail da conta, enviar até três lembretes de publicação (com opção de parar em cada mensagem), publicar a loja, processar a assinatura, autenticar e recuperar o acesso, atender solicitações, prevenir abuso, proteger direitos e cumprir obrigações legais ou regulatórias. Quando necessário, outro fundamento previsto na legislação ou o consentimento do titular será utilizado.</p>
       </section>
       <section>
         <h2>5. Fornecedores e transferências</h2>
-        <p>Usamos Netlify para hospedagem, Supabase para banco de dados, autenticação e imagens, Asaas para cobrança e Resend para o envio de e-mails transacionais, incluindo autenticação e recuperação do cadastro. Esses fornecedores podem processar dados em infraestrutura fora do Brasil e devem tratá-los conforme seus contratos, medidas de segurança e a legislação aplicável.</p>
+        <p>Usamos Netlify para hospedagem, Supabase para banco de dados, autenticação e imagens, Asaas para cobrança e Resend para o envio de e-mails transacionais, incluindo autenticação, confirmação de e-mail, lembretes de publicação e recuperação do cadastro. Esses fornecedores podem processar dados em infraestrutura fora do Brasil e devem tratá-los conforme seus contratos, medidas de segurança e a legislação aplicável.</p>
       </section>
       <section>
         <h2>6. Cookies, carrinho e métricas</h2>
@@ -43,6 +43,7 @@ export default function PrivacyPage() {
       <section>
         <h2>7. Retenção e segurança</h2>
         <p>Enquanto a assinatura estiver ativa, inclusive durante o período já pago após o cancelamento da próxima renovação, mantemos os dados necessários para prestar o serviço. Quando esse período termina, a loja fica indisponível e catálogo, produtos, imagens, configurações e acesso permanecem por até 30 dias para encerramento operacional. O titular autenticado pode antecipar esse prazo para até 15 dias na tela Privacidade do painel.</p>
+        <p>Lojas em rascunho, nunca publicadas, são excluídas 30 dias após o último acesso ao painel, com a conta, o catálogo, as imagens e o registro do cadastro; como não houve contratação, nenhuma evidência é preservada. Links de confirmação de e-mail expiram em 7 dias e são eliminados no dia seguinte ao vencimento.</p>
         <p>Intenções de cadastro canceladas ou expiradas são eliminadas depois de 90 dias. Payloads de webhooks processados com sucesso são mantidos por 180 dias; falhas pendentes ficam preservadas até serem resolvidas. Registros técnicos de limitação de abuso expiram em um dia. Métricas agregadas de produto podem ser mantidas por até 400 dias para análise histórica do serviço.</p>
         <p>Depois da exclusão operacional, preservamos por cinco anos, contados do arquivamento, somente evidências mínimas de contratação, aceite dos documentos e pagamento, sem conteúdo do catálogo, imagens, WhatsApp, endereço ou credenciais. Esse conjunto isolado existe para obrigações legais, prevenção de fraude e exercício regular de direitos. Ao fim do prazo, ele também é eliminado. Aplicamos isolamento entre lojas, controle de acesso, validação de origem, limitação de abuso e chaves exclusivas de servidor.</p>
       </section>

@@ -62,6 +62,7 @@ const benefits = [
 
 const frequentlyAskedQuestions = [
   ["O que é o ClickCatálogo?", "É um catálogo digital para pequenos lojistas organizarem produtos e receberem pedidos pelo WhatsApp."],
+  ["Posso montar a loja antes de pagar?", "Sim. Você cria a conta e monta a loja de graça, com uma prévia de como os clientes vão vê-la. Só paga R$ 27 por mês quando decidir publicar. Rascunhos sem acesso ao painel por 30 dias são excluídos."],
   ["Meu cliente precisa instalar um aplicativo?", "Não. Ele abre o link da sua loja em qualquer navegador, escolhe os produtos e envia o pedido pelo WhatsApp."],
   ["Como recebo os pedidos?", "O cliente monta o pedido no catálogo e o ClickCatálogo prepara uma mensagem organizada para o WhatsApp da sua loja."],
   ["Como recebo o pagamento da venda?", "Você combina e recebe o pagamento diretamente do seu cliente. O ClickCatálogo não processa o pagamento dos produtos."],
@@ -98,7 +99,7 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <PendingLink className={buttonVariants({ size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
-                Quero minha loja
+                Criar minha loja grátis
                 <ArrowRight aria-hidden="true" />
               </PendingLink>
               <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="#temas">
@@ -106,7 +107,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm font-medium text-[var(--app-foreground-muted)]">
-              R$ 27/mês · sem comissão · produtos ilimitados · cancele quando quiser
+              Monte grátis · publique por R$ 27/mês · sem comissão · cancele quando quiser
             </p>
           </div>
 
@@ -211,7 +212,7 @@ export default function HomePage() {
                 <span className="text-5xl font-black tracking-tight">R$27</span>
                 <span className="pb-1 text-white/80">/mês</span>
               </p>
-              <p className="mt-4 text-sm leading-6 text-white/80">Pagamento mensal no cartão de crédito. Cancele quando quiser.</p>
+              <p className="mt-4 text-sm leading-6 text-white/80">Monte a loja grátis e pague só quando publicar. Cartão de crédito, cancele quando quiser.</p>
               <PendingLink
                 className={buttonVariants({
                   className: "mt-7 bg-[var(--brand-accent)] text-brand-900 hover:bg-white",
@@ -220,7 +221,7 @@ export default function HomePage() {
                 href="/cadastro"
                 pendingLabel="Abrindo cadastro..."
               >
-                Quero minha loja
+                Criar minha loja grátis
                 <ArrowRight aria-hidden="true" />
               </PendingLink>
             </div>
@@ -258,7 +259,7 @@ export default function HomePage() {
             Crie seu catálogo, compartilhe o link e deixe seus produtos trabalharem por você.
           </p>
           <PendingLink className={buttonVariants({ className: "mt-7", size: "lg" })} href="/cadastro" pendingLabel="Abrindo cadastro...">
-            Quero minha loja
+            Criar minha loja grátis
             <ArrowRight aria-hidden="true" />
           </PendingLink>
         </div>

@@ -54,6 +54,16 @@ O arquivo `migrations/202610010027_store_service_info.sql` acrescenta as informa
 
 O arquivo `migrations/202610010028_banner_only_header.sql` acrescenta `tenants.banner_somente` (padrão `false`): com ele marcado, a loja mostra o banner inteiro, sem nome, logo e degradê por cima. O site só aplica a opção quando há banner. O titular pode editá-la; `get_public_catalog` passa a devolvê-la. Aplique antes do deploy do código.
 
+O arquivo `migrations/202610020029_free_draft_signup.sql` implementa o cadastro gratuito (`docs/PLANO-MONTA-GRATIS.md`):
+
+- Lojas `rascunho` existem com conta e senha, mas ficam fora de `get_public_catalog`. Só o webhook de pagamento as coloca `ativo`, e o titular não pode alterar `status`.
+- O registro de aceites é um `signup_intents` com status `rascunho` e `provisioned_tenant_id`. Ao publicar, ele recebe o checkout.
+- `email_verification_tokens` e `consume_email_verification_token` confirmam o e-mail (`tenants.email_confirmado_em`), condição para publicar.
+- `touch_draft_last_seen` registra o último acesso ao painel. `claim_draft_reminders` reserva os lembretes dos dias 1, 3 e 7.
+- `claim_stale_drafts` e `delete_stale_draft` excluem rascunhos sem acesso há 30 dias, e `get_public_draft_store_name` alimenta a página "Loja em preparação".
+
+Aplique antes do deploy do código.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

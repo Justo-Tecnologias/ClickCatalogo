@@ -13,3 +13,10 @@ export const signupSchema = z.object({
 });
 
 export type SignupInput = z.input<typeof signupSchema>;
+
+/** Cadastro gratuito: os mesmos dados da loja e a senha de acesso ao painel. */
+export const draftSignupSchema = signupSchema.extend({
+  password: z.string().min(8, "Crie uma senha com pelo menos 8 caracteres.").max(128, "A senha deve ter no máximo 128 caracteres."),
+});
+
+export type DraftSignupInput = z.input<typeof draftSignupSchema>;

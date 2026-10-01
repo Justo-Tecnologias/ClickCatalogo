@@ -14,9 +14,9 @@ export type TenantTheme =
   | "elegante"
   | "minimal";
 
-export type TenantStatus = "ativo" | "inadimplente" | "cancelado";
+export type TenantStatus = "rascunho" | "ativo" | "inadimplente" | "cancelado";
 export type SubscriptionStatus = "ativo" | "atrasado" | "cancelado";
-export type SignupIntentStatus = "pendente" | "pago" | "expirado" | "cancelado";
+export type SignupIntentStatus = "rascunho" | "pendente" | "pago" | "expirado" | "cancelado";
 export type SignupIntentType = "signup" | "reactivation";
 export type AccountDeletionSource = "titular" | "retencao";
 export type AccountDeletionStatus = "agendado" | "processando" | "concluido" | "cancelado" | "falhou";
@@ -378,6 +378,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_verification_tokens: {
+        Row: {
+          consumed_at: string | null;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          tenant_id: string;
+          token_hash: string;
+        };
+        Insert: {
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          tenant_id: string;
+          token_hash: string;
+        };
+        Update: {
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          tenant_id?: string;
+          token_hash?: string;
+        };
+        Relationships: [];
+      };
       signup_recovery_tokens: {
         Row: {
           consumed_at: string | null;
@@ -494,6 +521,13 @@ export type Database = {
           banner_somente: boolean;
           banner_url: string | null;
           canceled_at: string | null;
+          draft_deletion_claimed_at: string | null;
+          draft_last_seen_at: string | null;
+          draft_reminder_claimed_at: string | null;
+          draft_reminder_last_day: 0 | 1 | 3 | 7;
+          email_confirmado_em: string | null;
+          lembretes_desativados_em: string | null;
+          lembretes_token: string;
           created_at: string;
           descricao_curta: string | null;
           endereco: string | null;
@@ -516,6 +550,13 @@ export type Database = {
           banner_somente?: boolean;
           banner_url?: string | null;
           canceled_at?: string | null;
+          draft_deletion_claimed_at?: string | null;
+          draft_last_seen_at?: string | null;
+          draft_reminder_claimed_at?: string | null;
+          draft_reminder_last_day?: 0 | 1 | 3 | 7;
+          email_confirmado_em?: string | null;
+          lembretes_desativados_em?: string | null;
+          lembretes_token?: string;
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
@@ -538,6 +579,13 @@ export type Database = {
           banner_somente?: boolean;
           banner_url?: string | null;
           canceled_at?: string | null;
+          draft_deletion_claimed_at?: string | null;
+          draft_last_seen_at?: string | null;
+          draft_reminder_claimed_at?: string | null;
+          draft_reminder_last_day?: 0 | 1 | 3 | 7;
+          email_confirmado_em?: string | null;
+          lembretes_desativados_em?: string | null;
+          lembretes_token?: string;
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
@@ -612,6 +660,18 @@ export type Database = {
       consume_api_rate_limit: {
         Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };
         Returns: { allowed: boolean; remaining: number; reset_at: string; retry_after: number }[];
+      };
+      consume_email_verification_token: {
+        Args: { p_token_hash: string };
+        Returns: string | null;
+      };
+      get_public_draft_store_name: {
+        Args: { p_slug: string };
+        Returns: string | null;
+      };
+      touch_draft_last_seen: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
       };
       consume_signup_recovery_token: {
         Args: { p_token_hash: string };
