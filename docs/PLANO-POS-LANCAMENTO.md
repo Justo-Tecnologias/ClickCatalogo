@@ -171,7 +171,8 @@ Para refazer os prints, use a ferramenta de captura com Chrome headless descrita
 - [x] Card "Sua loja esta semana" em **Minha loja**: visitas, cliques para pedir no WhatsApp e compartilhamentos dos últimos 7 dias comparados aos 7 anteriores (`src/lib/analytics/store-stats.ts`, lido das métricas agregadas já existentes, sem migration). Some se a leitura falhar.
 - [x] Informações de atendimento (migration 027, `src/lib/catalog/store-info.ts`): formas de pagamento, entrega/retirada com observação e horário. Editadas na seção **Atendimento** do formulário; exibidas abaixo do cabeçalho da loja e em resumo no rodapé do carrinho.
 - [x] Detalhes opcionais no carrinho: nome, entrega ou retirada (só quando a loja oferece as duas), forma de pagamento (só com mais de uma aceita) e observação. Vão apenas na mensagem do WhatsApp, cada um em uma linha; nada é gravado nem medido.
-- [ ] Aplicar a migration 027 em produção **antes** do deploy; publicar e preencher o atendimento da Ateliê Aurora.
+- [x] Migration 027 aplicada em produção antes do deploy.
+- [ ] Preencher o atendimento da Ateliê Aurora real (hoje só a demonstração mostra os selos).
 
 | Data | Decisão | Motivo |
 |---|---|---|
@@ -192,7 +193,7 @@ Pedido do titular após ver o pacote 2 no ar: a loja e o painel estavam poluído
 - [x] Carrinho em duas etapas: itens → finalizar (atendimento, detalhes opcionais e envio). Na finalização só aparece o que não virou escolha.
 - [x] Painel "Minha loja": formulário em abas (Loja, Contato, Atendimento, Aparência) com um único "Salvar"; card da semana compacto no celular.
 - [x] Login: só e-mail, senha e "Problemas para entrar?" (nova tela que separa senha esquecida de acesso sem senha); "Criar minha loja" e "Ver demonstração" em cartões abaixo.
-- [ ] Aplicar a migration 028 em produção **antes** do deploy.
+- [x] Migration 028 aplicada em produção antes do deploy; publicado em 01/10 (PR #16). `audit:production` passou a conferir o novo login e `/painel/problemas-para-entrar`.
 
 | Data | Decisão | Motivo |
 |---|---|---|
