@@ -32,22 +32,24 @@ O objetivo imediato é lançar com segurança, observar o comportamento real do 
 
 ## 3. Estado atual deste planejamento
 
-Revisado em **30 de setembro de 2026**, após a auditoria completa do projeto e duas releases publicadas no mesmo dia.
+Revisado em **5 de outubro de 2026** (semana de manutenção). As seções 3.2 em diante guardam o histórico desde 30/09.
 
 ### 3.1 Produção agora
 
 | Item | Estado |
 |---|---|
-| Commit publicado | `ba64198` — merge do PR #11 (Release B) sobre o PR #9 (Release A) |
+| Commit publicado | `3c3f8e0` — merge do PR #20 (ajustes do cadastro grátis) |
 | Next.js | **16.3.8** (corrige GHSA-vcvr-r3jv-pc5j, RCE em `next/og`) |
-| Migrations aplicadas em produção | até `202609300025_overdue_suspension_policy.sql` |
+| Migrations aplicadas em produção | até `202610020030_store_brand_click_metric.sql` |
 | Asaas | conta de **produção**; webhook "ClickCatalogo Produção" ativo, fila sem interrupção, 10 eventos (auditado com `audit-asaas` em 30/09) |
 | Webhook do Sandbox | desativado e com fila interrompida — inofensivo; só reativar se voltar a testar no Sandbox |
-| Lojas públicas indexadas | `justo-shop` e `atelie-aurora` (ambas `ativo`) |
+| Lojas públicas indexadas | `justo-shop` e `atelie-aurora` (ambas `ativo`); `justo-store` é rascunho de teste do titular |
 | Auditorias | `audit:production` sem falhas; `audit-slug-integrity.sql` sem conflitos |
-| Scheduled Function | executando de hora em hora sem erro (~3 s; log de 30/09 22:15 com todos os contadores em zero) |
-| Termos | versão `2026-09-30` publicada; aviso enviado aos 2 titulares ativos |
-| Qualidade | 69 testes, lint, TypeScript, contraste AA e build aprovados |
+| Scheduled Functions | `finalize-subscription-cancellations` (minuto 15) e `draft-lifecycle` (minuto 45); lembretes dos dias 1 e 3 da `justo-store` enviados |
+| Termos e Privacidade | versão `2026-10-01` (cadastro grátis); sem aviso, porque os titulares ativos são do próprio titular |
+| Qualidade | 98 testes, lint, TypeScript, contraste AA e build aprovados |
+| Cadastro | grátis em rascunho; publicação paga (R$ 27/mês) |
+| Divulgação | semana 05–11/10 agendada no Metricool (Instagram `@justotecnologias` + Facebook) |
 
 ### 3.2 O que foi entregue em 30/09/2026
 
@@ -124,7 +126,7 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 
 - [ ] Netlify: confirmar que `ASAAS_API_KEY` começa com `$aact_prod_`.
 - [ ] No primeiro pagamento: `CHECKOUT_PAID` e `PAYMENT_CONFIRMED` com resposta 200 em **Asaas → Integrações → Logs de Webhooks**.
-- [ ] Cliente cria a senha na tela de sucesso e entra no painel da loja correta.
+- [ ] Cliente publica pelo painel: volta do checkout em `/painel/loja?publicacao=retorno` e vê "Sua loja está no ar!".
 - [ ] Rodar `audit-asaas` e `audit:live` após o primeiro pagamento.
 - [ ] No primeiro cancelamento: `reconciliation.completed` sobe e `attention` permanece 0 no log da rotina.
 - [ ] No primeiro atraso: e-mail do dia 1 aparece como `overdueNotices.sent` no log.
@@ -138,8 +140,12 @@ O SQL da migration 025 foi validado com PGlite em 19 cenários: schema anterior 
 #### P2 — dívida técnica curta
 
 - [x] `audit:production`: a checagem `loja-real` agora usa o marcador "Falar no WhatsApp" e confere a `atelie-aurora` por padrão (Release C).
-- [ ] Atualizar `STATUS.md`, desatualizado desde 15/09.
-- [ ] Alerta "high" do `brace-expansion` (somente ferramentas de desenvolvimento) via Dependabot.
+- [x] `STATUS.md` reescrito em 05/10 com o estado atual.
+- [x] Alerta do `brace-expansion` não aparece mais. Os 3 alertas antigos do Next (< 16.3.3) já estão corrigidos pela 16.3.8 e aguardam o GitHub fechá-los.
+- [x] Dependabot (05/10):
+  - grupo de atualizações seguras (#12) aprovado;
+  - majors de TypeScript 7, ESLint 10 e `@types/node` ignorados até o ecossistema suportar (#3, #4 e #5 fechados);
+  - `@types/node` alinhado ao Node 22.
 - [ ] Teste de SQL permanente: hoje a validação com PGlite rodou fora do repositório. Avaliar adicionar `@electric-sql/pglite` como `devDependency` e um teste que carregue `schema.sql` e as migrations.
 - [ ] Lint no Windows reporta `no-img-element` em `opengraph-image.tsx` (no Linux a regra ignora o arquivo); inofensivo.
 - [ ] E2E de cadastro/retomada, login, CRUD essencial, carrinho e cancelamento, sem cobrança real.
