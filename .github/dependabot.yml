@@ -8,6 +8,17 @@ updates:
       time: "09:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    # Majors bloqueados pelo ecossistema; revisar quando houver suporte.
+    ignore:
+      # typescript-eslint (usado pelo lint do Next) ainda não suporta TS 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # eslint-plugin-react (via eslint-config-next) quebra no ESLint 10.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # Os tipos acompanham o Node 22 usado no projeto (.nvmrc).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       dependencias-seguras:
         update-types:
