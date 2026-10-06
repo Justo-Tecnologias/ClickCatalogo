@@ -84,8 +84,7 @@ function StoreFormTabs({ activeTab, baseId, onChange }: { activeTab: StoreFormTa
             aria-controls={`${baseId}-panel-${item.id}`}
             aria-selected={selected}
             className={cn(
-              // Sublinhado com sombra: o `* { border-color }` global (fora das
-              // camadas do Tailwind) anula classes de cor de borda.
+              // Sublinhado com sombra: não altera a altura da aba ao selecionar.
               "inline-flex min-h-11 flex-1 shrink-0 items-center justify-center px-2 text-sm sm:flex-none sm:px-3 outline-none transition-[color,box-shadow] focus-visible:ring-3 focus-visible:ring-brand-200",
               selected ? "font-semibold text-brand-900 shadow-[inset_0_-2px_0_var(--brand-700)]" : "font-medium text-[var(--app-foreground-muted)] hover:text-brand-900",
             )}
