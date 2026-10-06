@@ -85,7 +85,6 @@ Catálogo digital para pequenos lojistas venderem pelo WhatsApp. O lojista **mon
 
 - **Primeira publicação paga:** acompanhar de ponta a ponta (checklist P0 em `docs/PLANO-POS-LANCAMENTO.md`, seção 3.5).
 - **Aquisição:** tráfego ainda baixo (cerca de 4 visitas por dia no início de outubro). Próximos passos são os convites diretos com o modelo grátis e a medição de origem das visitas (`?origem=`).
-- **CSS global:** `* { border-color }` em `globals.css` fica fora das camadas do Tailwind e anula as classes de cor de borda (há tarefa separada para corrigir).
 - **Vercel:** o projeto antigo `catalogo-ja` continua conectado ao GitHub e falha em todo PR. Desconectar na Vercel.
 - **Dependências bloqueadas pelo ecossistema:**
   - TypeScript 7, porque o `typescript-eslint` ainda não o suporta;
