@@ -64,6 +64,16 @@ O arquivo `migrations/202610020029_free_draft_signup.sql` implementa o cadastro 
 
 Aplique antes do deploy do código.
 
+O arquivo `migrations/202610020030_store_brand_click_metric.sql` acrescenta `store_brand_clicked` (clique em "ClickCatálogo" no rodapé de uma loja, contado no escopo da loja) à lista de métricas.
+
+O arquivo `migrations/202610220031_acquisition_origin_metrics.sql` mede a origem das visitas pelos links de divulgação (`?origem=`, ver `docs/LINKS-DIVULGACAO.md`):
+
+- `acquisition_metrics_daily` conta por canal as visitas e as etapas do cadastro, em tabela separada de `product_metrics_daily`, para o funil geral não contar nada em dobro. A lista de eventos precisa ser igual a `acquisitionMetricNames` em `src/lib/analytics/origins.ts`; um teste confere isso.
+- `tenants.origem_cadastro` guarda o canal da loja criada (só a etiqueta, não é dado pessoal). O titular não pode alterá-la.
+- `increment_acquisition_metric` é restrita à `service_role`. O relatório `origin-report.sql` (somente leitura) mostra os 30 dias por canal.
+
+Aplique antes do deploy do código: sem a coluna `origem_cadastro`, o cadastro gratuito falharia ao gravar a loja.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

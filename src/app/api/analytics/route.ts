@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { publicProductMetricNames } from "@/lib/analytics/events";
-import { recordProductMetric } from "@/lib/analytics/server";
+import { isAcquisitionMetric, parseAcquisitionOrigin } from "@/lib/analytics/origins";
+import { recordAcquisitionMetric, recordProductMetric } from "@/lib/analytics/server";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
@@ -11,6 +12,7 @@ import { tenantSlugSchema } from "@/lib/tenants/slug";
 
 const inputSchema = z.object({
   event: z.enum(publicProductMetricNames),
+  origem: z.string().max(32).optional(),
   slug: tenantSlugSchema.optional(),
 });
 
@@ -44,5 +46,12 @@ export async function POST(request: Request) {
   }
 
   await recordProductMetric(parsed.data.event, tenantId);
+
+  // Visitas e etapas do cadastro vindas de um link com ?origem= também são
+  // contadas por canal (eventos de loja ficam só no escopo da loja).
+  const origin = parseAcquisitionOrigin(parsed.data.origem);
+  if (!tenantId && origin && isAcquisitionMetric(parsed.data.event)) {
+    await recordAcquisitionMetric(parsed.data.event, origin);
+  }
   return new NextResponse(null, { status: 204 });
 }

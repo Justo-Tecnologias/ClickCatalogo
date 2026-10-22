@@ -28,6 +28,7 @@ export const DEMO_TENANT: Database["public"]["Tables"]["tenants"]["Row"] = {
   email_confirmado_em: createdAt,
   lembretes_desativados_em: null,
   lembretes_token: "00000000-0000-4000-8000-000000000000",
+  origem_cadastro: null,
   descricao_curta: "Velas, cerâmicas e presentes artesanais feitos em pequenos lotes para transformar pequenos momentos.",
   endereco: "Rua das Flores, 120 — Centro",
   entrega_modo: "ambos",

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { trackProductMetric } from "@/lib/analytics/client";
+import { currentAcquisitionOrigin, trackProductMetric } from "@/lib/analytics/client";
 import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
 import { draftSignupSchema } from "@/lib/signup/schema";
 import { EMPTY_STORE_SERVICE_INFO } from "@/lib/catalog/store-info";
@@ -106,7 +106,7 @@ export function SignupForm() {
     if (!validation.success) return setError(validation.error.issues[0]?.message ?? "Revise os dados.");
     setSubmitting(true); setError(null);
     try {
-      const payload: Omit<FormState, "passwordConfirmation"> & { passwordConfirmation?: string } = { ...form };
+      const payload: Omit<FormState, "passwordConfirmation"> & { origem: string | null; passwordConfirmation?: string } = { ...form, origem: currentAcquisitionOrigin() };
       delete payload.passwordConfirmation;
       const response = await fetch("/api/cadastro/criar", { body: JSON.stringify(payload), headers: { "Content-Type": "application/json" }, method: "POST" });
       const result = await response.json() as { action?: "login" | "resume"; error?: string; next?: string };

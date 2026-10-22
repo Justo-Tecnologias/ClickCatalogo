@@ -59,7 +59,7 @@ Catálogo digital para pequenos lojistas venderem pelo WhatsApp. O lojista **mon
 
 ### Aquisição
 - **Páginas:** landing com faixa "Novo", `/como-funciona` com prints reais e Open Graph próprio.
-- **Métricas:** contadores diários agregados sem PII (`product_metrics_daily`), lidos com `supabase/funnel-report.sql`. O relatório soma todos os escopos e cobre visita → cadastro → loja criada → e-mail → produto → pagamento, além dos cliques no crédito das lojas.
+- **Métricas:** contadores diários agregados sem PII (`product_metrics_daily`), lidos com `supabase/funnel-report.sql`. O relatório soma todos os escopos e cobre visita → cadastro → loja criada → e-mail → produto → pagamento, além dos cliques no crédito das lojas. A origem das visitas (`?origem=` nos links de divulgação, ver `docs/LINKS-DIVULGACAO.md`) é contada por canal em `acquisition_metrics_daily` e lida com `supabase/origin-report.sql`; a loja criada guarda o canal em `tenants.origem_cadastro`.
 - **Redes sociais:**
   - Instagram `@justotecnologias` e página do Facebook, agendados pelo Metricool;
   - artes e legendas em `marketing/` (fora do Git).
