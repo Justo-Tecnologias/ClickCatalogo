@@ -11,7 +11,9 @@ import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/documents";
 import { logError, logInfo } from "@/lib/observability/logger";
 import { enforceRateLimit, PUBLIC_API_RATE_LIMITS } from "@/lib/security/rate-limit";
 import { enforceSameOrigin } from "@/lib/security/same-origin";
+import { parseShowcaseNiche } from "@/lib/marketing/store-showcase";
 import { sendEmailVerification } from "@/lib/signup/email-verification";
+import { seedExampleCatalog } from "@/lib/signup/example-catalog";
 import { expireStaleSignupIntents } from "@/lib/signup/intents";
 import { draftSignupSchema } from "@/lib/signup/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
   const input = parsed.data;
   // Canal do link que trouxe a pessoa (?origem=); inválido ou ausente vira null.
   const origin = parseAcquisitionOrigin(body && typeof body === "object" && "origem" in body ? body.origem : null);
+  // Vindo da prévia (/exemplo): começa com os produtos de exemplo do nicho.
+  const exampleNiche = parseShowcaseNiche(body && typeof body === "object" && "produtosExemplo" in body ? body.produtosExemplo : null);
 
   try {
     await expireStaleSignupIntents(admin);
@@ -102,6 +106,11 @@ export async function POST(request: Request) {
   }
 
   // A conta já existe: falhas daqui em diante não desfazem o cadastro.
+  if (exampleNiche) {
+    await seedExampleCatalog(admin, tenant.id, exampleNiche)
+      .catch((seedError) => logError("draft_signup.example_products", seedError, { request_id: requestId, tenant_id: tenant.id }));
+  }
+
   try {
     const supabase = await createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: input.email, password: input.password });

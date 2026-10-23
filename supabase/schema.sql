@@ -144,6 +144,8 @@ create table public.products (
   variacao_info text,
   ativo boolean not null default true,
   ordem integer not null default 0,
+  -- Produto de exemplo da prévia (/exemplo); ver migration 033.
+  exemplo boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -2372,6 +2374,7 @@ begin
       from public.products as product
       where product.tenant_id = claimed.id
         and product.ativo = true
+        and product.exemplo = false
     ),
     tenant.email_confirmado_em is not null,
     tenant.lembretes_token,

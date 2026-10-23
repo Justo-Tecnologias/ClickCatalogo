@@ -13,7 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const CHECKOUT_VALID_MS = 60 * 60 * 1000;
 const INTENT_VALID_MS = 24 * 60 * 60 * 1000;
 
-export type PublishBlocker = "email" | "products";
+export type PublishBlocker = "email" | "examples" | "products";
 
 // "Publicar minha loja": abre o checkout recorrente para a loja em rascunho.
 // O pagamento confirmado chega pelo webhook, que coloca a loja no ar
@@ -29,11 +29,15 @@ export async function startPublicationCheckoutAction(): Promise<ActionResult<{ c
     if (!userEmail) return { error: "Não foi possível confirmar o e-mail titular.", ok: false };
 
     const admin = createAdminClient();
-    const { count, error: productError } = await admin.from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id)
-      .eq("ativo", true);
+    const [{ count, error: productError }, { count: exampleCount, error: exampleError }] = await Promise.all([
+      admin.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("ativo", true).eq("exemplo", false),
+      admin.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("exemplo", true),
+    ]);
     if (productError) throw productError;
+    if (exampleError) throw exampleError;
+    if ((exampleCount ?? 0) > 0) {
+      return { blocker: "examples", error: "Edite ou apague os produtos de exemplo antes de publicar.", ok: false };
+    }
     if ((count ?? 0) === 0) {
       return { blocker: "products", error: "Cadastre pelo menos 1 produto antes de publicar.", ok: false };
     }

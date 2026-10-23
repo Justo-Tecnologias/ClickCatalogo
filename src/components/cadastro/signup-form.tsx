@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { currentAcquisitionOrigin, trackProductMetric } from "@/lib/analytics/client";
 import { CLICKCATALOGO_MONTHLY_PLAN } from "@/lib/billing/plan";
 import { draftSignupSchema } from "@/lib/signup/schema";
+import { buildShowcaseCatalog, SHOWCASE_NICHES, type ShowcaseNiche } from "@/lib/marketing/store-showcase";
 import { EMPTY_STORE_SERVICE_INFO } from "@/lib/catalog/store-info";
 import { formatBrazilWhatsApp, normalizeBrazilWhatsAppInput } from "@/lib/whatsapp/url";
 import type { TenantTheme } from "@/types/database";
@@ -25,8 +26,8 @@ const initialState: FormState = { email: "", nomeLoja: "", password: "", passwor
 
 function slugify(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60); }
 
-/** Vindo da prévia (/exemplo): nome e tema já escolhidos. */
-export type SignupPrefill = { nomeLoja: string; tema: TenantTheme };
+/** Vindo da prévia (/exemplo): nome, tema e nicho (produtos de exemplo) já escolhidos. */
+export type SignupPrefill = { nicho: ShowcaseNiche | null; nomeLoja: string; tema: TenantTheme };
 
 export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
   const [step, setStep] = useState(1);
@@ -42,6 +43,8 @@ export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
   const [checkingAccount, setCheckingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const exampleNiche = prefill?.nicho ?? null;
+  const [useExamples, setUseExamples] = useState(true);
 
   useEffect(() => {
     trackProductMetric("signup_started");
@@ -63,7 +66,11 @@ export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [form.slug]);
 
-  const preview = useMemo(() => ({ banner_url: null, categorias: [{ id: "11111111-1111-4111-8111-111111111111", nome: "Destaques", ordem: 0, produtos: [{ descricao: "Seu produto com descrição e preço.", id: "22222222-2222-4222-8222-222222222222", imagem_url: null, nome: "Produto de exemplo", ordem: 0, preco: 27, variacao_info: "Variações sob consulta" }] }], descricao_curta: "Catálogo pronto para receber pedidos.", endereco: null, ...EMPTY_STORE_SERVICE_INFO, instagram: null, logo_url: null, nome_loja: form.nomeLoja || "Nome da sua loja", slug: form.slug || "sua-loja", status: "ativo" as const, tema: form.tema, whatsapp: form.whatsapp || "5511999999999" }), [form]);
+  const exampleCategories = useMemo(
+    () => (exampleNiche ? buildShowcaseCatalog({ nicho: exampleNiche, nome: "", tema: form.tema }).categorias : null),
+    [exampleNiche, form.tema],
+  );
+  const preview = useMemo(() => ({ banner_url: null, categorias: exampleCategories && useExamples ? exampleCategories : [{ id: "11111111-1111-4111-8111-111111111111", nome: "Destaques", ordem: 0, produtos: [{ descricao: "Seu produto com descrição e preço.", id: "22222222-2222-4222-8222-222222222222", imagem_url: null, nome: "Produto de exemplo", ordem: 0, preco: 27, variacao_info: "Variações sob consulta" }] }], descricao_curta: "Catálogo pronto para receber pedidos.", endereco: null, ...EMPTY_STORE_SERVICE_INFO, instagram: null, logo_url: null, nome_loja: form.nomeLoja || "Nome da sua loja", slug: form.slug || "sua-loja", status: "ativo" as const, tema: form.tema, whatsapp: form.whatsapp || "5511999999999" }), [exampleCategories, form, useExamples]);
   const effectiveSlugStatus = form.slug.length < 3
     ? { available: false, checking: false, message: slugTouched || form.slug.length > 0 ? "Use pelo menos 3 caracteres." : "" }
     : slugStatus;
@@ -113,7 +120,11 @@ export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
     if (!validation.success) return setError(validation.error.issues[0]?.message ?? "Revise os dados.");
     setSubmitting(true); setError(null);
     try {
-      const payload: Omit<FormState, "passwordConfirmation"> & { origem: string | null; passwordConfirmation?: string } = { ...form, origem: currentAcquisitionOrigin() };
+      const payload: Omit<FormState, "passwordConfirmation"> & { origem: string | null; passwordConfirmation?: string; produtosExemplo: ShowcaseNiche | null } = {
+        ...form,
+        origem: currentAcquisitionOrigin(),
+        produtosExemplo: exampleNiche && useExamples ? exampleNiche : null,
+      };
       delete payload.passwordConfirmation;
       const response = await fetch("/api/cadastro/criar", { body: JSON.stringify(payload), headers: { "Content-Type": "application/json" }, method: "POST" });
       const result = await response.json() as { action?: "login" | "resume"; error?: string; next?: string };
@@ -145,7 +156,7 @@ export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
         </Card>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5 sm:p-6"><h1 className="text-2xl font-bold">Escolha a cara da loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Você poderá trocar o tema pelo painel a qualquer momento.</p>{error ? <Alert className="mt-5" title={error} variant="danger" /> : null}<div className="mt-6"><ThemePicker onValueChange={(tema) => update("tema", tema)} value={form.tema} /></div><div className="mt-6 rounded-lg bg-brand-50 p-4"><p className="flex items-center gap-2 text-sm font-semibold text-brand-800"><Sparkles aria-hidden="true" className="size-4 shrink-0" />Grátis para montar</p><p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">Cadastre produtos e veja a prévia sem pagar nada. Para publicar, o plano custa <strong className="text-[var(--app-foreground)]">R$ {CLICKCATALOGO_MONTHLY_PLAN.value}/mês</strong> no cartão, e você cancela quando quiser.</p></div><div className="mt-5 grid gap-2"><Button disabled={submitting} onClick={createStore} size="lg">{submitting ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Rocket aria-hidden="true" />}{submitting ? "Criando sua loja..." : "Criar minha loja grátis"}</Button><Button disabled={submitting} onClick={() => setStep(1)} variant="ghost"><ArrowLeft aria-hidden="true" />Voltar e revisar</Button></div></Card>
+          <Card className="p-5 sm:p-6"><h1 className="text-2xl font-bold">Escolha a cara da loja</h1><p className="mt-2 text-sm leading-6 text-[var(--app-foreground-muted)]">Você poderá trocar o tema pelo painel a qualquer momento.</p>{error ? <Alert className="mt-5" title={error} variant="danger" /> : null}<div className="mt-6"><ThemePicker onValueChange={(tema) => update("tema", tema)} value={form.tema} /></div>{exampleNiche ? <label className="mt-6 flex items-start gap-3 rounded-lg border border-brand-200 p-4 text-sm leading-6"><input checked={useExamples} className="mt-1 size-4 shrink-0 accent-[var(--brand-700)]" onChange={(event) => setUseExamples(event.target.checked)} type="checkbox" /><span><strong className="text-[var(--app-foreground)]">Começar com os 6 produtos de exemplo</strong> de {SHOWCASE_NICHES[exampleNiche].label.toLowerCase()}. Você troca as fotos e os preços pelos seus no painel, ou apaga todos de uma vez.</span></label> : null}<div className="mt-6 rounded-lg bg-brand-50 p-4"><p className="flex items-center gap-2 text-sm font-semibold text-brand-800"><Sparkles aria-hidden="true" className="size-4 shrink-0" />Grátis para montar</p><p className="mt-1 text-sm leading-6 text-[var(--app-foreground-muted)]">Cadastre produtos e veja a prévia sem pagar nada. Para publicar, o plano custa <strong className="text-[var(--app-foreground)]">R$ {CLICKCATALOGO_MONTHLY_PLAN.value}/mês</strong> no cartão, e você cancela quando quiser.</p></div><div className="mt-5 grid gap-2"><Button disabled={submitting} onClick={createStore} size="lg">{submitting ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Rocket aria-hidden="true" />}{submitting ? "Criando sua loja..." : "Criar minha loja grátis"}</Button><Button disabled={submitting} onClick={() => setStep(1)} variant="ghost"><ArrowLeft aria-hidden="true" />Voltar e revisar</Button></div></Card>
           <div className="lg:sticky lg:top-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Sua loja ao vivo</p><StorePreview catalog={preview} framed theme={form.tema} /></div>
         </div>
       )}

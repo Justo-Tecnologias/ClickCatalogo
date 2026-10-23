@@ -172,12 +172,15 @@ function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+export function parseShowcaseNiche(value: unknown): ShowcaseNiche | null {
+  return typeof value === "string" && Object.hasOwn(SHOWCASE_NICHES, value) ? value as ShowcaseNiche : null;
+}
+
 /** Lê ?nome=&nicho=&tema= da URL. Sem nome válido, devolve null (mostra o formulário). */
 export function parseShowcaseParams(params: Record<string, string | string[] | undefined>): ShowcaseParams | null {
   const nome = (first(params.nome) ?? "").replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LENGTH).trim();
   if (nome.length < 2) return null;
-  const rawNiche = first(params.nicho);
-  const nicho: ShowcaseNiche = rawNiche && Object.hasOwn(SHOWCASE_NICHES, rawNiche) ? rawNiche as ShowcaseNiche : "doces";
+  const nicho = parseShowcaseNiche(first(params.nicho)) ?? "doces";
   const rawTheme = first(params.tema);
   const tema = THEMES.find((theme) => theme.id === rawTheme)?.id ?? SHOWCASE_NICHES[nicho].tema;
   return { nicho, nome, tema };
@@ -187,9 +190,9 @@ export function showcaseHref({ nicho, nome, tema }: ShowcaseParams) {
   return `/exemplo?${new URLSearchParams({ nome, nicho, tema })}`;
 }
 
-/** Cadastro já preenchido com o nome e o tema escolhidos na prévia. */
-export function showcaseSignupHref({ nome, tema }: ShowcaseParams) {
-  return `/cadastro?${new URLSearchParams({ nome, tema })}`;
+/** Cadastro já preenchido com o nome, o tema e o nicho (produtos de exemplo) da prévia. */
+export function showcaseSignupHref({ nicho, nome, tema }: ShowcaseParams) {
+  return `/cadastro?${new URLSearchParams({ nome, tema, nicho })}`;
 }
 
 export function buildShowcaseCatalog({ nicho, nome, tema }: ShowcaseParams): PublicCatalog {

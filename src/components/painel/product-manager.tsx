@@ -1,10 +1,10 @@
 "use client";
 
-import { Eye, EyeOff, ImageIcon, LoaderCircle, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, ImageIcon, LoaderCircle, Package, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { deleteProductAction, saveProductAction, toggleProductAction } from "@/app/painel/(app)/produtos/actions";
+import { deleteExampleProductsAction, deleteProductAction, saveProductAction, toggleProductAction } from "@/app/painel/(app)/produtos/actions";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import { CatalogImage } from "@/components/loja-publica/catalog-image";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 
 type CategoryOption = { id: string; nome: string };
-export type ProductItem = { ativo: boolean; category_id: string; descricao: string | null; id: string; imagem_url: string | null; link_externo: string | null; nome: string; preco: number; variacao_info: string | null };
+export type ProductItem = { ativo: boolean; category_id: string; descricao: string | null; exemplo: boolean; id: string; imagem_url: string | null; link_externo: string | null; nome: string; preco: number; variacao_info: string | null };
 
 export function ProductManager({ categories, initialCategoryFilter, initialProducts }: { categories: CategoryOption[]; initialCategoryFilter?: string; initialProducts: ProductItem[] }) {
   const [products, setProducts] = useState(initialProducts);
@@ -32,6 +32,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
   const [priceInput, setPriceInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProductItem | null>(null);
+  const [examplesDeleteOpen, setExamplesDeleteOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [editorDirty, setEditorDirty] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
   const [isPending, startTransition] = useTransition();
   const notify = useToast();
   const unsavedNavigation = useUnsavedChanges(editorOpen && editorDirty && !isPending);
+  const exampleCount = products.filter((product) => product.exemplo).length;
   const categoryNames = useMemo(() => new Map(categories.map((category) => [category.id, category.nome])), [categories]);
 
   const filteredProducts = useMemo(() => {
@@ -174,6 +176,21 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
     });
   }
 
+  function confirmRemoveExamples() {
+    setOperation({ type: "delete" });
+    startTransition(async () => {
+      const result = await deleteExampleProductsAction();
+      setOperation(null);
+      if (!result.ok) {
+        notify({ title: result.error, variant: "danger" });
+        return setError(result.error);
+      }
+      setProducts((current) => current.filter((item) => !item.exemplo));
+      setExamplesDeleteOpen(false);
+      notify({ title: "Produtos de exemplo apagados", variant: "success" });
+    });
+  }
+
   if (categories.length === 0) {
     return <EmptyState action={<Link className={buttonVariants()} href="/painel/categorias"><Plus aria-hidden="true" />Criar primeira categoria</Link>} description="Todo produto precisa pertencer a uma categoria. Crie uma para começar." icon={Package} title="Crie uma categoria primeiro" />;
   }
@@ -181,6 +198,26 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
   return (
     <div className="grid min-w-0 gap-5">
       {error ? <Alert title={error} variant="danger" /> : null}
+
+      {exampleCount > 0 && !editorOpen ? (
+        <section aria-labelledby="example-products-title" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-3">
+            <Sparkles aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-700" />
+            <div>
+              <h2 className="font-semibold text-amber-900" id="example-products-title">
+                {exampleCount === 1 ? "1 produto de exemplo" : `${exampleCount} produtos de exemplo`}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-amber-900/80">
+                Edite cada um com a sua foto, nome e preço, ou apague todos e cadastre os seus. A loja só pode ser publicada sem produtos de exemplo.
+              </p>
+            </div>
+          </div>
+          <Button className="shrink-0" disabled={isPending} onClick={() => setExamplesDeleteOpen(true)} variant="secondary">
+            <Trash2 aria-hidden="true" />
+            Apagar os exemplos
+          </Button>
+        </section>
+      ) : null}
 
       {editorOpen ? (
         <Card className="p-5 sm:p-6">
@@ -236,7 +273,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
               <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-[var(--app-surface-muted)] sm:size-16">
                 {product.imagem_url ? <CatalogImage alt={`Imagem de ${product.nome}`} className="object-cover" fallback={<ImageIcon aria-hidden="true" className="size-5 text-[var(--app-foreground-muted)]" />} fill loading="lazy" sizes="64px" src={product.imagem_url} /> : <ImageIcon aria-hidden="true" className="size-5 text-[var(--app-foreground-muted)]" />}
               </div>
-              <div className="min-w-0 flex-1"><div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2"><p className="max-w-full truncate font-semibold">{product.nome}</p><Badge variant={product.ativo ? "success" : "neutral"}>{product.ativo ? "Publicado" : "Oculto"}</Badge>{product.link_externo && !isAllowedExternalLink(product.link_externo) ? <Badge title={`O link externo só é exibido para: ${EXTERNAL_LINK_STORE_NAMES}.`} variant="warning">Link não exibido</Badge> : null}</div><p className="mt-1 truncate text-xs text-[var(--app-foreground-muted)]">{categoryNames.get(product.category_id) ?? "Categoria não encontrada"}</p><p className="mt-1 text-sm font-semibold text-brand-700">{formatCurrency(product.preco)}</p></div>
+              <div className="min-w-0 flex-1"><div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2"><p className="max-w-full truncate font-semibold">{product.nome}</p>{product.exemplo ? <Badge title="Produto de exemplo: edite com os seus dados ou apague." variant="warning">Exemplo</Badge> : null}<Badge variant={product.ativo ? "success" : "neutral"}>{product.ativo ? "Publicado" : "Oculto"}</Badge>{product.link_externo && !isAllowedExternalLink(product.link_externo) ? <Badge title={`O link externo só é exibido para: ${EXTERNAL_LINK_STORE_NAMES}.`} variant="warning">Link não exibido</Badge> : null}</div><p className="mt-1 truncate text-xs text-[var(--app-foreground-muted)]">{categoryNames.get(product.category_id) ?? "Categoria não encontrada"}</p><p className="mt-1 text-sm font-semibold text-brand-700">{formatCurrency(product.preco)}</p></div>
               <div className="col-start-2 flex shrink-0 gap-1 sm:col-auto">
                 <Button aria-label={product.ativo ? `Ocultar ${product.nome}` : `Publicar ${product.nome}`} disabled={isPending} onClick={() => toggle(product)} size="icon" title={product.ativo ? "Ocultar produto" : "Publicar produto"} variant="ghost">{operation?.type === "toggle" && operation.id === product.id ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : product.ativo ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</Button>
                 <Button aria-label={`Editar ${product.nome}`} disabled={isPending} onClick={() => openEditor(product)} size="icon" title="Editar produto" variant="ghost"><Pencil aria-hidden="true" /></Button>
@@ -248,6 +285,7 @@ export function ProductManager({ categories, initialCategoryFilter, initialProdu
         </div>
       ) : null}
       <ConfirmDialog confirmLabel="Excluir produto" description={deleteTarget ? `“${deleteTarget.nome}” será removido permanentemente do catálogo.` : "Este produto será removido permanentemente."} onCancel={() => setDeleteTarget(null)} onConfirm={confirmRemove} open={Boolean(deleteTarget)} pending={operation?.type === "delete"} pendingLabel="Excluindo..." title="Excluir produto?" />
+      <ConfirmDialog confirmLabel="Apagar exemplos" description={`Os ${exampleCount} produtos de exemplo serão removidos. As categorias continuam, para você usar com os seus produtos.`} onCancel={() => setExamplesDeleteOpen(false)} onConfirm={confirmRemoveExamples} open={examplesDeleteOpen} pending={operation?.type === "delete" && !operation.id} pendingLabel="Apagando..." title="Apagar os produtos de exemplo?" />
       <ConfirmDialog confirmLabel="Descartar alterações" description="As informações preenchidas neste formulário não serão salvas." onCancel={() => setDiscardOpen(false)} onConfirm={() => closeEditor(true)} open={discardOpen} title="Sair sem salvar?" />
       <ConfirmDialog confirmLabel="Sair sem salvar" description="As alterações feitas no produto serão perdidas." onCancel={unsavedNavigation.cancelNavigation} onConfirm={unsavedNavigation.confirmNavigation} open={unsavedNavigation.navigationPending} title="Descartar alterações?" />
     </div>

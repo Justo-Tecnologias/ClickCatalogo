@@ -251,6 +251,7 @@ export type Database = {
           ativo: boolean;
           category_id: string;
           created_at: string;
+          exemplo: boolean;
           descricao: string | null;
           id: string;
           imagem_url: string | null;
@@ -266,6 +267,7 @@ export type Database = {
           ativo?: boolean;
           category_id: string;
           created_at?: string;
+          exemplo?: boolean;
           descricao?: string | null;
           id?: string;
           imagem_url?: string | null;
@@ -281,6 +283,7 @@ export type Database = {
           ativo?: boolean;
           category_id?: string;
           created_at?: string;
+          exemplo?: boolean;
           descricao?: string | null;
           id?: string;
           imagem_url?: string | null;

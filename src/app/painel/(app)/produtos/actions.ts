@@ -42,7 +42,7 @@ const productSchema = z.object({
 
 type SavedProduct = Pick<
   Database["public"]["Tables"]["products"]["Row"],
-  "ativo" | "category_id" | "descricao" | "id" | "imagem_url" | "link_externo" | "nome" | "preco" | "variacao_info"
+  "ativo" | "category_id" | "descricao" | "exemplo" | "id" | "imagem_url" | "link_externo" | "nome" | "preco" | "variacao_info"
 >;
 
 function parsePrice(value: FormDataEntryValue | null) {
@@ -112,6 +112,8 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
       ativo: parsed.data.ativo,
       category_id: parsed.data.categoryId,
       descricao: parsed.data.descricao,
+      // Salvar um produto de exemplo o torna do titular (sai da contagem de exemplos).
+      exemplo: false,
       imagem_url: imageUrl,
       link_externo: parsed.data.linkExterno,
       nome: parsed.data.nome,
@@ -121,7 +123,7 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
     };
 
     let savedProduct: SavedProduct;
-    const returnColumns = "ativo,category_id,descricao,id,imagem_url,link_externo,nome,preco,variacao_info";
+    const returnColumns = "ativo,category_id,descricao,exemplo,id,imagem_url,link_externo,nome,preco,variacao_info";
 
     if (parsed.data.id) {
       const { data, error } = await supabase
@@ -136,7 +138,8 @@ export async function saveProductAction(formData: FormData): Promise<ActionResul
     } else {
       const [{ count }, { count: totalCount }] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("category_id", parsed.data.categoryId),
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+        // Produtos de exemplo não contam como "primeiro produto" do titular.
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).eq("exemplo", false),
       ]);
       const { data, error } = await supabase
         .from("products")
@@ -183,6 +186,27 @@ export async function toggleProductAction(id: string, ativo: boolean): Promise<A
     return { ok: true };
   } catch (error) {
     return actionError(error, "Não foi possível alterar a visibilidade do produto.");
+  }
+}
+
+// Apaga de uma vez os produtos de exemplo criados no cadastro vindo da prévia.
+// As fotos deles são do próprio site (/nichos), não do Storage.
+export async function deleteExampleProductsAction(): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const { demo, tenant } = await requireTenant();
+    if (demo) return { error: "O modo de demonstração não exclui dados.", ok: false };
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("products").delete().eq("tenant_id", tenant.id).eq("exemplo", true).select("imagem_url");
+    if (error) throw error;
+    const paths = (data ?? []).map((product) => storagePathFromUrl(product.imagem_url)).filter((path): path is string => Boolean(path));
+    if (paths.length) {
+      const { error: cleanupError } = await supabase.storage.from("produtos").remove(paths);
+      if (cleanupError) console.error("Falha ao remover imagens de produtos de exemplo:", cleanupError.message);
+    }
+    revalidatePath("/painel", "layout");
+    return { data: { deleted: data?.length ?? 0 }, ok: true };
+  } catch (error) {
+    return actionError(error, "Não foi possível apagar os produtos de exemplo.");
   }
 }
 

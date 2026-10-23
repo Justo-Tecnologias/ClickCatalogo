@@ -44,7 +44,7 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
     <PanelShell
       demo={context.demo}
       notice={draft
-        ? <DraftBanner email={context.userEmail} emailConfirmed={Boolean(context.tenant.email_confirmado_em)} productCount={draft.productCount} />
+        ? <DraftBanner email={context.userEmail} emailConfirmed={Boolean(context.tenant.email_confirmado_em)} exampleCount={draft.exampleCount} productCount={draft.productCount} />
         : overdue ? <OverdueBanner {...overdue} /> : null}
       offline={overdue?.phase === "suspended" || overdue?.phase === "cancellation_due"}
       slug={context.tenant.slug}
@@ -61,11 +61,12 @@ export default async function ProtectedPanelLayout({ children }: { children: Rea
 // máximo 1 vez por hora) e conta os produtos exigidos para publicar.
 async function loadDraftState(tenantId: string) {
   const supabase = await createClient();
-  const [, { count }] = await Promise.all([
+  const [, { count }, { count: exampleCount }] = await Promise.all([
     supabase.rpc("touch_draft_last_seen"),
-    supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("ativo", true),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("ativo", true).eq("exemplo", false),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("exemplo", true),
   ]);
-  return { productCount: count ?? 0 };
+  return { exampleCount: exampleCount ?? 0, productCount: count ?? 0 };
 }
 
 async function loadOverdueSituation(tenantId: string) {

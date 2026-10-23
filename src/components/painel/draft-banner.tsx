@@ -13,16 +13,18 @@ import { cn } from "@/lib/utils/cn";
 export type DraftBannerProps = {
   email: string | null;
   emailConfirmed: boolean;
+  /** Produtos de exemplo da prévia ainda na loja: bloqueiam a publicação. */
+  exampleCount: number;
   productCount: number;
 };
 
 // Faixa do painel enquanto a loja está em rascunho: o que falta para
 // publicar (e-mail confirmado, ao menos 1 produto) e o botão de publicação.
-export function DraftBanner({ email, emailConfirmed, productCount }: DraftBannerProps) {
+export function DraftBanner({ email, emailConfirmed, exampleCount, productCount }: DraftBannerProps) {
   const [message, setMessage] = useState<{ text: string; tone: "error" | "info" } | null>(null);
   const [publishing, startPublishing] = useTransition();
   const [resending, startResending] = useTransition();
-  const hasProducts = productCount > 0;
+  const hasProducts = productCount > 0 && exampleCount === 0;
   const ready = emailConfirmed && hasProducts;
 
   function publish() {
@@ -67,7 +69,11 @@ export function DraftBanner({ email, emailConfirmed, productCount }: DraftBanner
               )}
             </Step>
             <Step done={hasProducts} icon={Package}>
-              {hasProducts ? (productCount === 1 ? "1 produto cadastrado" : `${productCount} produtos cadastrados`) : (
+              {hasProducts ? (productCount === 1 ? "1 produto cadastrado" : `${productCount} produtos cadastrados`) : exampleCount > 0 ? (
+                <Link className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline underline-offset-4 sm:min-h-0" href="/painel/produtos">
+                  {exampleCount === 1 ? "Troque o produto de exemplo pelo seu" : `Troque os ${exampleCount} produtos de exemplo pelos seus`}
+                </Link>
+              ) : (
                 <Link className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline underline-offset-4 sm:min-h-0" href="/painel/produtos">Cadastre o primeiro produto</Link>
               )}
             </Step>
