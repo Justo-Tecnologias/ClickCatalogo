@@ -25,6 +25,7 @@ export const acquisitionOriginNames = Object.keys(acquisitionOrigins) as Acquisi
 export const acquisitionMetricNames = [
   "landing_view",
   "how_it_works_view",
+  "store_preview_view",
   "signup_started",
   "signup_step_completed",
   "draft_created",

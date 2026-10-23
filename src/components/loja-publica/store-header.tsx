@@ -12,6 +12,8 @@ export type StoreHeaderProps = {
   /** Mostra o banner inteiro, sem nome, logo ou degradê por cima. */
   bannerOnly?: boolean;
   bannerUrl: string | null;
+  /** Prévia de exemplo: o botão leva a este endereço em vez do WhatsApp. */
+  contactHref?: string;
   description: string | null;
   framed?: boolean;
   logoUrl: string | null;
@@ -24,6 +26,7 @@ export function StoreHeader({
   analyticsSlug,
   bannerOnly = false,
   bannerUrl,
+  contactHref,
   description,
   framed = false,
   logoUrl,
@@ -46,9 +49,9 @@ export function StoreHeader({
     <>
       <a
         className={buttonVariants({ className: "min-w-0 flex-1 px-3 @xl:flex-none @xl:px-4", size: "md", variant: "theme" })}
-        href={whatsappUrl}
-        rel="noopener noreferrer"
-        target="_blank"
+        href={contactHref ?? whatsappUrl}
+        rel={contactHref ? undefined : "noopener noreferrer"}
+        target={contactHref ? undefined : "_blank"}
       >
         <MessageCircle aria-hidden="true" />
         Falar no WhatsApp

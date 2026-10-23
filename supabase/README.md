@@ -74,6 +74,8 @@ O arquivo `migrations/202610220031_acquisition_origin_metrics.sql` mede a origem
 
 Aplique antes do deploy do código: sem a coluna `origem_cadastro`, o cadastro gratuito falharia ao gravar a loja.
 
+O arquivo `migrations/202610230032_store_preview_metric.sql` acrescenta `store_preview_view` (alguém viu a prévia da própria loja em `/exemplo`) às listas de `product_metrics_daily` e `acquisition_metrics_daily`. Aplique antes do deploy: sem ela, a contagem da prévia falha em silêncio (só gera erro no log).
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

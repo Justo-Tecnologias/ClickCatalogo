@@ -968,7 +968,7 @@ create table public.product_metrics_daily (
   primary key (metric_date, event_name, scope_key),
   constraint product_metrics_daily_event_check check (
     event_name in (
-      'landing_view', 'how_it_works_view',
+      'landing_view', 'how_it_works_view', 'store_preview_view',
       'signup_started', 'signup_step_completed', 'draft_created',
       'email_verified', 'checkout_created',
       'payment_confirmed', 'password_created', 'first_category_created',
@@ -1000,7 +1000,7 @@ declare
   v_scope_key text := coalesce(p_tenant_id::text, 'global');
 begin
   if p_event_name not in (
-    'landing_view', 'how_it_works_view',
+    'landing_view', 'how_it_works_view', 'store_preview_view',
     'signup_started', 'signup_step_completed', 'draft_created',
     'email_verified', 'checkout_created',
     'payment_confirmed', 'password_created', 'first_category_created',
@@ -1056,7 +1056,7 @@ create table public.acquisition_metrics_daily (
   ),
   constraint acquisition_metrics_daily_event_check check (
     event_name in (
-      'landing_view', 'how_it_works_view', 'signup_started',
+      'landing_view', 'how_it_works_view', 'store_preview_view', 'signup_started',
       'signup_step_completed', 'draft_created'
     )
   ),
@@ -1077,7 +1077,7 @@ set search_path = ''
 as $$
 begin
   if p_event_name not in (
-    'landing_view', 'how_it_works_view', 'signup_started',
+    'landing_view', 'how_it_works_view', 'store_preview_view', 'signup_started',
     'signup_step_completed', 'draft_created'
   ) then
     raise exception 'unsupported metric';

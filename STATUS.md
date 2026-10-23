@@ -18,7 +18,7 @@ Catálogo digital para pequenos lojistas venderem pelo WhatsApp. O lojista **mon
 | Publicação | Exige e-mail confirmado e ao menos 1 produto; checkout Asaas; o webhook põe a loja no ar. |
 | Lojas reais em produção | `atelie-aurora` (vitrine) e `justo-shop`; `justo-store` é rascunho de teste do titular. |
 | Primeiro pagamento real pelo fluxo de publicação | Ainda não ocorreu (será confirmado pela primeira cliente). |
-| Banco | Migrations até `202610020030_store_brand_click_metric.sql` aplicadas em produção. |
+| Banco | Migrations até `202610220031_acquisition_origin_metrics.sql` aplicadas em produção; `202610230032_store_preview_metric.sql` acompanha a prévia `/exemplo`. |
 | Qualidade | 98 testes (`npm test`), lint, TypeScript, contraste AA e build no CI (`npm run verify` + `npm audit --omit=dev`). |
 | Framework | Next.js 16.3.8 (App Router, `proxy.ts`), React 19, Tailwind 4, Zod 4, Supabase, Asaas, Resend, Netlify. |
 
@@ -59,7 +59,7 @@ Catálogo digital para pequenos lojistas venderem pelo WhatsApp. O lojista **mon
 
 ### Aquisição
 - **Páginas:** landing com faixa "Novo", `/como-funciona` com prints reais e Open Graph próprio.
-- **Métricas:** contadores diários agregados sem PII (`product_metrics_daily`), lidos com `supabase/funnel-report.sql`. O relatório soma todos os escopos e cobre visita → cadastro → loja criada → e-mail → produto → pagamento, além dos cliques no crédito das lojas. A origem das visitas (`?origem=` nos links de divulgação, ver `docs/LINKS-DIVULGACAO.md`) é contada por canal em `acquisition_metrics_daily` e lida com `supabase/origin-report.sql`; a loja criada guarda o canal em `tenants.origem_cadastro`.
+- **Métricas:** contadores diários agregados sem PII (`product_metrics_daily`), lidos com `supabase/funnel-report.sql`. O relatório soma todos os escopos e cobre visita → cadastro → loja criada → e-mail → produto → pagamento, além dos cliques no crédito das lojas. A origem das visitas (`?origem=` nos links de divulgação, ver `docs/LINKS-DIVULGACAO.md`) é contada por canal em `acquisition_metrics_daily` e lida com `supabase/origin-report.sql`; a loja criada guarda o canal em `tenants.origem_cadastro`. A prévia `/exemplo` ("Sua loja em 10 segundos") conta `store_preview_view`.
 - **Redes sociais:**
   - Instagram `@justotecnologias` e página do Facebook, agendados pelo Metricool;
   - artes e legendas em `marketing/` (fora do Git).
