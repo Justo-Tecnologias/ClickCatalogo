@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { PendingLink } from "@/components/ui/pending-link";
 import { getLegalIdentity } from "@/lib/legal/identity";
 import type { Announcement } from "@/lib/marketing/announcements";
+import { SHOWCASE_NICHE_IDS, SHOWCASE_NICHES } from "@/lib/marketing/store-showcase";
 import { cn } from "@/lib/utils/cn";
 
 // Cabeçalho e rodapé das páginas institucionais (landing e /como-funciona).
@@ -80,13 +81,18 @@ export function SiteFooter({ origin = "inicio" }: { origin?: string }) {
       className="border-t border-white/10 bg-brand-900 px-4 text-white sm:px-6 lg:px-8"
       id="rodape"
     >
-      <div className="mx-auto grid max-w-7xl gap-8 py-10 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="mx-auto grid max-w-7xl gap-8 py-10 sm:grid-cols-[1fr_auto_auto] sm:items-start">
         <div className="max-w-md">
           <BrandLink inverse />
           <p className="mt-4 text-sm leading-6 text-white/75">
             Catálogo digital simples para organizar produtos e receber pedidos direto no WhatsApp.
           </p>
         </div>
+        <nav aria-label="Catálogo para o seu negócio" className="flex flex-col items-start gap-1 sm:items-end">
+          {SHOWCASE_NICHE_IDS.map((nicho) => (
+            <FooterLink href={`/para/${nicho}`} key={nicho}>Para {SHOWCASE_NICHES[nicho].label.toLowerCase()}</FooterLink>
+          ))}
+        </nav>
         <nav aria-label="Links institucionais" className="flex flex-col items-start gap-1 sm:items-end">
           <FooterLink href="/como-funciona">Como funciona</FooterLink>
           <FooterLink href="/termos">Termos de uso</FooterLink>
