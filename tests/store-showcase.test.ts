@@ -26,7 +26,7 @@ test("prévia lê nome, nicho e tema da URL com valores seguros", () => {
 test("links da prévia e do cadastro levam nome e tema codificados", () => {
   const params = { nicho: "doces" as const, nome: "Doces & Cia", tema: "delivery" as const };
   assert.equal(showcaseHref(params), "/exemplo?nome=Doces+%26+Cia&nicho=doces&tema=delivery");
-  assert.equal(showcaseSignupHref(params), "/cadastro?nome=Doces+%26+Cia&tema=delivery");
+  assert.equal(showcaseSignupHref(params), "/cadastro?nome=Doces+%26+Cia&tema=delivery&nicho=doces");
 });
 
 test("cada nicho tem fotos existentes, preços e ids únicos", () => {

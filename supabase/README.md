@@ -76,6 +76,8 @@ Aplique antes do deploy do código: sem a coluna `origem_cadastro`, o cadastro g
 
 O arquivo `migrations/202610230032_store_preview_metric.sql` acrescenta `store_preview_view` (alguém viu a prévia da própria loja em `/exemplo`) às listas de `product_metrics_daily` e `acquisition_metrics_daily`. Aplique antes do deploy: sem ela, a contagem da prévia falha em silêncio (só gera erro no log).
 
+O arquivo `migrations/202610230033_example_products.sql` acrescenta `products.exemplo` (padrão `false`). Quem vem da prévia pode criar a loja já com os 6 produtos do nicho, marcados como exemplo: eles não contam como produto do titular, não entram na contagem dos lembretes (`claim_draft_reminders`) e bloqueiam a publicação até serem editados (o que desmarca) ou apagados. Aplique antes do deploy: sem a coluna, o painel de produtos e a faixa do rascunho falham.
+
 ## Aplicação
 
 Quando o projeto Supabase existir, vincule o CLI ao projeto e execute:

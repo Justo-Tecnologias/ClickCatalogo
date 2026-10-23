@@ -69,6 +69,7 @@ const demoProduct = (
   category_id: DEMO_CATEGORIES[categoryIndex].id,
   created_at: createdAt,
   descricao,
+  exemplo: false,
   id: `00000000-0000-4000-8000-000000000${String(200 + index)}`,
   imagem_url: DEMO_IMAGE(image),
   link_externo: null,

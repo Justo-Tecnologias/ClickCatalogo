@@ -18,7 +18,7 @@ Catálogo digital para pequenos lojistas venderem pelo WhatsApp. O lojista **mon
 | Publicação | Exige e-mail confirmado e ao menos 1 produto; checkout Asaas; o webhook põe a loja no ar. |
 | Lojas reais em produção | `atelie-aurora` (vitrine) e `justo-shop`; `justo-store` é rascunho de teste do titular. |
 | Primeiro pagamento real pelo fluxo de publicação | Ainda não ocorreu (será confirmado pela primeira cliente). |
-| Banco | Migrations até `202610220031_acquisition_origin_metrics.sql` aplicadas em produção; `202610230032_store_preview_metric.sql` acompanha a prévia `/exemplo`. |
+| Banco | Migrations até `202610220031_acquisition_origin_metrics.sql` aplicadas em produção; `202610230032_store_preview_metric.sql` acompanha a prévia `/exemplo`; `202610230033_example_products.sql` acompanha os produtos de exemplo. |
 | Qualidade | 98 testes (`npm test`), lint, TypeScript, contraste AA e build no CI (`npm run verify` + `npm audit --omit=dev`). |
 | Framework | Next.js 16.3.8 (App Router, `proxy.ts`), React 19, Tailwind 4, Zod 4, Supabase, Asaas, Resend, Netlify. |
 
