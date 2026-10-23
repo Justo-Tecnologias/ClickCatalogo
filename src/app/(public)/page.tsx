@@ -8,13 +8,12 @@ import {
   Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { HeroShowcase } from "@/components/marketing/hero-showcase";
 import { MobileStickyCta } from "@/components/marketing/mobile-sticky-cta";
 import { PageViewTracker } from "@/components/marketing/page-view-tracker";
-import { ShowcaseForm } from "@/components/marketing/showcase-form";
+import { ShowcaseLive } from "@/components/marketing/showcase-live";
 import { AnnouncementBar, SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
@@ -145,34 +144,28 @@ export default function HomePage() {
       </section>
 
       <section className="scroll-mt-4 px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8" id="sua-loja">
-        <Card className="mx-auto grid max-w-5xl items-center gap-8 overflow-hidden border-brand-200 p-6 sm:p-10 md:grid-cols-[1fr_auto]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Sua loja em 10 segundos</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-900">Veja como fica a sua loja</h2>
-            <p className="mt-4 max-w-xl leading-7 text-[var(--app-foreground-muted)]">
-              Digite o nome do seu negócio e escolha o que você vende: montamos uma prévia com produtos de exemplo para
-              você navegar e simular um pedido. Sem cadastro.
-            </p>
-            <ShowcaseForm className="mt-6" />
-            <p className="mt-5 text-sm text-[var(--app-foreground-muted)]">
-              Prefere ver uma loja de verdade?{" "}
-              <Link className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand-700 underline-offset-4 hover:underline" href="/loja/atelie-aurora" rel="noopener" target="_blank">
-                Abrir a Ateliê Aurora
-                <ExternalLink aria-hidden="true" className="size-3.5" />
-              </Link>
-            </p>
-          </div>
-          <figure className="mx-auto w-full max-w-[13rem] rounded-[2rem] border-[6px] border-brand-900 bg-brand-900 shadow-[0_24px_60px_rgb(19_50_41_/_22%)]">
-            <Image
-              alt="Loja Ateliê Aurora aberta no celular"
-              className="h-auto w-full rounded-[1.6rem]"
-              height={1688}
-              loading="lazy"
-              sizes="208px"
-              src="/como-funciona/loja-celular.webp"
-              width={780}
-            />
-          </figure>
+        <Card className="mx-auto max-w-5xl overflow-hidden border-brand-200 p-6 sm:p-10">
+          <ShowcaseLive
+            footer={(
+              <p className="mt-5 text-sm text-[var(--app-foreground-muted)]">
+                Prefere ver uma loja de verdade?{" "}
+                <Link className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand-700 underline-offset-4 hover:underline" href="/loja/atelie-aurora" rel="noopener" target="_blank">
+                  Abrir a Ateliê Aurora
+                  <ExternalLink aria-hidden="true" className="size-3.5" />
+                </Link>
+              </p>
+            )}
+            intro={(
+              <>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Sua loja em 10 segundos</p>
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-900">Veja como fica a sua loja</h2>
+                <p className="mt-4 max-w-xl leading-7 text-[var(--app-foreground-muted)]">
+                  Digite o nome do seu negócio e escolha o que você vende: o celular mostra a sua loja na hora.
+                  Depois abra a prévia completa para navegar e simular um pedido. Sem cadastro.
+                </p>
+              </>
+            )}
+          />
         </Card>
       </section>
 

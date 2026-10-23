@@ -75,6 +75,11 @@ test("cadastro abre preenchido vindo da prévia e a landing leva até ela", () =
   assert.match(read("src/components/cadastro/signup-form.tsx"), /slug: slugify\(prefill\.nomeLoja\)/);
   const landing = read("src/app/(public)/page.tsx");
   assert.match(landing, /href="#sua-loja"/);
-  assert.match(landing, /<ShowcaseForm className="mt-6" \/>/);
-  assert.match(read("src/components/marketing/showcase-form.tsx"), /<form action="\/exemplo" className=\{cn\("grid gap-5", className\)\} method="get">/);
+  assert.match(landing, /<ShowcaseLive\b/);
+  assert.match(read("src/components/marketing/showcase-form.tsx"), /action="\/exemplo"\s+className=\{cn\("grid gap-5", className\)\}\s+method="get"/);
+  // A miniatura da landing é só desenho: sem carrinho nem a loja completa.
+  const mini = read("src/components/marketing/mini-store-preview.tsx");
+  assert.doesNotMatch(mini, /<StorePreview|<StoreCatalog|<CartPanel/);
+  assert.match(mini, /data-tema=\{template\.tema\}/);
+  assert.match(read("src/components/marketing/showcase-live.tsx"), /<MiniStorePreview niche=\{niche\} storeName=\{storeName\.trim\(\) \|\| "Sua loja"\} \/>/);
 });
