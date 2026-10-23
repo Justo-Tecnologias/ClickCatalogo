@@ -114,3 +114,10 @@ test("painel limita a prévia desktop e mantém acesso à visualização complet
   assert.match(settings, /Expandir prévia/);
   assert.doesNotMatch(settings, /backdrop:bg-black\/50 xl:hidden/);
 });
+
+test("cor padrão de borda fica em @layer base para não anular utilitários do Tailwind", () => {
+  const css = readFileSync("src/app/globals.css", "utf8");
+  // Fora de uma camada, `* { border-color }` vence border-brand-700, border-[var(--cor-borda)] etc.
+  assert.match(css, /@layer base \{\s*\*,[\s\S]*?border-color: var\(--app-border\);/);
+  assert.doesNotMatch(css.replace(/@layer base \{[\s\S]*?\n\}/, ""), /^\*\s*\{[^}]*border-color/m);
+});

@@ -15,8 +15,16 @@
   --font-sans: "Inter Variable", Inter, Arial, Helvetica, sans-serif;
 }
 
-* {
-  border-color: var(--app-border);
+/* Cor padrão de borda fica em @layer base para que utilitários como
+   border-brand-700 ou border-[var(--cor-borda)] possam sobrescrevê-la. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--app-border);
+  }
 }
 
 html {

@@ -209,7 +209,7 @@ Pedido do titular após ver o pacote 2 no ar: a loja e o painel estavam poluído
 | 01/10 | Configuração em abas | Página mais curta, principalmente no celular |
 | 01/10 | Login com tela "Problemas para entrar?"; cadastro e demonstração continuam no login | Menos ações concorrendo com "Entrar", sem esconder quem ainda não tem loja |
 
-Observação técnica: o `* { border-color }` de `globals.css` fica fora das camadas do Tailwind e anula classes de cor de borda (ex.: `peer-checked:border-brand-700`). As abas usam sombra para o sublinhado; corrigir a regra global fica como dívida técnica.
+Observação técnica: o `* { border-color }` de `globals.css` ficava fora das camadas do Tailwind e anulava classes de cor de borda (ex.: `peer-checked:border-brand-700`). Corrigido em 06/10 movendo a regra para `@layer base`.
 
 #### Pacote 4 — "monte grátis, pague para publicar" (branch `feat/monta-gratis`)
 
