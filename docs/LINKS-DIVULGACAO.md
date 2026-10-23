@@ -27,6 +27,10 @@ A página `/exemplo` monta na hora uma loja com o nome do negócio e produtos de
 - Opcional: `&tema=elegante` (ou `classico`, `natural`, `tech`, `delivery`, `minimal`). Sem ele, vale o tema padrão do nicho.
 - O botão "Quero essa loja" abre o cadastro já com o nome e o tema. A visita conta como `store_preview_view` no funil e no canal.
 
+## Páginas por nicho (busca orgânica)
+
+`/para/doces`, `/para/artesanato`, `/para/moda`, `/para/marmitas` e `/para/cosmeticos`: cada uma fala a dor do nicho e já abre a prévia nele. Estão no sitemap e no rodapé do site; as visitas contam como `landing_view`. Também servem para divulgar a um público específico, por exemplo `https://clickcatalogo.com/para/doces?origem=grupo` num grupo de confeiteiras.
+
 Também funciona em outras páginas: `https://clickcatalogo.com/como-funciona?origem=dm` ou `https://clickcatalogo.com/cadastro?origem=dm`.
 
 ## Regras

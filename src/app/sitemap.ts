@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getSiteUrl } from "@/lib/env/server";
+import { SHOWCASE_NICHE_IDS } from "@/lib/marketing/store-showcase";
 import { isSupabaseConfigured } from "@/lib/env/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -12,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { changeFrequency: "weekly", priority: 1, url: siteUrl },
     { changeFrequency: "monthly", priority: 0.8, url: `${siteUrl}/como-funciona` },
     { changeFrequency: "monthly", priority: 0.7, url: `${siteUrl}/exemplo` },
+    ...SHOWCASE_NICHE_IDS.map((nicho) => ({ changeFrequency: "monthly" as const, priority: 0.7, url: `${siteUrl}/para/${nicho}` })),
     { changeFrequency: "monthly", priority: 0.4, url: `${siteUrl}/atendimento` },
     { changeFrequency: "monthly", priority: 0.3, url: `${siteUrl}/termos` },
     { changeFrequency: "monthly", priority: 0.3, url: `${siteUrl}/privacidade` },

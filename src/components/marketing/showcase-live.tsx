@@ -8,9 +8,9 @@ import { SHOWCASE_NICHES, type ShowcaseNiche } from "@/lib/marketing/store-showc
 
 // Formulário da prévia com a miniatura ao lado: o celular acompanha o nome
 // digitado e o nicho escolhido, antes mesmo de abrir /exemplo.
-export function ShowcaseLive({ footer, intro }: { footer?: ReactNode; intro: ReactNode }) {
+export function ShowcaseLive({ defaultNiche = "doces", footer, intro }: { defaultNiche?: ShowcaseNiche; footer?: ReactNode; intro: ReactNode }) {
   const [storeName, setStoreName] = useState("");
-  const [niche, setNiche] = useState<ShowcaseNiche>("doces");
+  const [niche, setNiche] = useState<ShowcaseNiche>(defaultNiche);
 
   return (
     <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
@@ -18,6 +18,7 @@ export function ShowcaseLive({ footer, intro }: { footer?: ReactNode; intro: Rea
         {intro}
         <ShowcaseForm
           className="mt-6"
+          defaultNiche={defaultNiche}
           onFieldChange={(name, value) => {
             if (name === "nome") setStoreName(value);
             if (name === "nicho" && Object.hasOwn(SHOWCASE_NICHES, value)) setNiche(value as ShowcaseNiche);
