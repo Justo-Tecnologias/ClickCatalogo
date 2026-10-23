@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <LegalPage
       description="Como o ClickCatálogo trata os dados necessários à criação, cobrança e operação da sua loja."
       title="Política de privacidade"
-      updatedAt="1 de outubro de 2026"
+      updatedAt="22 de outubro de 2026"
     >
       <section>
         <h2>1. Controlador e contato</h2>
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>6. Cookies, carrinho e métricas</h2>
-        <p>Usamos cookies essenciais para manter a sessão, selecionar a loja administrada e proteger a demonstração. O carrinho do catálogo permanece somente na memória da página e é descartado quando ela é recarregada. Não usamos cookies de publicidade comportamental. Registramos contadores agregados diários de uso dos produtos para acompanhar o funcionamento do serviço, sem armazenar nesses contadores IP, e-mail, telefone ou o conteúdo do catálogo.</p>
+        <p>Usamos cookies essenciais para manter a sessão, selecionar a loja administrada e proteger a demonstração. O carrinho do catálogo permanece somente na memória da página e é descartado quando ela é recarregada. Não usamos cookies de publicidade comportamental. Registramos contadores agregados diários de uso dos produtos para acompanhar o funcionamento do serviço, sem armazenar nesses contadores IP, e-mail, telefone ou o conteúdo do catálogo. Quando você chega por um link de divulgação com a indicação do canal (por exemplo, a bio do Instagram), essa etiqueta fica guardada apenas na aba aberta do navegador, até ela ser fechada, para somarmos os contadores por canal; se você criar uma loja, o canal fica registrado junto com ela. A etiqueta não identifica você.</p>
         <p>O endereço IP pode ser processado temporariamente para segurança, prevenção de abuso e limitação de requisições. Nesse mecanismo não armazenamos o IP bruto: mantemos apenas um identificador derivado por HMAC, que não permite recuperar o endereço original e expira em até um dia.</p>
       </section>
       <section>

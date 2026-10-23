@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { recordProductMetric } from "@/lib/analytics/server";
+import { parseAcquisitionOrigin } from "@/lib/analytics/origins";
+import { recordAcquisitionMetric, recordProductMetric } from "@/lib/analytics/server";
 import { ACTIVE_TENANT_COOKIE_MAX_AGE, ACTIVE_TENANT_COOKIE_NAME } from "@/lib/auth/tenant-cookie";
 import { DEMO_COOKIE_NAME } from "@/lib/demo/panel-demo";
 import { isSupabaseConfigured } from "@/lib/env/public";
@@ -29,7 +30,8 @@ export async function POST(request: Request) {
   const rateLimitResponse = await enforceRateLimit(request, PUBLIC_API_RATE_LIMITS.draftSignup);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const parsed = draftSignupSchema.safeParse(await request.json().catch(() => null));
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = draftSignupSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revise os dados informados." }, { status: 400 });
 
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -38,6 +40,8 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const input = parsed.data;
+  // Canal do link que trouxe a pessoa (?origem=); inválido ou ausente vira null.
+  const origin = parseAcquisitionOrigin(body && typeof body === "object" && "origem" in body ? body.origem : null);
 
   try {
     await expireStaleSignupIntents(admin);
@@ -58,6 +62,7 @@ export async function POST(request: Request) {
   const { data: tenant, error: tenantError } = await admin.from("tenants").insert({
     draft_last_seen_at: now,
     nome_loja: input.nomeLoja,
+    origem_cadastro: origin,
     owner_user_id: owner.userId,
     slug: input.slug,
     status: "rascunho",
@@ -109,6 +114,7 @@ export async function POST(request: Request) {
   await sendEmailVerification(admin, { email: input.email, kind: "welcome", storeName: input.nomeLoja, tenantId: tenant.id })
     .catch((sendError) => logError("draft_signup.welcome_email", sendError, { request_id: requestId, tenant_id: tenant.id }));
   await recordProductMetric("draft_created", tenant.id);
+  if (origin) await recordAcquisitionMetric("draft_created", origin);
   logInfo("draft_signup.created", { request_id: requestId, result: "created", tenant_id: tenant.id });
 
   const response = NextResponse.json({ next: "/painel/loja?bem-vindo=1" });

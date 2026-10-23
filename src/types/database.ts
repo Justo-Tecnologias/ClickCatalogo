@@ -24,6 +24,30 @@ export type AccountDeletionStatus = "agendado" | "processando" | "concluido" | "
 export type Database = {
   public: {
     Tables: {
+      acquisition_metrics_daily: {
+        Row: {
+          event_count: number;
+          event_name: string;
+          metric_date: string;
+          origem: string;
+          updated_at: string;
+        };
+        Insert: {
+          event_count?: number;
+          event_name: string;
+          metric_date: string;
+          origem: string;
+          updated_at?: string;
+        };
+        Update: {
+          event_count?: number;
+          event_name?: string;
+          metric_date?: string;
+          origem?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       api_rate_limits: {
         Row: {
           key_hash: string;
@@ -528,6 +552,7 @@ export type Database = {
           email_confirmado_em: string | null;
           lembretes_desativados_em: string | null;
           lembretes_token: string;
+          origem_cadastro: string | null;
           created_at: string;
           descricao_curta: string | null;
           endereco: string | null;
@@ -557,6 +582,7 @@ export type Database = {
           email_confirmado_em?: string | null;
           lembretes_desativados_em?: string | null;
           lembretes_token?: string;
+          origem_cadastro?: string | null;
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
@@ -586,6 +612,7 @@ export type Database = {
           email_confirmado_em?: string | null;
           lembretes_desativados_em?: string | null;
           lembretes_token?: string;
+          origem_cadastro?: string | null;
           created_at?: string;
           descricao_curta?: string | null;
           endereco?: string | null;
@@ -725,6 +752,10 @@ export type Database = {
       get_own_tenant_redirect_slugs: {
         Args: Record<PropertyKey, never>;
         Returns: string[];
+      };
+      increment_acquisition_metric: {
+        Args: { p_event_name: string; p_origem: string };
+        Returns: undefined;
       };
       increment_product_metric: {
         Args: { p_event_name: string; p_tenant_id?: string | null };
