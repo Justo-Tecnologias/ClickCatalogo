@@ -9,20 +9,31 @@ import { SHOWCASE_NICHE_IDS, SHOWCASE_NICHES, type ShowcaseNiche } from "@/lib/m
 import { cn } from "@/lib/utils/cn";
 
 // Formulário GET para /exemplo: funciona mesmo antes do JavaScript carregar e
-// não envia nada ao servidor além da URL da prévia.
+// não envia nada ao servidor além da URL da prévia. onFieldChange (opcional)
+// avisa cada mudança, para a miniatura da landing acompanhar.
 export function ShowcaseForm({
   className,
   defaultName = "",
   defaultNiche = "doces",
+  onFieldChange,
   origin,
 }: {
   className?: string;
   defaultName?: string;
   defaultNiche?: ShowcaseNiche;
+  onFieldChange?: (name: string, value: string) => void;
   origin?: AcquisitionOrigin | null;
 }) {
   return (
-    <form action="/exemplo" className={cn("grid gap-5", className)} method="get">
+    <form
+      action="/exemplo"
+      className={cn("grid gap-5", className)}
+      method="get"
+      onChange={onFieldChange ? (event) => {
+        const field: EventTarget = event.target;
+        if (field instanceof HTMLInputElement) onFieldChange(field.name, field.value);
+      } : undefined}
+    >
       {origin ? <input name="origem" type="hidden" value={origin} /> : null}
       <div className="grid gap-2">
         <FieldLabel htmlFor="showcase-nome">Nome do seu negócio</FieldLabel>
@@ -45,7 +56,7 @@ export function ShowcaseForm({
             const niche = SHOWCASE_NICHES[id];
             return (
               <label
-                className="group flex min-h-14 cursor-pointer items-center gap-2.5 rounded-[var(--radius-card)] border border-[var(--app-border)] bg-white p-2 text-sm font-medium transition hover:border-brand-300 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-700/20 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-brand-700/30"
+                className="group flex min-h-14 cursor-pointer items-center gap-2.5 rounded-[var(--radius-card)] border border-[var(--app-border)] bg-white p-2 text-sm font-medium transition hover:border-brand-300 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:font-semibold has-[:checked]:ring-2 has-[:checked]:ring-brand-700 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-brand-700/30"
                 key={id}
               >
                 <input className="sr-only" defaultChecked={id === defaultNiche} name="nicho" type="radio" value={id} />
