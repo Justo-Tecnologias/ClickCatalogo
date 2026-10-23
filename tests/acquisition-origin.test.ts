@@ -24,7 +24,7 @@ test("só canais da lista fechada são aceitos", () => {
 
 test("lista de etapas por canal é igual no código, na migration e no schema", () => {
   const expected = [...acquisitionMetricNames].sort();
-  for (const sql of [read(migration), read("supabase/schema.sql")]) {
+  for (const sql of [read("supabase/migrations/202610230032_store_preview_metric.sql"), read("supabase/schema.sql")]) {
     const constraint = sql.match(/acquisition_metrics_daily_event_check check \(\s*event_name in \(([^)]*)\)/);
     const fn = sql.match(/increment_acquisition_metric[\s\S]*?if p_event_name not in \(([^)]*)\)/);
     assert.ok(constraint && fn);
@@ -32,6 +32,8 @@ test("lista de etapas por canal é igual no código, na migration e no schema", 
       assert.deepEqual([...list.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]).sort(), expected);
     }
     assert.match(sql, /grant execute on function public\.increment_acquisition_metric\(text, text\)\s+to service_role;/);
+  }
+  for (const sql of [read(migration), read("supabase/schema.sql")]) {
     assert.match(sql, /revoke all on table public\.acquisition_metrics_daily from public, anon, authenticated;/);
   }
   // Etapas enviadas pelo navegador precisam existir na API pública.

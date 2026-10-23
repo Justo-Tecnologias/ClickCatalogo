@@ -83,7 +83,7 @@ test("experiência pública preserva seis temas, indisponibilidade e canonical n
 
   assert.match(page, /store\.kind === "canceled"/);
   assert.match(page, /canonicalUrl=\{canonicalUrl\}/);
-  assert.match(preview, /shareUrl=\{!framed \? canonicalUrl : undefined\}/);
+  assert.match(preview, /shareUrl=\{published \? canonicalUrl : undefined\}/);
   assert.match(preview, /footer=\{\(/);
   assert.match(catalog, /\{footer\}[\s\S]*?cartItemCount > 0[\s\S]*?env\(safe-area-inset-bottom\)/);
   assert.match(card, /Adicionar/);

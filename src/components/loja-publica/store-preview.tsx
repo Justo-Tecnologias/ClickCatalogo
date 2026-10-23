@@ -10,6 +10,8 @@ export type StorePreviewProps = {
   canonicalUrl?: string;
   catalog: PublicCatalog;
   className?: string;
+  /** Prévia de exemplo (/exemplo): carrinho ativo, sem métricas nem WhatsApp real. */
+  demo?: { contactHref: string; signupHref: string };
   framed?: boolean;
   theme?: TenantTheme;
 };
@@ -18,9 +20,11 @@ export function StorePreview({
   canonicalUrl,
   catalog,
   className,
+  demo,
   framed = false,
   theme = catalog.tema,
 }: StorePreviewProps) {
+  const published = !framed && !demo;
   const categoriesWithProducts = catalog.categorias.filter(
     (category) => category.produtos.length > 0,
   );
@@ -35,25 +39,28 @@ export function StorePreview({
       )}
       data-tema={theme}
     >
-      {!framed ? <CatalogViewTracker slug={catalog.slug} /> : null}
+      {published ? <CatalogViewTracker slug={catalog.slug} /> : null}
       <StoreHeader
-        analyticsSlug={!framed ? catalog.slug : undefined}
+        analyticsSlug={published ? catalog.slug : undefined}
         bannerOnly={Boolean(catalog.banner_somente)}
         bannerUrl={catalog.banner_url}
+        contactHref={demo?.contactHref}
         description={catalog.descricao_curta}
         framed={framed}
         logoUrl={catalog.logo_url}
-        shareUrl={!framed ? canonicalUrl : undefined}
+        shareUrl={published ? canonicalUrl : undefined}
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}
       />
       <StoreCatalog
         categories={categoriesWithProducts}
+        demoSignupHref={demo?.signupHref}
         enableCart={!framed}
         footer={(
           <StoreFooter
             address={catalog.endereco}
-            analyticsSlug={!framed ? catalog.slug : undefined}
+            analyticsSlug={published ? catalog.slug : undefined}
+            contactHref={demo?.contactHref}
             instagram={catalog.instagram}
             serviceInfo={catalog}
             storeName={catalog.nome_loja}
@@ -61,7 +68,7 @@ export function StorePreview({
           />
         )}
         framed={framed}
-        analyticsSlug={!framed ? catalog.slug : undefined}
+        analyticsSlug={published ? catalog.slug : undefined}
         serviceInfo={catalog}
         storeName={catalog.nome_loja}
         whatsapp={catalog.whatsapp}

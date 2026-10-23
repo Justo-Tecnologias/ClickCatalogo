@@ -20,15 +20,16 @@ etapas(ordem, event_name, etapa) as (
   values
     (1, 'landing_view', 'Visitou a landing'),
     (2, 'how_it_works_view', 'Visitou /como-funciona'),
-    (3, 'signup_started', 'Abriu o cadastro'),
-    (4, 'signup_step_completed', 'Concluiu a etapa de dados'),
-    (5, 'draft_created', 'Criou a loja grátis (rascunho)'),
-    (6, 'email_verified', 'Confirmou o e-mail'),
-    (7, 'first_product_created', 'Cadastrou o primeiro produto'),
-    (8, 'checkout_created', 'Abriu o pagamento para publicar'),
-    (9, 'payment_confirmed', 'Publicou (pagamento confirmado)'),
+    (3, 'store_preview_view', 'Viu a prévia da própria loja (/exemplo)'),
+    (4, 'signup_started', 'Abriu o cadastro'),
+    (5, 'signup_step_completed', 'Concluiu a etapa de dados'),
+    (6, 'draft_created', 'Criou a loja grátis (rascunho)'),
+    (7, 'email_verified', 'Confirmou o e-mail'),
+    (8, 'first_product_created', 'Cadastrou o primeiro produto'),
+    (9, 'checkout_created', 'Abriu o pagamento para publicar'),
+    (10, 'payment_confirmed', 'Publicou (pagamento confirmado)'),
     -- Interesse vindo das lojas: clique no crédito do rodapé (fonte, não etapa).
-    (10, 'store_brand_clicked', 'Clicou em "ClickCatálogo" no rodapé de uma loja')
+    (11, 'store_brand_clicked', 'Clicou em "ClickCatálogo" no rodapé de uma loja')
 )
 select
   etapas.ordem,
@@ -39,7 +40,7 @@ select
       then round(100.0 * coalesce(periodo.total, 0) / (select total from periodo where event_name = 'landing_view'), 1)
   end as percentual_sobre_landing,
   case
-    when etapas.ordem between 6 and 9 and coalesce((select total from periodo where event_name = 'draft_created'), 0) > 0
+    when etapas.ordem between 7 and 10 and coalesce((select total from periodo where event_name = 'draft_created'), 0) > 0
       then round(100.0 * coalesce(periodo.total, 0) / (select total from periodo where event_name = 'draft_created'), 1)
   end as percentual_sobre_lojas_criadas
 from etapas

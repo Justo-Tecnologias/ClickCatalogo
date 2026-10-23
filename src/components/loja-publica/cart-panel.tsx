@@ -20,6 +20,8 @@ import { createWhatsAppUrl } from "@/lib/whatsapp/url";
 
 type CartPanelProps = {
   analyticsSlug?: string;
+  /** Prévia de exemplo: mostra como o pedido chegaria, sem abrir o WhatsApp. */
+  demoSignupHref?: string;
   items: CartLine[];
   onClose: () => void;
   onDecrement: (productId: string) => void;
@@ -37,6 +39,7 @@ type CartStep = "finalizar" | "itens";
 
 export function CartPanel({
   analyticsSlug,
+  demoSignupHref,
   items,
   onClose,
   onDecrement,
@@ -58,6 +61,7 @@ export function CartPanel({
   const [receiving, setReceiving] = useState<"entrega" | "retirada" | null>(null);
   const [payment, setPayment] = useState<PaymentMethod | null>(null);
   const [note, setNote] = useState("");
+  const [demoMessageVisible, setDemoMessageVisible] = useState(false);
   const acceptedPayments = normalizePaymentMethods(serviceInfo?.formas_pagamento ?? []);
   const offersReceivingChoice = serviceInfo?.entrega_modo === "ambos";
   // Na finalização, o atendimento aparece só no que não virou escolha: com
@@ -84,14 +88,15 @@ export function CartPanel({
     [items],
   );
   const itemCountLabel = itemCount === 1 ? "1 item" : `${itemCount} itens`;
-  const orderUrl = items.length
-    ? createWhatsAppUrl(whatsapp, createCartMessage(storeName, items, {
+  const orderMessage = items.length
+    ? createCartMessage(storeName, items, {
       customerName,
       note,
       payment: acceptedPayments.length > 1 ? payment : null,
       receiving: offersReceivingChoice ? receiving : null,
-    }))
+    })
     : null;
+  const orderUrl = orderMessage ? createWhatsAppUrl(whatsapp, orderMessage) : null;
   const messageTooLong = (orderUrl?.length ?? 0) > 7_000;
 
   useEffect(() => {
@@ -114,6 +119,7 @@ export function CartPanel({
   // Ao reabrir, o carrinho começa sempre pela revisão dos itens.
   function close() {
     setStep("itens");
+    setDemoMessageVisible(false);
     onClose();
   }
 
@@ -260,7 +266,24 @@ export function CartPanel({
                   variant="warning"
                 />
               ) : null}
-              {orderUrl && !messageTooLong ? (
+              {orderMessage && demoSignupHref && !messageTooLong ? (
+                demoMessageVisible ? (
+                  <div className="grid gap-3">
+                    <p className="text-sm font-semibold text-[var(--cor-texto)]">Assim o pedido chega no seu WhatsApp:</p>
+                    <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-[#d9fdd3] p-3 font-sans text-[13px] leading-5 text-[#111b21] shadow-sm">{orderMessage}</pre>
+                    <a className={buttonVariants({ className: "w-full text-sm sm:text-base", size: "lg", variant: "theme" })} href={demoSignupHref}>
+                      Quero essa loja (grátis)
+                      <ArrowRight aria-hidden="true" />
+                    </a>
+                  </div>
+                ) : (
+                  <Button className="w-full text-sm sm:text-base" onClick={() => setDemoMessageVisible(true)} size="lg" variant="theme">
+                    <MessageCircle aria-hidden="true" />
+                    Ver como o pedido chega
+                  </Button>
+                )
+              ) : null}
+              {orderUrl && !demoSignupHref && !messageTooLong ? (
                 <a
                   className={buttonVariants({ className: "w-full text-sm sm:text-base", size: "lg", variant: "theme" })}
                   href={orderUrl}

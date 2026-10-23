@@ -12,13 +12,15 @@ export type StoreFooterProps = {
   address: string | null;
   /** Só na loja publicada (não na prévia do painel). */
   analyticsSlug?: string;
+  /** Prévia de exemplo: o link leva a este endereço em vez do WhatsApp. */
+  contactHref?: string;
   instagram: string | null;
   serviceInfo?: StoreServiceInfo;
   storeName: string;
   whatsapp: string;
 };
 
-export function StoreFooter({ address, analyticsSlug, instagram, serviceInfo, storeName, whatsapp }: StoreFooterProps) {
+export function StoreFooter({ address, analyticsSlug, contactHref, instagram, serviceInfo, storeName, whatsapp }: StoreFooterProps) {
   const instagramUsername = instagram ? normalizeInstagramUsername(instagram) : null;
   const instagramUrl = instagram ? getInstagramProfileUrl(instagram) : null;
   const mapUrl = createMapSearchUrl(address);
@@ -61,9 +63,9 @@ export function StoreFooter({ address, analyticsSlug, instagram, serviceInfo, st
             ) : null}
             <a
               className="inline-flex min-h-11 items-center gap-2 font-medium text-[var(--cor-texto)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[color:var(--cor-primaria)]/30"
-              href={whatsappUrl}
-              rel="noopener noreferrer"
-              target="_blank"
+              href={contactHref ?? whatsappUrl}
+              rel={contactHref ? undefined : "noopener noreferrer"}
+              target={contactHref ? undefined : "_blank"}
             >
               <MessageCircle aria-hidden="true" className="size-4" />
               WhatsApp

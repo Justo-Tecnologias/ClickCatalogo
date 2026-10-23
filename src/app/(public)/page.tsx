@@ -14,6 +14,7 @@ import Link from "next/link";
 import { HeroShowcase } from "@/components/marketing/hero-showcase";
 import { MobileStickyCta } from "@/components/marketing/mobile-sticky-cta";
 import { PageViewTracker } from "@/components/marketing/page-view-tracker";
+import { ShowcaseForm } from "@/components/marketing/showcase-form";
 import { AnnouncementBar, SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { ThemePreviewSection } from "@/components/marketing/theme-preview-section";
 import { buttonVariants } from "@/components/ui/button";
@@ -102,8 +103,8 @@ export default function HomePage() {
                 Criar minha loja grátis
                 <ArrowRight aria-hidden="true" />
               </PendingLink>
-              <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="#temas">
-                Ver os temas
+              <Link className={buttonVariants({ size: "lg", variant: "secondary" })} href="#sua-loja">
+                Ver como fica a minha loja
               </Link>
             </div>
             <p className="mt-4 text-sm font-medium text-[var(--app-foreground-muted)]">
@@ -143,24 +144,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
+      <section className="scroll-mt-4 px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8" id="sua-loja">
         <Card className="mx-auto grid max-w-5xl items-center gap-8 overflow-hidden border-brand-200 p-6 sm:p-10 md:grid-cols-[1fr_auto]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Veja uma loja no ar</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-900">Ateliê Aurora</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Sua loja em 10 segundos</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-900">Veja como fica a sua loja</h2>
             <p className="mt-4 max-w-xl leading-7 text-[var(--app-foreground-muted)]">
-              Nossa loja de demonstração: velas, cerâmicas e presentes organizados em categorias, com carrinho e pedido
-              pelo WhatsApp. Abra no celular, monte um pedido e veja a experiência do seu cliente.
+              Digite o nome do seu negócio e escolha o que você vende: montamos uma prévia com produtos de exemplo para
+              você navegar e simular um pedido. Sem cadastro.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link className={buttonVariants()} href="/loja/atelie-aurora" rel="noopener" target="_blank">
-                Abrir a loja
-                <ExternalLink aria-hidden="true" />
+            <ShowcaseForm className="mt-6" />
+            <p className="mt-5 text-sm text-[var(--app-foreground-muted)]">
+              Prefere ver uma loja de verdade?{" "}
+              <Link className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand-700 underline-offset-4 hover:underline" href="/loja/atelie-aurora" rel="noopener" target="_blank">
+                Abrir a Ateliê Aurora
+                <ExternalLink aria-hidden="true" className="size-3.5" />
               </Link>
-              <Link className={buttonVariants({ variant: "secondary" })} href="/como-funciona">
-                Como funciona
-              </Link>
-            </div>
+            </p>
           </div>
           <figure className="mx-auto w-full max-w-[13rem] rounded-[2rem] border-[6px] border-brand-900 bg-brand-900 shadow-[0_24px_60px_rgb(19_50_41_/_22%)]">
             <Image

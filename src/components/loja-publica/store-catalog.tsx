@@ -34,6 +34,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 type StoreCatalogProps = {
   analyticsSlug?: string;
   categories: CatalogCategory[];
+  /** Prévia de exemplo: o carrinho mostra a mensagem em vez de abrir o WhatsApp. */
+  demoSignupHref?: string;
   enableCart?: boolean;
   footer?: ReactNode;
   framed?: boolean;
@@ -50,7 +52,7 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
-export function StoreCatalog({ analyticsSlug, categories, enableCart = true, footer, framed = false, serviceInfo, storeName, whatsapp }: StoreCatalogProps) {
+export function StoreCatalog({ analyticsSlug, categories, demoSignupHref, enableCart = true, footer, framed = false, serviceInfo, storeName, whatsapp }: StoreCatalogProps) {
   const searchId = useId();
   const categoryTargetIdPrefix = `${searchId.replace(/:/g, "")}-categoria`;
   const totalProducts = useMemo(
@@ -266,6 +268,7 @@ export function StoreCatalog({ analyticsSlug, categories, enableCart = true, foo
           ) : null}
           <CartPanel
             analyticsSlug={analyticsSlug}
+            demoSignupHref={demoSignupHref}
             items={cartItems}
             onClose={() => setCartOpen(false)}
             onDecrement={decrementCartItem}

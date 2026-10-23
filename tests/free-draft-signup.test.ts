@@ -146,5 +146,5 @@ test("crédito do rodapé continua igual e só mede o clique por loja", () => {
   assert.match(credit, />\s*ClickCatálogo\s*</);
   assert.match(read("src/app/api/analytics/route.ts"), /TENANT_EVENTS = new Set\(\[[^\]]*"store_brand_clicked"/);
   // A prévia do painel não conta cliques.
-  assert.match(read("src/components/loja-publica/store-preview.tsx"), /analyticsSlug=\{!framed \? catalog\.slug : undefined\}\s*\n\s*instagram/);
+  assert.match(read("src/components/loja-publica/store-preview.tsx"), /analyticsSlug=\{published \? catalog\.slug : undefined\}\s*\n\s*contactHref=\{demo\?\.contactHref\}\s*\n\s*instagram/);
 });

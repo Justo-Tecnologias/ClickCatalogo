@@ -12,6 +12,7 @@ por_canal as (
     origem,
     sum(event_count) filter (where event_name = 'landing_view') as visitas_landing,
     sum(event_count) filter (where event_name = 'how_it_works_view') as visitas_como_funciona,
+    sum(event_count) filter (where event_name = 'store_preview_view') as viu_previa,
     sum(event_count) filter (where event_name = 'signup_started') as abriu_cadastro,
     sum(event_count) filter (where event_name = 'signup_step_completed') as concluiu_dados,
     sum(event_count) filter (where event_name = 'draft_created') as criou_loja
@@ -23,6 +24,7 @@ geral as (
   select
     sum(event_count) filter (where event_name = 'landing_view') as visitas_landing,
     sum(event_count) filter (where event_name = 'how_it_works_view') as visitas_como_funciona,
+    sum(event_count) filter (where event_name = 'store_preview_view') as viu_previa,
     sum(event_count) filter (where event_name = 'signup_started') as abriu_cadastro,
     sum(event_count) filter (where event_name = 'signup_step_completed') as concluiu_dados,
     sum(event_count) filter (where event_name = 'draft_created') as criou_loja
@@ -45,6 +47,7 @@ linhas as (
     'sem_origem',
     coalesce(geral.visitas_landing, 0) - coalesce((select sum(visitas_landing) from por_canal), 0),
     coalesce(geral.visitas_como_funciona, 0) - coalesce((select sum(visitas_como_funciona) from por_canal), 0),
+    coalesce(geral.viu_previa, 0) - coalesce((select sum(viu_previa) from por_canal), 0),
     coalesce(geral.abriu_cadastro, 0) - coalesce((select sum(abriu_cadastro) from por_canal), 0),
     coalesce(geral.concluiu_dados, 0) - coalesce((select sum(concluiu_dados) from por_canal), 0),
     coalesce(geral.criou_loja, 0) - coalesce((select sum(criou_loja) from por_canal), 0)
@@ -54,6 +57,7 @@ select
   coalesce(linhas.origem, lojas.origem) as origem,
   coalesce(linhas.visitas_landing, 0) as visitas_landing,
   coalesce(linhas.visitas_como_funciona, 0) as visitas_como_funciona,
+  coalesce(linhas.viu_previa, 0) as viu_previa,
   coalesce(linhas.abriu_cadastro, 0) as abriu_cadastro,
   coalesce(linhas.concluiu_dados, 0) as concluiu_dados,
   coalesce(linhas.criou_loja, 0) as criou_loja,

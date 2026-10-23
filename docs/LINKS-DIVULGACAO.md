@@ -17,6 +17,16 @@ Relatório: `supabase/origin-report.sql` (somente leitura) no SQL Editor do Supa
 | `indicacao` | `https://clickcatalogo.com/?origem=indicacao` | Quando alguém indica o ClickCatálogo |
 | `loja` | automático | Clique em "ClickCatálogo" no rodapé de uma loja |
 
+## Prévia com o nome da pessoa (abordagem direta)
+
+A página `/exemplo` monta na hora uma loja com o nome do negócio e produtos de exemplo do nicho (`doces`, `artesanato`, `moda`, `marmitas`, `cosmeticos`). Na mensagem direta, mande a loja **dela**:
+
+`https://clickcatalogo.com/exemplo?nome=Doces%20da%20Ana&nicho=doces&origem=dm`
+
+- Troque `Doces%20da%20Ana` pelo nome do perfil (`%20` é o espaço; o WhatsApp e o Instagram também aceitam o link com `+` no lugar do espaço).
+- Opcional: `&tema=elegante` (ou `classico`, `natural`, `tech`, `delivery`, `minimal`). Sem ele, vale o tema padrão do nicho.
+- O botão "Quero essa loja" abre o cadastro já com o nome e o tema. A visita conta como `store_preview_view` no funil e no canal.
+
 Também funciona em outras páginas: `https://clickcatalogo.com/como-funciona?origem=dm` ou `https://clickcatalogo.com/cadastro?origem=dm`.
 
 ## Regras

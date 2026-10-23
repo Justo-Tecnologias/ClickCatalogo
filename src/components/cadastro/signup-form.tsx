@@ -25,12 +25,19 @@ const initialState: FormState = { email: "", nomeLoja: "", password: "", passwor
 
 function slugify(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60); }
 
-export function SignupForm() {
+/** Vindo da prévia (/exemplo): nome e tema já escolhidos. */
+export type SignupPrefill = { nomeLoja: string; tema: TenantTheme };
+
+export function SignupForm({ prefill }: { prefill?: SignupPrefill | null }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<FormState>(initialState);
+  const [form, setForm] = useState<FormState>(() => (prefill
+    ? { ...initialState, nomeLoja: prefill.nomeLoja, slug: slugify(prefill.nomeLoja), tema: prefill.tema }
+    : initialState));
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
-  const [slugStatus, setSlugStatus] = useState<SlugStatus>({ available: null, checking: false, message: "" });
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>(() => (prefill && slugify(prefill.nomeLoja).length >= 3
+    ? { available: null, checking: true, message: "Verificando endereço..." }
+    : { available: null, checking: false, message: "" }));
   const [accountAction, setAccountAction] = useState<"login" | "resume" | null>(null);
   const [checkingAccount, setCheckingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
